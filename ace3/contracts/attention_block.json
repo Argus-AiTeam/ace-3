@@ -1,0 +1,196 @@
+{
+  "schema_version": 1,
+  "conclusion": "SCALED_QK_CAUSAL_SOFTMAX_FP16_VALUE_COMPOSITION",
+  "provenance": {
+    "base_commit": "3f115aa0884739e8619b24b919cfddf538287082",
+    "model_repository": "Qwen/Qwen2.5-0.5B-Instruct-AWQ",
+    "model_revision": "db09cd27ead7fee40cdee309693cf83601b9c899",
+    "config_sha256": "bd20ae34a91eb38230b870d39f56677d1cda1e8b6688ad627e6efb6ca9f44090",
+    "interface_recovery": "No attention interface artifact exists in the accepted base commit or mission frontier. This contract freezes the three public module interfaces before their first implementation."
+  },
+  "geometry": {
+    "query_heads": 14,
+    "key_value_heads": 2,
+    "head_dim": 64,
+    "gqa_mapping": "key_value_head = floor(query_head / 7)",
+    "score_scale": "1/sqrt(64) = 1/8",
+    "causal_eligibility": "key_position <= query_position",
+    "default_context_max": 128
+  },
+  "modules": [
+    {
+      "name": "ace3_attention_score_core",
+      "parameters": {
+        "HEAD_DIM": 64
+      },
+      "transaction": "Accept one start, then exactly HEAD_DIM Q/K pairs in dimension order. Emit one retained score.",
+      "ports": [
+        "input clk_i",
+        "input rst_ni",
+        "input clear_i",
+        "input start_valid_i",
+        "output start_ready_o",
+        "input [3:0] query_head_i",
+        "input [3:0] key_head_i",
+        "input [14:0] query_position_i",
+        "input [14:0] key_position_i",
+        "input pair_valid_i",
+        "output pair_ready_o",
+        "input [15:0] q_f16_i",
+        "input [15:0] k_f16_i",
+        "input cache_hit_i",
+        "output out_valid_o",
+        "input out_ready_i",
+        "output [15:0] score_f16_o",
+        "output [3:0] query_head_o",
+        "output [3:0] key_head_o",
+        "output [14:0] query_position_o",
+        "output [14:0] key_position_o",
+        "output causal_o",
+        "output cache_miss_o",
+        "output invalid_operand_o",
+        "output saturation_o",
+        "output busy_o"
+      ]
+    },
+    {
+      "name": "ace3_attention_softmax_core",
+      "parameters": {
+        "CONTEXT_MAX": 128
+      },
+      "transaction": "Accept one row start, then exactly context_count score records. Emit context_count retained probabilities in input order.",
+      "ports": [
+        "input clk_i",
+        "input rst_ni",
+        "input clear_i",
+        "input start_valid_i",
+        "output start_ready_o",
+        "input [3:0] query_head_i",
+        "input [14:0] query_position_i",
+        "input [15:0] context_count_i",
+        "input score_valid_i",
+        "output score_ready_o",
+        "input [15:0] score_f16_i",
+        "input [14:0] key_position_i",
+        "input causal_i",
+        "input cache_miss_i",
+        "input invalid_operand_i",
+        "output out_valid_o",
+        "input out_ready_i",
+        "output [15:0] probability_f16_o",
+        "output [3:0] query_head_o",
+        "output [14:0] query_position_o",
+        "output [14:0] key_position_o",
+        "output [15:0] out_index_o",
+        "output out_last_o",
+        "output row_error_o",
+        "output cache_miss_o",
+        "output invalid_operand_o",
+        "output busy_o"
+      ]
+    },
+    {
+      "name": "ace3_attention_value_core",
+      "parameters": {
+        "HEAD_DIM": 64,
+        "CONTEXT_MAX": 128
+      },
+      "transaction": "Accept one output-dimension start, then exactly context_count probability/V terms. Emit one retained FP16 result.",
+      "ports": [
+        "input clk_i",
+        "input rst_ni",
+        "input clear_i",
+        "input start_valid_i",
+        "output start_ready_o",
+        "input [3:0] query_head_i",
+        "input [3:0] value_head_i",
+        "input [14:0] query_position_i",
+        "input [5:0] dimension_i",
+        "input [15:0] context_count_i",
+        "input term_valid_i",
+        "output term_ready_o",
+        "input [15:0] probability_f16_i",
+        "input [15:0] value_f16_i",
+        "input value_hit_i",
+        "input row_error_i",
+        "output out_valid_o",
+        "input out_ready_i",
+        "output [15:0] value_f16_o",
+        "output [3:0] query_head_o",
+        "output [3:0] value_head_o",
+        "output [14:0] query_position_o",
+        "output [5:0] dimension_o",
+        "output row_error_o",
+        "output cache_miss_o",
+        "output invalid_operand_o",
+        "output saturation_o",
+        "output busy_o"
+      ]
+    }
+  ],
+  "numerical_policy": {
+    "input_format": "IEEE-754 binary16 bits; subnormals and signed zero are supported; NaN and infinity are invalid.",
+    "score": {
+      "product": "Decode each finite binary16 Q and K exactly to signed Q24, multiply exactly to Q48, and accumulate all 64 products in a signed 90-bit accumulator.",
+      "scale": "Divide the final Q48 sum by 2^3 while converting to signed Q24 using round-to-nearest, ties-to-even, then convert Q24 to binary16 RNE.",
+      "finite_overflow": "Saturate to signed maximum finite binary16 and raise saturation.",
+      "invalid_or_required_cache_miss": "Return positive zero and raise the corresponding status."
+    },
+    "softmax": {
+      "max_subtraction": "Decode scores exactly to signed Q24 and subtract the maximum over causal entries.",
+      "exponential": "For delta >= 0, compute y=floor(delta*round(log2(e)*2^16)/2^24) in unsigned Q16.16. Approximate 2^-y using a 17-point Q0.24 table at sixteenth intervals, RNE linear interpolation over the low 12 fractional bits, then RNE power-of-two shifting. Values with integer y >= 25 underflow to zero.",
+      "table_q24": [
+        16777216,
+        16065917,
+        15384775,
+        14732511,
+        14107901,
+        13509772,
+        12937002,
+        12388516,
+        11863283,
+        11360319,
+        10878679,
+        10417458,
+        9975792,
+        9552851,
+        9147842,
+        8760003,
+        8388608
+      ],
+      "normalization": "Sum Q0.24 exponent weights exactly, divide each weight by the sum to Q0.24 with RNE, then convert Q24 to binary16 RNE.",
+      "approximation_bound": "For finite deltas whose exponent does not underflow, piecewise-linear interpolation contributes at most 0.024 percent relative exponential overestimate before fixed-point rounding; log2(e) quantization is below 7.7e-6 per unit delta. Underflow is explicit at y >= 25.",
+      "mask": "Non-causal entries receive positive-zero probability and do not contribute to maximum or denominator.",
+      "row_error": "Any causally required K miss, invalid score, causal metadata mismatch, or row with no causal entry makes every row output positive zero. No partial-row renormalization is allowed."
+    },
+    "value_composition": {
+      "product": "Decode each nonzero finite probability and required finite cached V exactly to signed Q24, multiply exactly to Q48, and accumulate all context terms in a signed 90-bit accumulator.",
+      "rounding": "Convert the final Q48 sum to signed Q24 with RNE, then convert Q24 to binary16 RNE.",
+      "finite_overflow": "Saturate to signed maximum finite binary16 and raise saturation.",
+      "error": "Any upstream row error, required V miss, or required non-finite operand returns positive zero for the complete output dimension."
+    }
+  },
+  "protocol_policy": {
+    "reset": "rst_ni is active-low asynchronous reset. It aborts active work and clears retained-valid state.",
+    "clear": "clear_i is active-high synchronous clear. It aborts active work and clears retained-valid state.",
+    "backpressure": "Every output and all metadata/status remain stable while out_valid_o=1 and out_ready_i=0.",
+    "configuration": "A start is accepted only for query_head<14, mapped KV head, legal counts, and legal dimensions. Unknown or high-impedance control/metadata must not produce an accepted handshake in four-state simulation.",
+    "storage": "Internal score, key-position, causal, and exponent arrays are not reset; control state prevents stale entries from becoming observable."
+  },
+  "verification_boundary": {
+    "required": [
+      "independent bit-level oracle",
+      "hash-authenticated official-checkpoint-derived and directed vectors",
+      "Icarus four-state numerical and protocol simulation",
+      "Verilator two-state numerical and protocol simulation",
+      "tamper rejection",
+      "reset, clear, retained backpressure, cache miss, causal mask, and bounded X/Z checks"
+    ],
+    "excluded": [
+      "decoder-layer or full-model execution",
+      "dialogue",
+      "formal proof",
+      "synthesis, timing, area, power, FPGA, silicon, or performance"
+    ]
+  }
+}

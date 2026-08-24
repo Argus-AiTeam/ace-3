@@ -13,3 +13,7 @@ fixed-revision authenticated Qwen geometries, corrected native-GEMM indexing,
 the 102-bit cross-group accumulator, and cycle contract.
 `awq_w4a16_projection_vector_bindings.json` separately binds all complete-input
 projection simulator streams.
+
+`attention_block.json` freezes the three attention interfaces, GQA/causal
+policy, fixed-point widths, rounding, approximation bound, and error behavior.
+`attention_vector_bindings.json` authenticates every generated simulator input.

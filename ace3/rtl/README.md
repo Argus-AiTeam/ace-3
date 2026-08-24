@@ -11,3 +11,8 @@ The QKV milestone adds a fixed three-engine projection cluster, Qwen2.5
 half-split FP16 rotary pair datapath, and parameterized indexed FP16 K/V cache.
 The cache arrays are SRAM-oriented data stores with separately invalidated
 validity metadata; no synthesis or physical-memory mapping is claimed.
+
+The attention candidate adds separate retained-handshake score, softmax, and
+value-composition cores. They implement the fixed 14-to-2 GQA mapping, causal
+eligibility, an explicitly bounded Q0.24 exponential approximation, and FP16
+cached-V accumulation. No synthesis or complete decoder claim is attached.

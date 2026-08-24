@@ -1,0 +1,64 @@
+{
+  "schema_version": 1,
+  "kind": "ace3_attention_serialized_bindings",
+  "generation": {
+    "model_repository": "Qwen/Qwen2.5-0.5B-Instruct-AWQ",
+    "model_revision": "db09cd27ead7fee40cdee309693cf83601b9c899",
+    "query_heads": 14,
+    "kv_heads": 2,
+    "head_dim": 64,
+    "score_cases": 20,
+    "softmax_rows": 20,
+    "value_cases": 20
+  },
+  "serialized_artifacts": [
+    {
+      "file": "attention_params.svh",
+      "sha256": "a4ee2fcd4404bd5bc7d31937fbbfd15c2ac6ed2305598ee6eff7bd3c0df96363",
+      "byte_count": 205,
+      "line_count": 6
+    },
+    {
+      "file": "attention_score_expected.hex",
+      "sha256": "7749f12dd727fa96b36d3d4e8d2ba0a2d45fc639f5265376093e1fd750a6dea9",
+      "byte_count": 660,
+      "line_count": 20
+    },
+    {
+      "file": "attention_score_terms.hex",
+      "sha256": "db6263beab0147594bab2da1603e0800882e52c1590839c6a649a80c3c2f5df1",
+      "byte_count": 21760,
+      "line_count": 1280
+    },
+    {
+      "file": "attention_softmax_rows.hex",
+      "sha256": "c6a1eb754cd9e1843ccb862c396de95475d68d8d8d95126db6ecc83cc20a2528",
+      "byte_count": 340,
+      "line_count": 20
+    },
+    {
+      "file": "attention_softmax_terms.hex",
+      "sha256": "54a990ef2d728dd5808fbda4369d5dc478e7a1077e34c02540e394de017ce3be",
+      "byte_count": 2380,
+      "line_count": 140
+    },
+    {
+      "file": "attention_value_cases.hex",
+      "sha256": "1486148d192dc2c92763a92ed95c2709ffe77ec6d29f1b7b85a0918e8a8ac24e",
+      "byte_count": 660,
+      "line_count": 20
+    },
+    {
+      "file": "attention_value_terms.hex",
+      "sha256": "98d6d8fcebef28b92eebefae5605e5c7d4c2f93bea5db507a20c02362c72e1b8",
+      "byte_count": 2074,
+      "line_count": 122
+    },
+    {
+      "file": "manifest.json",
+      "sha256": "25cbb9327b4bdcc16fd326e8902ab57daedf15a59b9b1759a0ac14e0c8d05f25",
+      "byte_count": 1255,
+      "line_count": 39
+    }
+  ]
+}

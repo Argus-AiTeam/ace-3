@@ -83,6 +83,25 @@ QKV_TB := $(ROOT)/ace3/tb/ace3_qkv_rope_cache_tb.sv
 QKV_GEOMETRY_TB := $(ROOT)/ace3/tb/ace3_qkv_projection_geometry_tb.sv
 QKV_VERILATOR_TOP := $(ROOT)/ace3/tb/ace3_qkv_rope_cache_verilator_top.sv
 QKV_CPP_TB := $(ROOT)/ace3/tb/ace3_qkv_rope_cache_main.cpp
+ATTENTION_VECTOR_DIR := $(BUILD_DIR)/attention_vectors
+ATTENTION_TAMPER_DIR := $(BUILD_DIR)/tamper-attention-vectors
+ATTENTION_IVERILOG_DIR := $(BUILD_DIR)/attention_iverilog
+ATTENTION_IVERILOG_BIN := $(ATTENTION_IVERILOG_DIR)/ace3_attention_block.vvp
+ATTENTION_VERILATOR_DIR := $(BUILD_DIR)/attention_verilator
+ATTENTION_VERILATOR_OBJ_DIR := $(ATTENTION_VERILATOR_DIR)/obj_dir
+ATTENTION_VERILATOR_BIN := $(ATTENTION_VERILATOR_OBJ_DIR)/Vace3_attention_verilator_top
+ATTENTION_SCORE_RTL := $(ROOT)/ace3/rtl/ace3_attention_score_core.sv
+ATTENTION_SOFTMAX_RTL := $(ROOT)/ace3/rtl/ace3_attention_softmax_core.sv
+ATTENTION_VALUE_RTL := $(ROOT)/ace3/rtl/ace3_attention_value_core.sv
+ATTENTION_RTL := $(ATTENTION_SCORE_RTL) $(ATTENTION_SOFTMAX_RTL) $(ATTENTION_VALUE_RTL)
+ATTENTION_ORACLE := $(ROOT)/ace3/model/attention_oracle.py
+ATTENTION_GENERATOR := $(ROOT)/ace3/model/generate_attention_vectors.py
+ATTENTION_VALIDATOR := $(ROOT)/ace3/model/validate_attention_vectors.py
+ATTENTION_CONTRACT := $(ROOT)/ace3/contracts/attention_block.json
+ATTENTION_BINDINGS := $(ROOT)/ace3/contracts/attention_vector_bindings.json
+ATTENTION_TB := $(ROOT)/ace3/tb/ace3_attention_block_tb.sv
+ATTENTION_VERILATOR_TOP := $(ROOT)/ace3/tb/ace3_attention_verilator_top.sv
+ATTENTION_CPP_TB := $(ROOT)/ace3/tb/ace3_attention_main.cpp
 
 IVERILOG_BIN := $(IVERILOG_DIR)/ace3_awq_w4a16_g128_dot_lane.vvp
 PROTOCOL_BIN := $(IVERILOG_DIR)/ace3_awq_w4a16_g128_dot_lane_protocol.vvp
@@ -111,7 +130,11 @@ export PYTHONDONTWRITEBYTECODE := 1
 	qkv-rope-cache qkv-oracle qkv-vectors qkv-json-validation \
 	qkv-tamper-rejection qkv-geometry qkv-iverilog-compile \
 	qkv-iverilog-simulation qkv-verilator-compile \
-	qkv-verilator-simulation clean
+	qkv-verilator-simulation \
+	attention attention-oracle attention-vectors \
+	attention-json-validation attention-tamper-rejection \
+	attention-iverilog-compile attention-iverilog-simulation \
+	attention-verilator-compile attention-verilator-simulation clean
 
 test:
 	@mkdir -p "$(LOG_DIR)"
@@ -134,13 +157,14 @@ test:
 	  git -C "$(ROOT)" check-ignore -q build/vectors/manifest.json; \
 	  git -C "$(ROOT)" check-ignore -q build/projection_vectors/manifest.json; \
 	  git -C "$(ROOT)" check-ignore -q build/qkv_rope_cache_vectors/manifest.json; \
+	  git -C "$(ROOT)" check-ignore -q build/attention_vectors/manifest.json; \
 	  test ! -e "$(ROOT)/ace3/generated"; \
 	  printf '%s\n' 'REPOSITORY_HYGIENE_PASS status_unchanged=yes build_ignored=yes legacy_generated_absent=yes diff_check=pass'; \
 	} > "$$log" 2>&1 || { status=$$?; cat "$$log"; exit $$status; }; \
 	cat "$$log"
-	@printf '%s\n' 'STANDALONE_VALIDATION_PASS semantic_checks=fresh primitive=pass projection=pass fp16_adaptation=pass qkv_rope_cache=pass serialized_sha256=pass tamper_rejection=pass iverilog=pass protocol_4state=pass verilator=pass geometry_parameters=pass hygiene=pass'
+	@printf '%s\n' 'STANDALONE_VALIDATION_PASS semantic_checks=fresh primitive=pass projection=pass fp16_adaptation=pass qkv_rope_cache=pass attention=pass serialized_sha256=pass tamper_rejection=pass iverilog=pass protocol_4state=pass verilator=pass geometry_parameters=pass hygiene=pass'
 
-_validate: oracle tamper-rejection iverilog verilator projection fp16-adaptation qkv-rope-cache
+_validate: oracle tamper-rejection iverilog verilator projection fp16-adaptation qkv-rope-cache attention
 
 oracle:
 	@mkdir -p "$(BUILD_DIR)" "$(LOG_DIR)"
@@ -657,6 +681,103 @@ qkv-verilator-simulation: qkv-verilator-compile
 	: > "$$log"; \
 	if cd "$(ROOT)" && "$(QKV_VERILATOR_BIN)" \
 	    --vector-dir "$(QKV_VECTOR_DIR)" >> "$$log" 2>&1; then :; \
+	else status=$$?; cat "$$log"; exit $$status; fi; \
+	cat "$$log"
+
+attention: attention-oracle attention-tamper-rejection \
+	attention-iverilog-simulation attention-verilator-simulation
+
+attention-oracle:
+	@mkdir -p "$(BUILD_DIR)" "$(LOG_DIR)"
+	@set -eu; log="$(LOG_DIR)/attention-oracle.log"; \
+	printf '%s\n' '$ python3 ace3/model/attention_oracle.py' > "$$log"; \
+	if cd "$(ROOT)" && "$(PYTHON)" "$(ATTENTION_ORACLE)" >> "$$log" 2>&1; then :; \
+	else status=$$?; cat "$$log"; exit $$status; fi; \
+	cat "$$log"
+
+attention-vectors:
+	@rm -rf "$(ATTENTION_VECTOR_DIR)"
+	@mkdir -p "$(ATTENTION_VECTOR_DIR)" "$(LOG_DIR)"
+	@set -eu; log="$(LOG_DIR)/attention-vector-generation.log"; \
+	printf '%s\n' '$ python3 ace3/model/generate_attention_vectors.py --official-tensor-dir "$(OFFICIAL_TENSOR_DIR)" --output-dir build/attention_vectors' > "$$log"; \
+	if cd "$(ROOT)" && "$(PYTHON)" "$(ATTENTION_GENERATOR)" \
+	    --official-tensor-dir "$(OFFICIAL_TENSOR_DIR)" \
+	    --output-dir "$(ATTENTION_VECTOR_DIR)" >> "$$log" 2>&1; then :; \
+	else status=$$?; cat "$$log"; exit $$status; fi; \
+	cat "$$log"
+
+attention-json-validation: attention-vectors
+	@mkdir -p "$(LOG_DIR)"
+	@set -eu; log="$(LOG_DIR)/attention-vector-validation.log"; \
+	printf '%s\n' '$ python3 ace3/model/validate_attention_vectors.py --generated-dir build/attention_vectors --contract ace3/contracts/attention_block.json --bindings ace3/contracts/attention_vector_bindings.json' > "$$log"; \
+	if cd "$(ROOT)" && "$(PYTHON)" "$(ATTENTION_VALIDATOR)" \
+	    --generated-dir "$(ATTENTION_VECTOR_DIR)" \
+	    --contract "$(ATTENTION_CONTRACT)" \
+	    --bindings "$(ATTENTION_BINDINGS)" >> "$$log" 2>&1; then :; \
+	else status=$$?; cat "$$log"; exit $$status; fi; \
+	cat "$$log"
+
+attention-tamper-rejection: attention-json-validation
+	@rm -rf "$(ATTENTION_TAMPER_DIR)"
+	@cp -a "$(ATTENTION_VECTOR_DIR)" "$(ATTENTION_TAMPER_DIR)"
+	@printf '0' >> "$(ATTENTION_TAMPER_DIR)/attention_score_terms.hex"
+	@set -eu; attempt="$(LOG_DIR)/attention-tamper-attempt.log"; \
+	log="$(LOG_DIR)/attention-tamper-rejection.log"; \
+	printf '%s\n' '$ printf 0 >> build/tamper-attention-vectors/attention_score_terms.hex' > "$$attempt"; \
+	printf '%s\n' '$ python3 ace3/model/validate_attention_vectors.py ... (expected failure)' >> "$$attempt"; \
+	if cd "$(ROOT)" && "$(PYTHON)" "$(ATTENTION_VALIDATOR)" \
+	    --generated-dir "$(ATTENTION_TAMPER_DIR)" \
+	    --contract "$(ATTENTION_CONTRACT)" \
+	    --bindings "$(ATTENTION_BINDINGS)" >> "$$attempt" 2>&1; then \
+	  cat "$$attempt"; exit 1; \
+	fi; \
+	if ! grep -Fq 'attention_score_terms.hex SHA256 mismatch' "$$attempt"; then \
+	  cat "$$attempt"; exit 1; \
+	fi; \
+	printf '%s\n' 'ACE3_ATTENTION_TAMPER_REJECTION_PASS artifact=attention_score_terms.hex validator_exit=nonzero reason=sha256_mismatch originals=untouched' > "$$log"; \
+	cat "$$log"
+
+attention-iverilog-compile: attention-json-validation
+	@rm -rf "$(ATTENTION_IVERILOG_DIR)"
+	@mkdir -p "$(ATTENTION_IVERILOG_DIR)" "$(LOG_DIR)"
+	@set -eu; log="$(LOG_DIR)/attention-iverilog-compile.log"; \
+	printf '%s\n' '$ iverilog -g2012 -Wall -I build/attention_vectors -s ace3_attention_block_tb -o build/attention_iverilog/ace3_attention_block.vvp ...' > "$$log"; \
+	if "$(IVERILOG)" -g2012 -Wall -I "$(ATTENTION_VECTOR_DIR)" \
+	    -s ace3_attention_block_tb -o "$(ATTENTION_IVERILOG_BIN)" \
+	    "$(FP16_FIXED_RTL)" $(ATTENTION_RTL) "$(ATTENTION_TB)" \
+	    >> "$$log" 2>&1; then :; \
+	else status=$$?; cat "$$log"; exit $$status; fi; \
+	cat "$$log"
+
+attention-iverilog-simulation: attention-iverilog-compile
+	@mkdir -p "$(LOG_DIR)"
+	@set -eu; log="$(LOG_DIR)/attention-iverilog-simulation.log"; \
+	printf '%s\n' '$ vvp build/attention_iverilog/ace3_attention_block.vvp +VECTOR_DIR=build/attention_vectors' > "$$log"; \
+	if cd "$(ROOT)" && "$(VVP)" "$(ATTENTION_IVERILOG_BIN)" \
+	    +VECTOR_DIR="$(ATTENTION_VECTOR_DIR)" >> "$$log" 2>&1; then :; \
+	else status=$$?; cat "$$log"; exit $$status; fi; \
+	cat "$$log"
+
+attention-verilator-compile: attention-json-validation
+	@rm -rf "$(ATTENTION_VERILATOR_OBJ_DIR)"
+	@mkdir -p "$(ATTENTION_VERILATOR_DIR)" "$(LOG_DIR)"
+	@set -eu; log="$(LOG_DIR)/attention-verilator-compile.log"; \
+	printf '%s\n' '$ verilator --cc --exe --build --Wall -Wno-fatal --top-module ace3_attention_verilator_top --Mdir build/attention_verilator/obj_dir ...' > "$$log"; \
+	if cd "$(ROOT)" && "$(VERILATOR)" --cc --exe --build \
+	    --Wall -Wno-fatal --top-module ace3_attention_verilator_top \
+	    --Mdir "$(ATTENTION_VERILATOR_OBJ_DIR)" \
+	    "$(FP16_FIXED_RTL)" $(ATTENTION_RTL) \
+	    "$(ATTENTION_VERILATOR_TOP)" "$(ATTENTION_CPP_TB)" \
+	    >> "$$log" 2>&1; then :; \
+	else status=$$?; cat "$$log"; exit $$status; fi; \
+	test -x "$(ATTENTION_VERILATOR_BIN)"; cat "$$log"
+
+attention-verilator-simulation: attention-verilator-compile
+	@mkdir -p "$(LOG_DIR)"
+	@set -eu; log="$(LOG_DIR)/attention-verilator-simulation.log"; \
+	printf '%s\n' '$ build/attention_verilator/obj_dir/Vace3_attention_verilator_top --vector-dir=build/attention_vectors' > "$$log"; \
+	if cd "$(ROOT)" && "$(ATTENTION_VERILATOR_BIN)" \
+	    --vector-dir="$(ATTENTION_VECTOR_DIR)" >> "$$log" 2>&1; then :; \
 	else status=$$?; cat "$$log"; exit $$status; fi; \
 	cat "$$log"
 

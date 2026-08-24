@@ -17,3 +17,8 @@ QKV tests authenticate 512 RoPE pairs spanning every one of 14 query heads and
 two key heads, then exercise every dimension of both value heads through indexed
 K/V writes and reads. Icarus adds bounded inactive X/Z probes; both simulators
 check retained outputs, overwrite, cache-slot/token isolation, reset, and clear.
+
+The attention harness is shared by Icarus and Verilator and checks every
+authenticated score, probability, and value-composition record. Both runs cover
+retained backpressure, reset/clear aborts, causal masking, GQA mapping, and
+cache-miss propagation; bounded X/Z rejection is claimed only for Icarus.
