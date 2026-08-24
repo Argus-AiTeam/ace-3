@@ -18,7 +18,10 @@
 - [x] Bind vectors to an official Qwen projection tensor slice.
 - [x] Reproduce the promoted primitive from the standalone repository layout.
 - [x] Add bounded X/Z and protocol-property simulation coverage.
-- [ ] Scale the primitive into a complete parameterized projection engine.
+- [x] Scale the primitive into a complete parameterized full-input projection
+  engine.
+- [ ] Bind and numerically verify authenticated k/v/o/gate/up/down tensor
+  samples when those read-only samples are available.
 
 ## Phase 2: decoder arithmetic
 

@@ -1,0 +1,59 @@
+{
+  "schema_version": 1,
+  "kind": "ace3_full_input_projection_serialized_vector_bindings",
+  "claim_boundary": "These hashes bind complete-input projection simulator streams generated from authenticated layer-0 q_proj samples and directed cases. They do not revise the historical G128 primitive evidence.",
+  "generation": {
+    "seed": 2900610818,
+    "model_repository": "Qwen/Qwen2.5-0.5B-Instruct-AWQ",
+    "model_revision": "db09cd27ead7fee40cdee309693cf83601b9c899",
+    "in_features": 896,
+    "out_features": 896,
+    "group_size": 128,
+    "group_count": 7,
+    "cross_acc_bits": 102,
+    "transaction_count": 7,
+    "output_count": 14,
+    "metadata_count": 98,
+    "pair_count": 12544,
+    "official_output_count": 8,
+    "synthetic_output_count": 6
+  },
+  "serialized_artifacts": [
+    {
+      "file": "manifest.json",
+      "sha256": "0619f42d47cb6617da93a857dbbd64828842ae0eb9fc6ef6a726d6b812255331",
+      "byte_count": 9996,
+      "line_count": 365
+    },
+    {
+      "file": "transactions.hex",
+      "sha256": "7306f9d79f20ff960b3df21121676904368b0a62d94db9f6ced14b948b343bfb",
+      "byte_count": 56,
+      "line_count": 7
+    },
+    {
+      "file": "expected.hex",
+      "sha256": "a6ec52b131112fe416b748fbe06c6d506a4fc9a99d695792258d56b648620a4f",
+      "byte_count": 490,
+      "line_count": 14
+    },
+    {
+      "file": "meta.hex",
+      "sha256": "5ef481ccbcfd4277717c3c5911552027d56c9f94a90cc96e2970fc3a242fe02d",
+      "byte_count": 1274,
+      "line_count": 98
+    },
+    {
+      "file": "pairs.hex",
+      "sha256": "e82464ea4f5faa1cd3954aeeed746eeb1c68837b43c74e4afcf1cd8ca1ca6527",
+      "byte_count": 163072,
+      "line_count": 12544
+    },
+    {
+      "file": "projection_params.svh",
+      "sha256": "2294164a2688a570cc082b1fbfc79f374d6386cdf60ff79550c7d535f015d52e",
+      "byte_count": 180,
+      "line_count": 4
+    }
+  ]
+}

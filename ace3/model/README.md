@@ -8,3 +8,10 @@ verification references, not accelerator implementations or performance paths.
 sample location and places all generated files under `build/vectors/`.
 `validate_vectors.py` authenticates every serialized output against the
 source-controlled standalone binding contract before any simulator runs.
+
+`projection_oracle.py`, `generate_projection_vectors.py`, and
+`validate_projection_vectors.py` extend the same integer-only arithmetic to
+complete input reductions while keeping the historical primitive artifacts
+unchanged. Generation re-authenticates the fixed model revision, config,
+native-GEMM packing source, and sampled qweight/qzero/scale payloads; validation
+recomputes every serialized output from the simulator streams.

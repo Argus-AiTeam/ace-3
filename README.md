@@ -31,11 +31,12 @@ These are software-reference findings, not RTL or hardware evidence.
 
 | Profile | Intent | Status |
 | --- | --- | --- |
-| `AWQ_W4A16` | Native AWQ G128 weights with FP16 activations | In development |
+| `AWQ_W4A16` | Native AWQ G128 weights with FP16 activations | Full-input sequential projection RTL verified |
 | `ACE_W4A8` | Compatibility with the existing strict integer line | Planned |
 
-The first RTL milestone is a reusable AWQ W4A16 projection primitive with an
-independent bit-level oracle and open-source simulation evidence.
+The implemented RTL boundary now includes the accepted G128 primitive and a
+parameterized sequential engine that composes every input group for a tiled
+set of output channels.
 
 ## Repository layout
 
@@ -51,10 +52,11 @@ docs/          Architecture and roadmap
 Generated logs, model weights, build outputs, and local evidence bundles are not
 source files and must not be committed by default.
 
-## Standalone primitive validation
+## Standalone validation
 
-The promoted G128 dot lane has a repository-root validation entry point. It
-uses only Python, GNU Make, Icarus Verilog, and Verilator:
+The accepted G128 dot lane and full-input projection engine share a
+repository-root validation entry point using only Python, GNU Make, Icarus
+Verilog, and Verilator:
 
 ```sh
 make clean
@@ -69,8 +71,9 @@ under ignored `build/`. `build/logs/` records each command and result.
 
 Every `make test` invocation deletes and regenerates `build/vectors/`, reruns
 the oracle and JSON validation, recompiles and reruns both Icarus tests, and
-rebuilds and reruns Verilator before printing the aggregate pass line. No
-semantic check is stamp-cached.
+rebuilds and reruns Verilator. It separately regenerates, authenticates, and
+simulates full-input projection vectors before printing the aggregate pass
+line. No semantic check is stamp-cached.
 
 The historical frozen manifest remains byte-identical. A separate
 source-controlled standalone binding contract authenticates SHA256, byte
@@ -85,6 +88,37 @@ results, protocol invariants, Icarus four-state X/Z probes, and an independent
 Verilator run. Verilator is a two-state simulator in this configuration, so
 X/Z claims come only from the bounded Icarus test. These are dynamic
 simulation checks, not formal verification.
+
+## Full-input projection boundary
+
+`ace3_awq_w4a16_projection_engine` is parameterized by `IN_FEATURES` and
+`OUT_FEATURES`. It sequences a contiguous output tile, consumes one metadata
+record and 128 activation/qweight pairs per AWQ group, sign-extends each exact
+96-bit Q47.48 group accumulator into a 102-bit Q53.48 cross-group accumulator,
+and rounds once after all groups. It never adds the primitive's already-rounded
+FP16 group outputs.
+
+| Modules | Input features | Output features | Groups |
+| --- | ---: | ---: | ---: |
+| q/o projections | 896 | 896 | 7 |
+| k/v projections | 896 | 128 | 7 |
+| gate/up projections | 896 | 4864 | 7 |
+| down projection | 4864 | 896 | 38 |
+
+Official-tensor numerical evidence uses authenticated layer-0 `q_proj`
+qweight, qzeros, and scales from
+`Qwen/Qwen2.5-0.5B-Instruct-AWQ@db09cd27ead7fee40cdee309693cf83601b9c899`
+with deterministic generated FP16 activations. It covers channels 4 through 11
+over all 896 inputs. Directed outputs cover cross-group round-once
+cancellation, saturation, subnormal, zero, and invalid operands. Other
+geometries are elaborated and linted with both simulators; they are not claimed
+as official-tensor numerical matches.
+
+Measured RTL-simulation latency for this intentionally sequential single-lane
+engine is 910 cycles from accepted start or previous output acceptance to
+`out_valid` for 896 inputs, and 4,940 cycles for a 4,864-input synthetic-zero
+output. Output acceptance takes one additional cycle. These are simulation
+cycle counts, not synthesis, timing, or performance measurements.
 
 ## Evidence policy
 
@@ -106,4 +140,6 @@ path. ACE-3 does not move, rename, or overwrite ACE-2 RTL. Reuse must happen
 through explicit, reviewed interfaces and independently reproducible evidence.
 
 See [Architecture](docs/ARCHITECTURE.md),
-[Roadmap](docs/ROADMAP.md), and [Contributing](CONTRIBUTING.md).
+[Roadmap](docs/ROADMAP.md),
+[projection result](docs/results/AWQ_W4A16_PROJECTION_CF02.md), and
+[Contributing](CONTRIBUTING.md).

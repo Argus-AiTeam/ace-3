@@ -7,3 +7,9 @@ here. A contract is descriptive evidence and does not by itself certify RTL.
 case manifest. `awq_w4a16_g128_standalone_vector_bindings.json` is a separate
 standalone provenance contract that binds every serialized simulator input by
 SHA256 without rewriting the historical manifest.
+
+`awq_w4a16_projection_engine.json` defines the additive full-input engine,
+fixed-revision authenticated Qwen geometries, corrected native-GEMM indexing,
+the 102-bit cross-group accumulator, and cycle contract.
+`awq_w4a16_projection_vector_bindings.json` separately binds all complete-input
+projection simulator streams.

@@ -1,0 +1,141 @@
+{
+  "schema_version": 1,
+  "conclusion": "FULL_INPUT_SEQUENTIAL_PROJECTION_ENGINE",
+  "implementation": "ace3/rtl/ace3_awq_w4a16_projection_engine.sv",
+  "composition": {
+    "group_primitive": "ace3/rtl/ace3_awq_w4a16_g128_dot_lane.sv",
+    "group_primitive_sha256": "5cb3e3534cb0f556010c91c9888d2634cffc46410296227a5c2e524de3745e7c",
+    "group_accumulator": "signed 96-bit Q47.48",
+    "group_result_usage": "acc_q47_48_o only; the primitive FP16 result is not accumulated",
+    "final_rounding": "one binary16 round-to-nearest-ties-to-even conversion after every input group has been summed"
+  },
+  "ace2_evolution_audit": {
+    "accepted_source_revision": "8edf99e16633e7877f6be357cae4ddc4b9a8fb97",
+    "audited_sources": [
+      "rtl/ace2_w4a8_proj_core.sv",
+      "rtl/ace2_shell.sv",
+      "tools/ace2_projection_reference.py",
+      "verification/tb/ace2_w4a8_proj_tb.sv",
+      "verification/verilator/ace2_shell_oproj_harness.sv",
+      "verification/verilator/ace2_shell_oproj_main.cpp"
+    ],
+    "reused": [
+      "separate start, pair, metadata, and output ready-valid channels",
+      "handshake-gated state and index advancement",
+      "active-low asynchronous reset, synchronous clear abort, and output retention until acceptance"
+    ],
+    "adapted": [
+      "ACE-2 output-major shell scheduling becomes output-major then G128-group-major sequencing with explicit native tensor indices",
+      "ACE-2 variable-ready protocol tests become deterministic metadata, pair, and output stalls plus stable-output checks",
+      "the independent fixed-point reference pattern becomes an independent native-AWQ FP16 oracle"
+    ],
+    "replaced": [
+      "signed symmetric INT4 by INT8 arithmetic and fixed multiplier/right-shift requantization",
+      "32-bit accumulation and INT8 output saturation",
+      "shell-coupled memory addressing and writeback, which are outside this stream-engine milestone"
+    ],
+    "copy_policy": "No ACE-2 arithmetic RTL is copied. Compatible interface and control patterns are re-expressed for native asymmetric AWQ W4A16 semantics and verified independently."
+  },
+  "authenticated_model_config": {
+    "path": "official/config.json",
+    "sha256": "bd20ae34a91eb38230b870d39f56677d1cda1e8b6688ad627e6efb6ca9f44090",
+    "repository": "Qwen/Qwen2.5-0.5B-Instruct-AWQ",
+    "revision": "db09cd27ead7fee40cdee309693cf83601b9c899",
+    "model_api_path": "official/model-api.json",
+    "model_api_sha256": "9a4a3beea2283031c91d0de501fcb1a8613f9b5f5d6039111eac421833d5a768",
+    "model_safetensors_lfs_sha256": "c50d807b7bed7ff314308972e0f4bcf4e5a70bc60ad88fc7df53940831ed0c1b",
+    "hidden_size": 896,
+    "intermediate_size": 4864,
+    "num_attention_heads": 14,
+    "num_key_value_heads": 2,
+    "head_dim": 64,
+    "awq_bits": 4,
+    "awq_group_size": 128,
+    "awq_version": "gemm",
+    "awq_zero_point": true
+  },
+  "authenticated_tensor_contract": {
+    "path": "attempt-0001/tensor-contract.json",
+    "sha256": "b3754c03658534b79ddf8f667049e9122d631f84005fb219faf0e5e9de56e2aa",
+    "evidence_manifest_sha256": "60523500426692f82f1b23f880eac48fe694193d09ecee6e02e64b91585ff0a8",
+    "native_awq_correction_path": "repair-0001/tensor-contract-correction.json",
+    "native_awq_correction_sha256": "601e726d6a524d01bc48ef435831d9fe23cf9a99ad86e22c2382d5af74cded66",
+    "packing_source_path": "official/autoawq-v0.2.9-packing_utils.py",
+    "packing_source_sha256": "65eab3eabe3f55e300ffbab5feac59c49322d985f42dcda4e2288859fb9a4abe"
+  },
+  "supported_geometries": [
+    {
+      "modules": ["q_proj", "o_proj"],
+      "in_features": 896,
+      "out_features": 896,
+      "groups": 7,
+      "packed_output_words": 112
+    },
+    {
+      "modules": ["k_proj", "v_proj"],
+      "in_features": 896,
+      "out_features": 128,
+      "groups": 7,
+      "packed_output_words": 16
+    },
+    {
+      "modules": ["gate_proj", "up_proj"],
+      "in_features": 896,
+      "out_features": 4864,
+      "groups": 7,
+      "packed_output_words": 608
+    },
+    {
+      "modules": ["down_proj"],
+      "in_features": 4864,
+      "out_features": 896,
+      "groups": 38,
+      "packed_output_words": 112
+    }
+  ],
+  "parameters": {
+    "IN_FEATURES": {
+      "default": 896,
+      "constraints": "multiple of 128, 128 through 4864"
+    },
+    "OUT_FEATURES": {
+      "default": 896,
+      "constraints": "multiple of 8, 8 through 4864"
+    }
+  },
+  "accumulator": {
+    "format": "signed 102-bit Q53.48",
+    "width_derivation": "96 group bits + ceil(log2(38 maximum groups)) = 102 bits",
+    "overflow_policy": "sign-extend and add every accepted 96-bit group result exactly; no internal saturation or wrap is possible for up to 38 representable group results",
+    "final_overflow": "saturate only during the single final binary16 conversion"
+  },
+  "streaming": {
+    "start": "first_output_channel_i plus output_count_i selects a contiguous output tile within OUT_FEATURES",
+    "metadata_order": "for each output channel in ascending order, groups 0 through IN_FEATURES/128-1",
+    "pair_order": "within each group, input indices group*128 through group*128+127",
+    "qweight_index": "qweight[input_index][floor(output_channel/8)]",
+    "qzero_index": "qzeros[group_index][floor(output_channel/8)]",
+    "scale_index": "scales[group_index][output_channel]",
+    "logical_lane": "output_channel mod 8",
+    "logical_lane_to_physical_nibble": [0, 4, 1, 5, 2, 6, 3, 7],
+    "backpressure": "metadata, pair, and output channels use ready/valid; output channel, result, accumulator, invalid, and saturation remain stable while stalled",
+    "reset": "active-low asynchronous abort and state clear",
+    "clear": "active-high synchronous abort and state clear"
+  },
+  "sequential_cycle_model": {
+    "per_group_without_stalls": "1 metadata acceptance + 128 pair acceptances + 1 group-result collection = 130 cycles",
+    "compute_cycles_per_896_input_output": 910,
+    "compute_cycles_per_4864_input_output": 4940,
+    "output_visibility": "out_valid is visible after the final group-result collection; output acceptance consumes one additional cycle"
+  },
+  "excluded": [
+    "parallel lanes",
+    "activation or weight SRAM",
+    "automatic tensor DMA",
+    "decoder integration",
+    "all-module numerical verification",
+    "synthesis/PPA",
+    "FPGA",
+    "full-model execution"
+  ]
+}
