@@ -45,6 +45,35 @@ milestone contract, not a claim that the final architecture has been selected.
 The synthesizable DUT must not use SystemVerilog `real`, DPI-based arithmetic,
 or proprietary floating-point IP as a substitute for the datapath.
 
+### Streaming and four-state hardening boundary
+
+For legal binary-valued traffic, the accepted arithmetic and transaction
+interface are unchanged. `start_ready_o` and `pair_ready_o` are suppressed
+during reset or synchronous clear so a producer cannot count a transaction
+that the DUT is aborting. Output acceptance is likewise blocked unless clear
+is known deasserted.
+
+The standalone Icarus test adds bounded four-state probes for X and Z on
+`start_valid_i`, `pair_valid_i`, `out_ready_i`, and `clear_i`, including
+unknown payload while no legal handshake exists. A property-style monitor
+requires accepted payload to be fully known, exactly 128 accepted pairs before
+each output, known output/status whenever `out_valid_o` is asserted, and stable
+output/status/accumulator while backpressured. Reset, clear, completed, and
+aborted transaction counts are checked explicitly.
+
+This is runtime simulation coverage, not formal verification. Clock and reset
+must be driven as known binary values. Accepted X/Z payload is a testbench
+protocol violation rather than a synthesized hardware error-recovery mode.
+Verilator 4.038 is two-state and repeats the legal protocol and arithmetic
+checks but cannot substantiate X/Z behavior.
+
+The generated case manifest retains its historical CF01 hash. Standalone
+serialization is bound separately by
+`ace3/contracts/awq_w4a16_g128_standalone_vector_bindings.json`, which records
+SHA256 for every file consumed by Icarus or Verilator. The root test
+regenerates and authenticates those files on every invocation before either
+simulator runs; a tampered build-local copy is required to fail validation.
+
 ## Isolation from ACE-2
 
 ACE-2 source paths are not part of this repository. ACE-3 may reproduce an

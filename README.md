@@ -51,6 +51,41 @@ docs/          Architecture and roadmap
 Generated logs, model weights, build outputs, and local evidence bundles are not
 source files and must not be committed by default.
 
+## Standalone primitive validation
+
+The promoted G128 dot lane has a repository-root validation entry point. It
+uses only Python, GNU Make, Icarus Verilog, and Verilator:
+
+```sh
+make clean
+make OFFICIAL_TENSOR_DIR=/home/argustest/ace-2/build/ace2_chat_demo/qwen25-05b-instruct-awq-software-baseline-cf01/official test
+```
+
+`OFFICIAL_TENSOR_DIR` is explicit and configurable; the default is the path
+shown above. The generator reads the three official layer-0 `q_proj` sample
+files in place, verifies their frozen SHA256 values, and never writes to that
+directory. Vectors, simulator objects, binaries, and logs are created only
+under ignored `build/`. `build/logs/` records each command and result.
+
+Every `make test` invocation deletes and regenerates `build/vectors/`, reruns
+the oracle and JSON validation, recompiles and reruns both Icarus tests, and
+rebuilds and reruns Verilator before printing the aggregate pass line. No
+semantic check is stamp-cached.
+
+The historical frozen manifest remains byte-identical. A separate
+source-controlled standalone binding contract authenticates SHA256, byte
+count, and line count for all five serialized artifacts consumed by the
+validator or simulators: `manifest.json`, `meta.hex`, `pairs.hex`, `cases.txt`,
+and `vector_params.svh`. Validation occurs before simulation, and `make test`
+also confirms that a tampered copy of `meta.hex` is rejected.
+
+The target checks the integer-only oracle, deterministic seed `0xACE3CF01`, 30
+cases and 3,840 G128 pairs, exact accumulator values, zero-ULP binary16
+results, protocol invariants, Icarus four-state X/Z probes, and an independent
+Verilator run. Verilator is a two-state simulator in this configuration, so
+X/Z claims come only from the bounded Icarus test. These are dynamic
+simulation checks, not formal verification.
+
 ## Evidence policy
 
 Every published claim must identify its execution boundary:

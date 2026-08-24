@@ -33,6 +33,12 @@ module ace3_awq_w4a16_g128_dot_lane_tb;
     integer case_index;
     integer pair_index;
     integer stall_index;
+    integer vector_start_count;
+    integer vector_pair_count;
+    integer vector_output_count;
+    string vector_dir;
+    string meta_path;
+    string pairs_path;
 
     ace3_awq_w4a16_g128_dot_lane dut (
         .clk_i(clk),
@@ -80,7 +86,7 @@ module ace3_awq_w4a16_g128_dot_lane_tb;
             rst_n = 1'b0;
             #2;
             if (out_valid || pair_ready || (out_f16 !== 16'd0) ||
-                invalid_operand || saturation) begin
+                (accumulator !== 96'sd0) || invalid_operand || saturation) begin
                 $display("RESET_ASYNC_FAIL");
                 failures = failures + 1;
             end
@@ -126,7 +132,8 @@ module ace3_awq_w4a16_g128_dot_lane_tb;
             pair_valid = 1'b0;
             rst_n = 1'b0;
             #2;
-            if (out_valid || pair_ready || invalid_operand || saturation) begin
+            if (out_valid || pair_ready || (out_f16 !== 16'd0) ||
+                (accumulator !== 96'sd0) || invalid_operand || saturation) begin
                 $display("RESET_MID_ACTIVITY_FAIL");
                 failures = failures + 1;
             end
@@ -150,8 +157,10 @@ module ace3_awq_w4a16_g128_dot_lane_tb;
             @(posedge clk);
             @(negedge clk);
             clear = 1'b0;
+            #1;
             if (!start_ready || out_valid || pair_ready ||
-                (accumulator !== 96'sd0)) begin
+                (out_f16 !== 16'd0) || (accumulator !== 96'sd0) ||
+                invalid_operand || saturation) begin
                 $display("CLEAR_MID_ACTIVITY_FAIL");
                 failures = failures + 1;
             end
@@ -163,6 +172,7 @@ module ace3_awq_w4a16_g128_dot_lane_tb;
         integer selected_pair;
         begin
             start_case(selected_case);
+            vector_start_count = vector_start_count + 1;
             for (selected_pair = 0; selected_pair < 128;
                  selected_pair = selected_pair + 1) begin
                 if ((selected_pair % 11) == 3) begin
@@ -184,7 +194,8 @@ module ace3_awq_w4a16_g128_dot_lane_tb;
                     $display("PAIR_HANDSHAKE_FAIL case=%0d pair=%0d",
                              selected_case, selected_pair);
                     failures = failures + 1;
-                end
+                end else
+                    vector_pair_count = vector_pair_count + 1;
                 @(negedge clk);
                 pair_valid = 1'b0;
             end
@@ -232,6 +243,13 @@ module ace3_awq_w4a16_g128_dot_lane_tb;
             end
             @(negedge clk);
             out_ready = 1'b1;
+            if (out_valid)
+                vector_output_count = vector_output_count + 1;
+            else begin
+                $display("OUTPUT_HANDSHAKE_COUNT_FAIL case=%0d",
+                         selected_case);
+                failures = failures + 1;
+            end
             @(posedge clk);
             @(negedge clk);
             out_ready = 1'b0;
@@ -240,20 +258,39 @@ module ace3_awq_w4a16_g128_dot_lane_tb;
 
     initial begin
         failures = 0;
+        vector_start_count = 0;
+        vector_pair_count = 0;
+        vector_output_count = 0;
         rst_n = 1'b1;
         drive_idle();
-        $readmemh("generated/meta.hex", meta_mem);
-        $readmemh("generated/pairs.hex", pair_mem);
+        if (!$value$plusargs("VECTOR_DIR=%s", vector_dir))
+            vector_dir = "build/vectors";
+        meta_path = {vector_dir, "/meta.hex"};
+        pairs_path = {vector_dir, "/pairs.hex"};
+        $readmemh(meta_path, meta_mem);
+        $readmemh(pairs_path, pair_mem);
         apply_reset();
         test_abort_paths();
         for (case_index = 0; case_index < VECTOR_CASES;
              case_index = case_index + 1)
             run_case(case_index);
+        if ((vector_start_count != VECTOR_CASES) ||
+            (vector_pair_count != VECTOR_PAIRS) ||
+            (vector_output_count != VECTOR_CASES)) begin
+            $display(
+                "TRANSACTION_COUNT_FAIL starts=%0d pairs=%0d outputs=%0d",
+                vector_start_count,
+                vector_pair_count,
+                vector_output_count
+            );
+            failures = failures + 1;
+        end
         if (failures == 0) begin
             $display(
-                "AWQ_W4A16_G128_PASS cases=%0d pairs=%0d ulp_bound=0 reset=pass clear=pass backpressure=pass",
+                "AWQ_W4A16_G128_PASS cases=%0d pairs=%0d ulp_bound=0 reset=pass clear=pass backpressure=pass protocol=pass transactions=%0d",
                 VECTOR_CASES,
-                VECTOR_PAIRS
+                VECTOR_PAIRS,
+                vector_output_count
             );
             $finish;
         end

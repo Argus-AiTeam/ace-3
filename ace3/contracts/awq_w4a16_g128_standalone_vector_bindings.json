@@ -1,0 +1,64 @@
+{
+  "schema_version": 1,
+  "kind": "ace3_standalone_serialized_vector_bindings",
+  "claim_boundary": "This source-controlled contract binds deterministic standalone simulator inputs. It supplements, and does not replace or rewrite, the historical accepted CF01 manifest.",
+  "generation": {
+    "seed": 2900610817,
+    "group_size": 128,
+    "case_count": 30,
+    "pair_count": 3840,
+    "exact_ulp_bound": 0
+  },
+  "historical_frozen_manifest": {
+    "path": "ace3/contracts/awq_w4a16_g128_vectors_manifest.json",
+    "sha256": "39140a1555ea07697b59256892ad59560a633513c338bcf42fdcb1fca365b363"
+  },
+  "serialized_artifacts": [
+    {
+      "file": "manifest.json",
+      "sha256": "39140a1555ea07697b59256892ad59560a633513c338bcf42fdcb1fca365b363",
+      "byte_count": 8229,
+      "line_count": 340,
+      "consumers": [
+        "ace3/model/validate_vectors.py"
+      ]
+    },
+    {
+      "file": "meta.hex",
+      "sha256": "432ed0246efbd91a154763701654bcbaabc848b6132e5a3193b2641515e0e60d",
+      "byte_count": 1290,
+      "line_count": 30,
+      "consumers": [
+        "ace3/tb/ace3_awq_w4a16_g128_dot_lane_tb.sv"
+      ]
+    },
+    {
+      "file": "pairs.hex",
+      "sha256": "9253b5ee7dc4ed7f9df131def3a2dd0ccd6adca477d2e4848166d8029dfde5e3",
+      "byte_count": 49920,
+      "line_count": 3840,
+      "consumers": [
+        "ace3/tb/ace3_awq_w4a16_g128_dot_lane_tb.sv",
+        "ace3/tb/ace3_awq_w4a16_g128_dot_lane_main.cpp"
+      ]
+    },
+    {
+      "file": "cases.txt",
+      "sha256": "55ef82bbb13d66f287827096bc05374ff47668be8dc832c87b2ff9aa0db9a09e",
+      "byte_count": 2334,
+      "line_count": 30,
+      "consumers": [
+        "ace3/tb/ace3_awq_w4a16_g128_dot_lane_main.cpp"
+      ]
+    },
+    {
+      "file": "vector_params.svh",
+      "sha256": "032d0a329ee931c459064af1f015e6a1e3d472d62d13c3f8aca7655d22fe5348",
+      "byte_count": 78,
+      "line_count": 2,
+      "consumers": [
+        "ace3/tb/ace3_awq_w4a16_g128_dot_lane_tb.sv"
+      ]
+    }
+  ]
+}

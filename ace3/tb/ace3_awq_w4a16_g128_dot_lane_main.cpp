@@ -1,6 +1,7 @@
 #include "Vace3_awq_w4a16_g128_dot_lane.h"
 #include "verilated.h"
 
+#include <cstdlib>
 #include <cstdint>
 #include <fstream>
 #include <iostream>
@@ -19,6 +20,32 @@ struct Case {
     bool saturation;
 };
 
+struct InputPaths {
+    std::string cases;
+    std::string pairs;
+};
+
+static InputPaths parse_input_paths(int argc, char** argv) {
+    InputPaths paths;
+    for (int index = 1; index < argc; ++index) {
+        const std::string argument = argv[index];
+        if ((argument == "--cases" || argument == "--pairs") &&
+            index + 1 >= argc) {
+            std::cerr << argument << " requires a path\n";
+            std::exit(2);
+        }
+        if (argument == "--cases")
+            paths.cases = argv[++index];
+        else if (argument == "--pairs")
+            paths.pairs = argv[++index];
+    }
+    if (paths.cases.empty() || paths.pairs.empty()) {
+        std::cerr << "usage: verilator-sim --cases PATH --pairs PATH\n";
+        std::exit(2);
+    }
+    return paths;
+}
+
 static void tick(Vace3_awq_w4a16_g128_dot_lane* top) {
     top->clk_i = 0;
     top->eval();
@@ -28,6 +55,10 @@ static void tick(Vace3_awq_w4a16_g128_dot_lane* top) {
 
 static std::vector<Case> read_cases(const char* path) {
     std::ifstream input(path);
+    if (!input) {
+        std::cerr << "cannot open case records: " << path << "\n";
+        std::exit(2);
+    }
     std::vector<Case> cases;
     std::string line;
     while (std::getline(input, line)) {
@@ -65,10 +96,19 @@ static std::vector<Case> read_cases(const char* path) {
 
 static std::vector<uint64_t> read_pairs(const char* path) {
     std::ifstream input(path);
+    if (!input) {
+        std::cerr << "cannot open pair records: " << path << "\n";
+        std::exit(2);
+    }
     std::vector<uint64_t> pairs;
     std::string line;
-    while (std::getline(input, line))
+    while (std::getline(input, line)) {
+        if (line.size() != 12) {
+            std::cerr << "invalid pair record: " << line << "\n";
+            std::exit(2);
+        }
         pairs.push_back(std::stoull(line, nullptr, 16));
+    }
     return pairs;
 }
 
@@ -99,24 +139,47 @@ static void start_case(
     top->start_valid_i = 0;
 }
 
+static bool state_is_cleared(
+    const Vace3_awq_w4a16_g128_dot_lane* top
+) {
+    return !top->out_valid_o && !top->pair_ready_o &&
+           top->start_ready_o && top->out_f16_o == 0 &&
+           top->acc_q47_48_o[0] == 0 && top->acc_q47_48_o[1] == 0 &&
+           top->acc_q47_48_o[2] == 0 && !top->invalid_operand_o &&
+           !top->saturation_o;
+}
+
 int main(int argc, char** argv) {
     Verilated::commandArgs(argc, argv);
+    const InputPaths paths = parse_input_paths(argc, argv);
     auto* top = new Vace3_awq_w4a16_g128_dot_lane;
-    const auto cases = read_cases("generated/cases.txt");
-    const auto pairs = read_pairs("generated/pairs.hex");
+    const auto cases = read_cases(paths.cases.c_str());
+    const auto pairs = read_pairs(paths.pairs.c_str());
     unsigned failures = 0;
+    size_t vector_starts = 0;
+    size_t vector_pairs = 0;
+    size_t vector_outputs = 0;
+
+    if (cases.size() != 30 || pairs.size() != 3840) {
+        std::cerr << "vector geometry mismatch: cases=" << cases.size()
+                  << " pairs=" << pairs.size() << "\n";
+        delete top;
+        return 2;
+    }
 
     drive_idle(top);
     top->rst_ni = 0;
     top->eval();
     if (top->out_valid_o || top->pair_ready_o || top->invalid_operand_o ||
-        top->saturation_o)
+        top->saturation_o || top->out_f16_o ||
+        top->acc_q47_48_o[0] || top->acc_q47_48_o[1] ||
+        top->acc_q47_48_o[2])
         ++failures;
     tick(top);
     tick(top);
     top->rst_ni = 1;
     tick(top);
-    if (!top->start_ready_o)
+    if (!state_is_cleared(top))
         ++failures;
 
     start_case(top, cases.at(0));
@@ -135,12 +198,26 @@ int main(int argc, char** argv) {
         ++failures;
     top->rst_ni = 1;
     tick(top);
-    if (!top->start_ready_o)
+    if (!state_is_cleared(top))
+        ++failures;
+
+    start_case(top, cases.at(0));
+    top->qweight_i = pairs.at(0) & 0xffffffffu;
+    top->activation_f16_i = pairs.at(0) >> 32;
+    top->pair_valid_i = 1;
+    tick(top);
+    top->pair_valid_i = 0;
+    top->clear_i = 1;
+    tick(top);
+    top->clear_i = 0;
+    top->eval();
+    if (!state_is_cleared(top))
         ++failures;
 
     for (size_t case_index = 0; case_index < cases.size(); ++case_index) {
         const Case& item = cases.at(case_index);
         start_case(top, item);
+        ++vector_starts;
         for (unsigned pair_index = 0; pair_index < 128; ++pair_index) {
             if (pair_index % 11 == 3) {
                 top->pair_valid_i = 0;
@@ -153,8 +230,11 @@ int main(int argc, char** argv) {
             top->qweight_i = pair & 0xffffffffu;
             top->activation_f16_i = pair >> 32;
             top->pair_valid_i = 1;
-            if (!top->pair_ready_o)
+            if (!top->pair_ready_o) {
                 ++failures;
+            } else {
+                ++vector_pairs;
+            }
             tick(top);
             top->pair_valid_i = 0;
         }
@@ -192,21 +272,33 @@ int main(int argc, char** argv) {
             ++failures;
         }
         top->out_ready_i = 1;
+        if (!top->out_valid_o)
+            ++failures;
+        else
+            ++vector_outputs;
         tick(top);
         top->out_ready_i = 0;
+        if (top->out_valid_o || !top->start_ready_o)
+            ++failures;
     }
 
     top->clear_i = 1;
     tick(top);
     top->clear_i = 0;
-    if (!top->start_ready_o || top->out_valid_o || top->pair_ready_o)
+    top->eval();
+    if (!state_is_cleared(top))
+        ++failures;
+    if (vector_starts != 30 || vector_pairs != 3840 ||
+        vector_outputs != 30)
         ++failures;
 
     if (failures == 0) {
         std::cout
             << "AWQ_W4A16_G128_VERILATOR_PASS cases=" << cases.size()
             << " pairs=" << pairs.size()
-            << " ulp_bound=0 reset=pass backpressure=pass\n";
+            << " ulp_bound=0 reset=pass clear=pass backpressure=pass"
+            << " protocol=pass transactions=" << vector_outputs
+            << " four_state=unsupported\n";
     } else {
         std::cerr << "AWQ_W4A16_G128_VERILATOR_FAIL failures=" << failures
                   << "\n";

@@ -3,6 +3,7 @@
 
 from __future__ import annotations
 
+import argparse
 import hashlib
 import json
 import random
@@ -11,37 +12,51 @@ from pathlib import Path
 
 from awq_bit_oracle import AWQ_REVERSE_ORDER, GROUP_SIZE, complete_dot
 
-TARGET = Path(__file__).resolve().parents[1]
-REPO = Path(__file__).resolve().parents[4]
-GENERATED = TARGET / "generated"
 SEED = 0xACE3CF01
-SOURCE_BASE = (
-    REPO
-    / "build/ace2_chat_demo/qwen25-05b-instruct-awq-software-baseline-cf01"
-    / "official"
-)
-SOURCES = {
+SOURCES: dict[str, tuple[str, str]] = {
     "qweight": (
-        SOURCE_BASE / "sample-model_layers_0_self_attn_q_proj-qweight.bin",
+        "sample-model_layers_0_self_attn_q_proj-qweight.bin",
         "db4770023698611ff0115d220590fdb8232fbe5dcbd22fbe80e0bcdc838caf87",
     ),
     "qzeros": (
-        SOURCE_BASE / "sample-model_layers_0_self_attn_q_proj-qzeros.bin",
+        "sample-model_layers_0_self_attn_q_proj-qzeros.bin",
         "3cf7cd5712dd7523db3c7dd47c2b1d582e19545036f75b95ff0331c1fc0c596c",
     ),
     "scales": (
-        SOURCE_BASE / "sample-model_layers_0_self_attn_q_proj-scales.bin",
+        "sample-model_layers_0_self_attn_q_proj-scales.bin",
         "687adc7d7bcd6e45a065f914dd27a1284b7e48260491bb0d26ae1e13b78ac321",
     ),
 }
 
 
-def checked_bytes(name: str) -> bytes:
-    path, expected = SOURCES[name]
+def parse_args() -> argparse.Namespace:
+    parser = argparse.ArgumentParser(
+        description="Generate deterministic ACE-3 AWQ G128 vectors"
+    )
+    parser.add_argument(
+        "--official-tensor-dir",
+        required=True,
+        type=Path,
+        help="read-only directory containing the three official layer-0 q_proj samples",
+    )
+    parser.add_argument(
+        "--output-dir",
+        required=True,
+        type=Path,
+        help="directory for generated vectors (the root build uses build/vectors)",
+    )
+    return parser.parse_args()
+
+
+def checked_bytes(name: str, source_base: Path) -> bytes:
+    filename, expected = SOURCES[name]
+    path = source_base / filename
     payload = path.read_bytes()
     actual = hashlib.sha256(payload).hexdigest()
     if actual != expected:
-        raise RuntimeError(f"{name} source hash mismatch: {actual}")
+        raise RuntimeError(
+            f"{name} source hash mismatch for {path}: expected {expected}, got {actual}"
+        )
     return payload
 
 
@@ -101,10 +116,10 @@ def finite_random_f16(rng: random.Random) -> int:
     return (sign << 15) | (exponent << 10) | rng.randrange(1024)
 
 
-def build_cases() -> list[dict[str, object]]:
-    qweight_raw = checked_bytes("qweight")
-    qzero_raw = checked_bytes("qzeros")
-    scale_raw = checked_bytes("scales")
+def build_cases(source_base: Path) -> list[dict[str, object]]:
+    qweight_raw = checked_bytes("qweight", source_base)
+    qzero_raw = checked_bytes("qzeros", source_base)
+    scale_raw = checked_bytes("scales", source_base)
     qweights = list(struct.unpack(f"<{len(qweight_raw) // 4}I", qweight_raw))
     qzeros = list(struct.unpack(f"<{len(qzero_raw) // 4}I", qzero_raw))
     scales = list(struct.unpack(f"<{len(scale_raw) // 2}H", scale_raw))
@@ -192,8 +207,8 @@ def build_cases() -> list[dict[str, object]]:
     return cases
 
 
-def write_vectors(cases: list[dict[str, object]]) -> None:
-    GENERATED.mkdir(parents=True, exist_ok=True)
+def write_vectors(cases: list[dict[str, object]], generated: Path) -> None:
+    generated.mkdir(parents=True, exist_ok=True)
     meta_lines: list[str] = []
     pair_lines: list[str] = []
     manifest_cases: list[dict[str, object]] = []
@@ -228,9 +243,9 @@ def write_vectors(cases: list[dict[str, object]]) -> None:
                 )
             }
         )
-    (GENERATED / "meta.hex").write_text("\n".join(meta_lines) + "\n")
-    (GENERATED / "pairs.hex").write_text("\n".join(pair_lines) + "\n")
-    (GENERATED / "cases.txt").write_text(
+    (generated / "meta.hex").write_text("\n".join(meta_lines) + "\n")
+    (generated / "pairs.hex").write_text("\n".join(pair_lines) + "\n")
+    (generated / "cases.txt").write_text(
         "\n".join(
             f"{case['name']} {int(case['qzero']):08x} {int(case['scale']):04x} "
             f"{int(case['lane'])} "
@@ -241,7 +256,7 @@ def write_vectors(cases: list[dict[str, object]]) -> None:
         )
         + "\n"
     )
-    (GENERATED / "vector_params.svh").write_text(
+    (generated / "vector_params.svh").write_text(
         f"localparam integer VECTOR_CASES = {len(cases)};\n"
         f"localparam integer VECTOR_PAIRS = {len(cases) * GROUP_SIZE};\n"
     )
@@ -258,16 +273,24 @@ def write_vectors(cases: list[dict[str, object]]) -> None:
         "exact_ulp_bound": 0,
         "cases": manifest_cases,
     }
-    (GENERATED / "manifest.json").write_text(
+    (generated / "manifest.json").write_text(
         json.dumps(manifest, indent=2, sort_keys=True) + "\n"
     )
 
 
 if __name__ == "__main__":
-    generated_cases = build_cases()
-    write_vectors(generated_cases)
+    arguments = parse_args()
+    official_tensor_dir = arguments.official_tensor_dir.resolve(strict=True)
+    output_dir = arguments.output_dir.resolve()
+    if not official_tensor_dir.is_dir():
+        raise NotADirectoryError(official_tensor_dir)
+    if output_dir == official_tensor_dir or official_tensor_dir in output_dir.parents:
+        raise ValueError("output directory must not be inside the official tensor directory")
+    generated_cases = build_cases(official_tensor_dir)
+    write_vectors(generated_cases, output_dir)
     print(
         "VECTOR_PASS "
         f"seed=0x{SEED:08x} cases={len(generated_cases)} "
-        f"pairs={len(generated_cases) * GROUP_SIZE}"
+        f"pairs={len(generated_cases) * GROUP_SIZE} official_sha256=pass "
+        f"official_tensor_dir={official_tensor_dir} output_dir={output_dir}"
     )

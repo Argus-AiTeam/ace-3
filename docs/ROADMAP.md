@@ -16,8 +16,8 @@
 - [x] Pass deterministic edge vectors.
 - [x] Pass seeded random vectors against an independent bit oracle.
 - [x] Bind vectors to an official Qwen projection tensor slice.
-- [ ] Reproduce the promoted primitive from the standalone repository layout.
-- [ ] Add bounded X/Z and protocol-property coverage.
+- [x] Reproduce the promoted primitive from the standalone repository layout.
+- [x] Add bounded X/Z and protocol-property simulation coverage.
 - [ ] Scale the primitive into a complete parameterized projection engine.
 
 ## Phase 2: decoder arithmetic

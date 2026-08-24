@@ -154,8 +154,9 @@ module ace3_awq_w4a16_g128_dot_lane (
         end
     endfunction
 
-    assign start_ready_o = (state_q == ST_IDLE) && !out_valid_q;
-    assign pair_ready_o = (state_q == ST_RUN);
+    assign start_ready_o =
+        rst_ni && !clear_i && (state_q == ST_IDLE) && !out_valid_q;
+    assign pair_ready_o = rst_ni && !clear_i && (state_q == ST_RUN);
     assign out_valid_o = out_valid_q;
     assign out_f16_o = out_f16_q;
     assign acc_q47_48_o = accumulator_q;
@@ -274,7 +275,7 @@ module ace3_awq_w4a16_g128_dot_lane (
                     end
                 end
                 default: begin
-                    if (out_valid_q && out_ready_i) begin
+                    if (out_valid_q && out_ready_i && !clear_i) begin
                         out_valid_q <= 1'b0;
                         state_q <= ST_IDLE;
                     end
