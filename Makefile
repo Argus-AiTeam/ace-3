@@ -42,6 +42,27 @@ PROJECTION_CONTRACT := $(ROOT)/ace3/contracts/awq_w4a16_projection_engine.json
 PROJECTION_BINDINGS := $(ROOT)/ace3/contracts/awq_w4a16_projection_vector_bindings.json
 TAMPER_DIR := $(BUILD_DIR)/tamper-vectors
 PROJECTION_TAMPER_DIR := $(BUILD_DIR)/tamper-projection-vectors
+FP16_VECTOR_DIR := $(BUILD_DIR)/fp16_adaptation_vectors
+FP16_TAMPER_DIR := $(BUILD_DIR)/tamper-fp16-adaptation-vectors
+FP16_IVERILOG_DIR := $(BUILD_DIR)/fp16_iverilog
+FP16_IVERILOG_BIN := $(FP16_IVERILOG_DIR)/ace3_fp16_adaptation.vvp
+FP16_VERILATOR_DIR := $(BUILD_DIR)/fp16_verilator
+FP16_VERILATOR_OBJ_DIR := $(FP16_VERILATOR_DIR)/obj_dir
+FP16_VERILATOR_BIN := $(FP16_VERILATOR_OBJ_DIR)/Vace3_fp16_adaptation_verilator_top
+FP16_GEOMETRY_DIR := $(BUILD_DIR)/fp16_geometry
+FP16_FIXED_RTL := $(ROOT)/ace3/rtl/ace3_fp16_fixed.sv
+FP16_RESIDUAL_RTL := $(ROOT)/ace3/rtl/ace3_fp16_residual_add_core.sv
+FP16_RMS_RTL := $(ROOT)/ace3/rtl/ace3_fp16_rmsnorm_core.sv
+FP16_SILU_RTL := $(ROOT)/ace3/rtl/ace3_fp16_silu_gate_core.sv
+FP16_RTL := $(FP16_FIXED_RTL) $(FP16_RESIDUAL_RTL) $(FP16_RMS_RTL) $(FP16_SILU_RTL)
+FP16_ORACLE := $(ROOT)/ace3/model/fp16_adaptation_oracle.py
+FP16_GENERATOR := $(ROOT)/ace3/model/generate_fp16_adaptation_vectors.py
+FP16_VALIDATOR := $(ROOT)/ace3/model/validate_fp16_adaptation_vectors.py
+FP16_CONTRACT := $(ROOT)/ace3/contracts/fp16_adaptation_operators.json
+FP16_BINDINGS := $(ROOT)/ace3/contracts/fp16_adaptation_vector_bindings.json
+FP16_TB := $(ROOT)/ace3/tb/ace3_fp16_adaptation_tb.sv
+FP16_VERILATOR_TOP := $(ROOT)/ace3/tb/ace3_fp16_adaptation_verilator_top.sv
+FP16_CPP_TB := $(ROOT)/ace3/tb/ace3_fp16_adaptation_main.cpp
 
 IVERILOG_BIN := $(IVERILOG_DIR)/ace3_awq_w4a16_g128_dot_lane.vvp
 PROTOCOL_BIN := $(IVERILOG_DIR)/ace3_awq_w4a16_g128_dot_lane_protocol.vvp
@@ -62,7 +83,11 @@ export PYTHONDONTWRITEBYTECODE := 1
 	projection-geometry projection-iverilog-compile \
 	projection-iverilog-simulation projection-4864-compile \
 	projection-4864-simulation projection-verilator-compile \
-	projection-verilator-simulation clean
+	projection-verilator-simulation \
+	fp16-adaptation fp16-oracle fp16-vectors fp16-json-validation \
+	fp16-tamper-rejection fp16-geometry fp16-iverilog-compile \
+	fp16-iverilog-simulation fp16-verilator-compile \
+	fp16-verilator-simulation clean
 
 test:
 	@mkdir -p "$(LOG_DIR)"
@@ -88,9 +113,9 @@ test:
 	  printf '%s\n' 'REPOSITORY_HYGIENE_PASS status_unchanged=yes build_ignored=yes legacy_generated_absent=yes diff_check=pass'; \
 	} > "$$log" 2>&1 || { status=$$?; cat "$$log"; exit $$status; }; \
 	cat "$$log"
-	@printf '%s\n' 'STANDALONE_VALIDATION_PASS semantic_checks=fresh primitive=pass projection=pass serialized_sha256=pass tamper_rejection=pass iverilog=pass protocol_4state=pass verilator=pass geometry_parameters=pass hygiene=pass'
+	@printf '%s\n' 'STANDALONE_VALIDATION_PASS semantic_checks=fresh primitive=pass projection=pass fp16_adaptation=pass serialized_sha256=pass tamper_rejection=pass iverilog=pass protocol_4state=pass verilator=pass geometry_parameters=pass hygiene=pass'
 
-_validate: oracle tamper-rejection iverilog verilator projection
+_validate: oracle tamper-rejection iverilog verilator projection fp16-adaptation
 
 oracle:
 	@mkdir -p "$(BUILD_DIR)" "$(LOG_DIR)"
@@ -362,6 +387,135 @@ projection-verilator-simulation: projection-verilator-compile
 	    --meta "$(PROJECTION_VECTOR_DIR)/meta.hex" \
 	    --pairs "$(PROJECTION_VECTOR_DIR)/pairs.hex" \
 	    >> "$$log" 2>&1; then :; \
+	else status=$$?; cat "$$log"; exit $$status; fi; \
+	cat "$$log"
+
+fp16-adaptation: fp16-oracle fp16-tamper-rejection fp16-geometry \
+	fp16-iverilog-simulation fp16-verilator-simulation
+
+fp16-oracle:
+	@mkdir -p "$(BUILD_DIR)" "$(LOG_DIR)"
+	@set -eu; log="$(LOG_DIR)/fp16-adaptation-oracle.log"; \
+	printf '%s\n' '$ python3 ace3/model/fp16_adaptation_oracle.py' > "$$log"; \
+	if cd "$(ROOT)" && "$(PYTHON)" "$(FP16_ORACLE)" >> "$$log" 2>&1; then :; \
+	else status=$$?; cat "$$log"; exit $$status; fi; \
+	cat "$$log"
+
+fp16-vectors:
+	@rm -rf "$(FP16_VECTOR_DIR)"
+	@mkdir -p "$(FP16_VECTOR_DIR)" "$(LOG_DIR)"
+	@set -eu; log="$(LOG_DIR)/fp16-adaptation-vector-generation.log"; \
+	printf '%s\n' '$ python3 ace3/model/generate_fp16_adaptation_vectors.py --official-tensor-dir "$(OFFICIAL_TENSOR_DIR)" --output-dir build/fp16_adaptation_vectors' > "$$log"; \
+	if cd "$(ROOT)" && "$(PYTHON)" "$(FP16_GENERATOR)" \
+	    --official-tensor-dir "$(OFFICIAL_TENSOR_DIR)" \
+	    --output-dir "$(FP16_VECTOR_DIR)" >> "$$log" 2>&1; then :; \
+	else status=$$?; cat "$$log"; exit $$status; fi; \
+	cat "$$log"
+
+fp16-json-validation: fp16-vectors
+	@mkdir -p "$(LOG_DIR)"
+	@set -eu; log="$(LOG_DIR)/fp16-adaptation-json-validation.log"; \
+	printf '%s\n' '$ python3 ace3/model/validate_fp16_adaptation_vectors.py --generated-dir build/fp16_adaptation_vectors --contract ace3/contracts/fp16_adaptation_operators.json --bindings ace3/contracts/fp16_adaptation_vector_bindings.json' > "$$log"; \
+	if cd "$(ROOT)" && "$(PYTHON)" "$(FP16_VALIDATOR)" \
+	    --generated-dir "$(FP16_VECTOR_DIR)" \
+	    --contract "$(FP16_CONTRACT)" \
+	    --bindings "$(FP16_BINDINGS)" >> "$$log" 2>&1; then :; \
+	else status=$$?; cat "$$log"; exit $$status; fi; \
+	cat "$$log"
+
+fp16-tamper-rejection: fp16-json-validation
+	@rm -rf "$(FP16_TAMPER_DIR)"
+	@cp -a "$(FP16_VECTOR_DIR)" "$(FP16_TAMPER_DIR)"
+	@printf '0' >> "$(FP16_TAMPER_DIR)/residual_cases.hex"
+	@set -eu; attempt="$(LOG_DIR)/fp16-adaptation-tamper-attempt.log"; \
+	log="$(LOG_DIR)/fp16-adaptation-tamper-rejection.log"; \
+	printf '%s\n' '$ printf 0 >> build/tamper-fp16-adaptation-vectors/residual_cases.hex' > "$$attempt"; \
+	if cd "$(ROOT)" && "$(PYTHON)" "$(FP16_VALIDATOR)" \
+	    --generated-dir "$(FP16_TAMPER_DIR)" \
+	    --contract "$(FP16_CONTRACT)" \
+	    --bindings "$(FP16_BINDINGS)" >> "$$attempt" 2>&1; then \
+	  cat "$$attempt"; exit 1; \
+	fi; \
+	if ! grep -Fq 'residual_cases.hex SHA256 mismatch' "$$attempt"; then \
+	  cat "$$attempt"; exit 1; \
+	fi; \
+	printf '%s\n' 'FP16_ADAPTATION_TAMPER_REJECTION_PASS artifact=residual_cases.hex validator_exit=nonzero reason=sha256_mismatch originals=untouched' > "$$log"; \
+	cat "$$log"
+
+fp16-geometry: fp16-json-validation
+	@rm -rf "$(FP16_GEOMETRY_DIR)"
+	@mkdir -p "$(FP16_GEOMETRY_DIR)" "$(LOG_DIR)"
+	@set -eu; log="$(LOG_DIR)/fp16-adaptation-geometry.log"; \
+	printf '%s\n' '$ elaborate/lint residual=896 rmsnorm=896 silu_gate=4864' > "$$log"; \
+	"$(IVERILOG)" -g2012 -Wall -s ace3_fp16_residual_add_core \
+	    -Pace3_fp16_residual_add_core.VECTOR_SIZE=896 \
+	    -o "$(FP16_GEOMETRY_DIR)/residual.vvp" \
+	    "$(FP16_FIXED_RTL)" "$(FP16_RESIDUAL_RTL)" >> "$$log" 2>&1 \
+	    || { cat "$$log"; exit 1; }; \
+	"$(IVERILOG)" -g2012 -Wall -s ace3_fp16_rmsnorm_core \
+	    -Pace3_fp16_rmsnorm_core.HIDDEN_SIZE=896 \
+	    -o "$(FP16_GEOMETRY_DIR)/rmsnorm.vvp" \
+	    "$(FP16_FIXED_RTL)" "$(FP16_RMS_RTL)" >> "$$log" 2>&1 \
+	    || { cat "$$log"; exit 1; }; \
+	"$(IVERILOG)" -g2012 -Wall -s ace3_fp16_silu_gate_core \
+	    -Pace3_fp16_silu_gate_core.INTERMEDIATE_SIZE=4864 \
+	    -o "$(FP16_GEOMETRY_DIR)/silu.vvp" \
+	    "$(FP16_FIXED_RTL)" "$(FP16_SILU_RTL)" >> "$$log" 2>&1 \
+	    || { cat "$$log"; exit 1; }; \
+	"$(VERILATOR)" --lint-only --Wall \
+	    --top-module ace3_fp16_residual_add_core -GVECTOR_SIZE=896 \
+	    "$(FP16_FIXED_RTL)" "$(FP16_RESIDUAL_RTL)" >> "$$log" 2>&1 \
+	    || { cat "$$log"; exit 1; }; \
+	"$(VERILATOR)" --lint-only --Wall \
+	    --top-module ace3_fp16_rmsnorm_core -GHIDDEN_SIZE=896 \
+	    "$(FP16_FIXED_RTL)" "$(FP16_RMS_RTL)" >> "$$log" 2>&1 \
+	    || { cat "$$log"; exit 1; }; \
+	"$(VERILATOR)" --lint-only --Wall \
+	    --top-module ace3_fp16_silu_gate_core -GINTERMEDIATE_SIZE=4864 \
+	    "$(FP16_FIXED_RTL)" "$(FP16_SILU_RTL)" >> "$$log" 2>&1 \
+	    || { cat "$$log"; exit 1; }; \
+	printf '%s\n' 'FP16_ADAPTATION_GEOMETRY_PASS simulators=iverilog,verilator residual=896 rmsnorm=896 silu_gate=4864' >> "$$log"; \
+	cat "$$log"
+
+fp16-iverilog-compile: fp16-json-validation
+	@rm -rf "$(FP16_IVERILOG_DIR)"
+	@mkdir -p "$(FP16_IVERILOG_DIR)" "$(LOG_DIR)"
+	@set -eu; log="$(LOG_DIR)/fp16-adaptation-iverilog-compile.log"; \
+	printf '%s\n' '$ iverilog -g2012 -Wall -I build/fp16_adaptation_vectors -s ace3_fp16_adaptation_tb -o build/fp16_iverilog/ace3_fp16_adaptation.vvp ...' > "$$log"; \
+	if "$(IVERILOG)" -g2012 -Wall -I "$(FP16_VECTOR_DIR)" \
+	    -s ace3_fp16_adaptation_tb -o "$(FP16_IVERILOG_BIN)" \
+	    $(FP16_RTL) "$(FP16_TB)" >> "$$log" 2>&1; then :; \
+	else status=$$?; cat "$$log"; exit $$status; fi; \
+	cat "$$log"
+
+fp16-iverilog-simulation: fp16-iverilog-compile
+	@mkdir -p "$(LOG_DIR)"
+	@set -eu; log="$(LOG_DIR)/fp16-adaptation-iverilog-simulation.log"; \
+	printf '%s\n' '$ vvp build/fp16_iverilog/ace3_fp16_adaptation.vvp +VECTOR_DIR=build/fp16_adaptation_vectors' > "$$log"; \
+	if cd "$(ROOT)" && "$(VVP)" "$(FP16_IVERILOG_BIN)" \
+	    +VECTOR_DIR="$(FP16_VECTOR_DIR)" >> "$$log" 2>&1; then :; \
+	else status=$$?; cat "$$log"; exit $$status; fi; \
+	cat "$$log"
+
+fp16-verilator-compile: fp16-json-validation
+	@rm -rf "$(FP16_VERILATOR_OBJ_DIR)"
+	@mkdir -p "$(FP16_VERILATOR_DIR)" "$(LOG_DIR)"
+	@set -eu; log="$(LOG_DIR)/fp16-adaptation-verilator-compile.log"; \
+	printf '%s\n' '$ verilator --cc --exe --build --Wall --top-module ace3_fp16_adaptation_verilator_top --Mdir build/fp16_verilator/obj_dir ...' > "$$log"; \
+	if cd "$(ROOT)" && "$(VERILATOR)" --cc --exe --build --Wall \
+	    --top-module ace3_fp16_adaptation_verilator_top \
+	    --Mdir "$(FP16_VERILATOR_OBJ_DIR)" \
+	    $(FP16_RTL) "$(FP16_VERILATOR_TOP)" "$(FP16_CPP_TB)" \
+	    >> "$$log" 2>&1; then :; \
+	else status=$$?; cat "$$log"; exit $$status; fi; \
+	test -x "$(FP16_VERILATOR_BIN)"; cat "$$log"
+
+fp16-verilator-simulation: fp16-verilator-compile
+	@mkdir -p "$(LOG_DIR)"
+	@set -eu; log="$(LOG_DIR)/fp16-adaptation-verilator-simulation.log"; \
+	printf '%s\n' '$ build/fp16_verilator/obj_dir/Vace3_fp16_adaptation_verilator_top --vector-dir build/fp16_adaptation_vectors' > "$$log"; \
+	if cd "$(ROOT)" && "$(FP16_VERILATOR_BIN)" \
+	    --vector-dir "$(FP16_VECTOR_DIR)" >> "$$log" 2>&1; then :; \
 	else status=$$?; cat "$$log"; exit $$status; fi; \
 	cat "$$log"
 

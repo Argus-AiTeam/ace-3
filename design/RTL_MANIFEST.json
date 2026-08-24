@@ -1,0 +1,633 @@
+{
+  "schema_version": 1,
+  "manifest_id": "ace3_fp16_model_adaptation_rtl",
+  "scope": {
+    "milestone": "bounded FP16 residual-add, RMSNorm, and SiLU/gate RTL simulation",
+    "baseline_commit": "d6f37f1c3bfcce0c9c71f7d28cd1cd5b97ef0ad6",
+    "baseline_subject": "feat(rtl): add native AWQ full projection",
+    "included_modules": [
+      "ace3_fp16_to_q24",
+      "ace3_q24_to_fp16_rne",
+      "ace3_fp16_residual_add_core",
+      "ace3_fp16_rmsnorm_core",
+      "ace3_fp16_silu_gate_core"
+    ],
+    "excluded_claims": [
+      "attention",
+      "decoder or full model",
+      "correctly rounded transcendental SiLU",
+      "synthesis, timing, area, power, FPGA, or silicon",
+      "dialogue or model quality"
+    ]
+  },
+  "authoritative_contract": {
+    "path": "ace3/contracts/fp16_adaptation_operators.json",
+    "status": "frozen and unchanged by this manifest",
+    "human_traceability": "design/RTL_TRACEABILITY.md"
+  },
+  "requirement_catalog": [
+    {
+      "id": "FP16-ADAPT-FORMAT-001",
+      "summary": "Each accepted scalar beat carries one IEEE-754 binary16 bit pattern and remains native-AWQ W4A16 compatible.",
+      "contract_refs": [
+        "/projection_compatibility/data_format",
+        "/projection_compatibility/awq_profile"
+      ]
+    },
+    {
+      "id": "FP16-ADAPT-DECODE-001",
+      "summary": "Finite binary16 values, including subnormals, decode exactly to signed Q40.24.",
+      "contract_refs": [
+        "/numerical_contract/decode"
+      ]
+    },
+    {
+      "id": "FP16-ADAPT-ENCODE-001",
+      "summary": "Q24 results convert to binary16 with round-to-nearest, ties-to-even, signed-zero policy, and finite-overflow saturation.",
+      "contract_refs": [
+        "/numerical_contract/rounding",
+        "/numerical_contract/finite_overflow",
+        "/numerical_contract/signed_zero"
+      ]
+    },
+    {
+      "id": "FP16-ADAPT-EXCEPTION-001",
+      "summary": "NaN or infinity marks the affected result or transaction invalid and returns positive zero without saturation.",
+      "contract_refs": [
+        "/numerical_contract/nonfinite"
+      ]
+    },
+    {
+      "id": "FP16-ADAPT-PROTOCOL-001",
+      "summary": "State advances only on ready-valid handshakes and output data, index, last, and status remain stable under backpressure.",
+      "contract_refs": [
+        "/protocol/input",
+        "/protocol/output"
+      ]
+    },
+    {
+      "id": "FP16-ADAPT-ABORT-001",
+      "summary": "Active-low asynchronous reset and active-high synchronous clear abort and clear the current transaction.",
+      "contract_refs": [
+        "/protocol/reset",
+        "/protocol/clear"
+      ]
+    },
+    {
+      "id": "FP16-ADAPT-START-001",
+      "summary": "Starts are accepted only for legal nonzero counts; RMSNorm requires exactly HIDDEN_SIZE.",
+      "contract_refs": [
+        "/protocol/start",
+        "/protocol/invalid_start"
+      ]
+    },
+    {
+      "id": "FP16-ADAPT-RESIDUAL-001",
+      "summary": "Residual addition exactly sums projection and residual Q24 values before one binary16 rounding boundary.",
+      "contract_refs": [
+        "/implementations/residual_add",
+        "/numerical_contract/decode",
+        "/numerical_contract/rounding",
+        "/numerical_contract/nonfinite",
+        "/numerical_contract/finite_overflow",
+        "/numerical_contract/signed_zero"
+      ]
+    },
+    {
+      "id": "FP16-ADAPT-RMSNORM-001",
+      "summary": "RMSNorm uses the frozen two-pass Q24/Q48 equation, 92-bit workspace, epsilon, and 46-cycle integer square root.",
+      "contract_refs": [
+        "/numerical_contract/rmsnorm"
+      ]
+    },
+    {
+      "id": "FP16-ADAPT-SILU-001",
+      "summary": "SiLU/gate uses the frozen Q0.24 rational sigmoid and exact wide gate product before one Q24 and one binary16 rounding boundary.",
+      "contract_refs": [
+        "/numerical_contract/silu_gate"
+      ]
+    },
+    {
+      "id": "FP16-ADAPT-DIMENSION-001",
+      "summary": "Default dimensions are hidden size 896 and MLP intermediate size 4864 while core bounds remain parameterized.",
+      "contract_refs": [
+        "/projection_compatibility/residual_vector_size",
+        "/projection_compatibility/rmsnorm_hidden_size",
+        "/projection_compatibility/silu_intermediate_size"
+      ]
+    },
+    {
+      "id": "FP16-ADAPT-CYCLE-001",
+      "summary": "The declared cycle boundaries are one cycle for residual-add and SiLU/gate and 46 post-load square-root cycles for RMSNorm.",
+      "contract_refs": [
+        "/cycle_boundaries"
+      ]
+    },
+    {
+      "id": "FP16-ADAPT-PROVENANCE-001",
+      "summary": "ACE-3 arithmetic is first-party RTL; only the enumerated ACE-2 control, protocol, dataflow, and verification structures are re-expressed.",
+      "contract_refs": [
+        "/ace2_reuse_audit"
+      ]
+    }
+  ],
+  "source_units": [
+    {
+      "path": "ace3/rtl/ace3_fp16_fixed.sv",
+      "sha256": "896c0e4c1405bf1cb80141a69259a94af905833ae45a8c7f1338664b4c0552d9",
+      "provenance": {
+        "classification": "first_party_ace3_rtl",
+        "copied_from_ace2": false,
+        "origin": "Authored for the ACE-3 native-AWQ W4A16 FP16 adaptation contract.",
+        "ace2_relationship": "Replaces ACE-2 INT8, Scale32, requantization, and saturation arithmetic; no ACE-2 arithmetic source is copied."
+      },
+      "modules": [
+        {
+          "name": "ace3_fp16_to_q24",
+          "kind": "combinational",
+          "parameters": [],
+          "ports": [
+            {
+              "name": "f16_i",
+              "direction": "input",
+              "declaration": "input wire [15:0] f16_i"
+            },
+            {
+              "name": "q24_o",
+              "direction": "output",
+              "declaration": "output reg signed [40:0] q24_o"
+            },
+            {
+              "name": "finite_o",
+              "direction": "output",
+              "declaration": "output wire finite_o"
+            },
+            {
+              "name": "sign_o",
+              "direction": "output",
+              "declaration": "output wire sign_o"
+            }
+          ],
+          "requirement_ids": [
+            "FP16-ADAPT-FORMAT-001",
+            "FP16-ADAPT-DECODE-001",
+            "FP16-ADAPT-EXCEPTION-001",
+            "FP16-ADAPT-PROVENANCE-001"
+          ]
+        },
+        {
+          "name": "ace3_q24_to_fp16_rne",
+          "kind": "combinational",
+          "parameters": [
+            {
+              "name": "WIDTH",
+              "declaration": "parameter integer WIDTH = 84",
+              "default": 84
+            }
+          ],
+          "ports": [
+            {
+              "name": "q24_i",
+              "direction": "input",
+              "declaration": "input wire signed [WIDTH-1:0] q24_i"
+            },
+            {
+              "name": "zero_sign_i",
+              "direction": "input",
+              "declaration": "input wire zero_sign_i"
+            },
+            {
+              "name": "f16_o",
+              "direction": "output",
+              "declaration": "output wire [15:0] f16_o"
+            },
+            {
+              "name": "saturation_o",
+              "direction": "output",
+              "declaration": "output wire saturation_o"
+            }
+          ],
+          "requirement_ids": [
+            "FP16-ADAPT-FORMAT-001",
+            "FP16-ADAPT-ENCODE-001",
+            "FP16-ADAPT-PROVENANCE-001"
+          ]
+        }
+      ]
+    },
+    {
+      "path": "ace3/rtl/ace3_fp16_residual_add_core.sv",
+      "sha256": "335954e0bf6909f3aa27330c241cc002f777e6eb5ef483e0b1f684c2fe35ba89",
+      "provenance": {
+        "classification": "first_party_ace3_rtl",
+        "copied_from_ace2": false,
+        "origin": "Authored for the ACE-3 native-AWQ W4A16 FP16 adaptation contract.",
+        "ace2_relationship": "Re-expresses ready-valid, handshake-gated advancement, retained output, reset, and clear patterns from the audited down-projection/residual-fusion structure while replacing Scale32 and INT8 arithmetic."
+      },
+      "modules": [
+        {
+          "name": "ace3_fp16_residual_add_core",
+          "kind": "sequential_stream_core",
+          "parameters": [
+            {
+              "name": "VECTOR_SIZE",
+              "declaration": "parameter integer VECTOR_SIZE = 896",
+              "default": 896
+            }
+          ],
+          "ports": [
+            {
+              "name": "clk_i",
+              "direction": "input",
+              "declaration": "input wire clk_i"
+            },
+            {
+              "name": "rst_ni",
+              "direction": "input",
+              "declaration": "input wire rst_ni"
+            },
+            {
+              "name": "clear_i",
+              "direction": "input",
+              "declaration": "input wire clear_i"
+            },
+            {
+              "name": "start_valid_i",
+              "direction": "input",
+              "declaration": "input wire start_valid_i"
+            },
+            {
+              "name": "start_ready_o",
+              "direction": "output",
+              "declaration": "output wire start_ready_o"
+            },
+            {
+              "name": "element_count_i",
+              "direction": "input",
+              "declaration": "input wire [12:0] element_count_i"
+            },
+            {
+              "name": "in_valid_i",
+              "direction": "input",
+              "declaration": "input wire in_valid_i"
+            },
+            {
+              "name": "in_ready_o",
+              "direction": "output",
+              "declaration": "output wire in_ready_o"
+            },
+            {
+              "name": "projection_f16_i",
+              "direction": "input",
+              "declaration": "input wire [15:0] projection_f16_i"
+            },
+            {
+              "name": "residual_f16_i",
+              "direction": "input",
+              "declaration": "input wire [15:0] residual_f16_i"
+            },
+            {
+              "name": "out_valid_o",
+              "direction": "output",
+              "declaration": "output wire out_valid_o"
+            },
+            {
+              "name": "out_ready_i",
+              "direction": "input",
+              "declaration": "input wire out_ready_i"
+            },
+            {
+              "name": "out_f16_o",
+              "direction": "output",
+              "declaration": "output wire [15:0] out_f16_o"
+            },
+            {
+              "name": "out_index_o",
+              "direction": "output",
+              "declaration": "output wire [12:0] out_index_o"
+            },
+            {
+              "name": "out_last_o",
+              "direction": "output",
+              "declaration": "output wire out_last_o"
+            },
+            {
+              "name": "invalid_operand_o",
+              "direction": "output",
+              "declaration": "output wire invalid_operand_o"
+            },
+            {
+              "name": "saturation_o",
+              "direction": "output",
+              "declaration": "output wire saturation_o"
+            },
+            {
+              "name": "busy_o",
+              "direction": "output",
+              "declaration": "output wire busy_o"
+            }
+          ],
+          "dependencies": [
+            "ace3_fp16_to_q24",
+            "ace3_q24_to_fp16_rne(WIDTH=42)"
+          ],
+          "requirement_ids": [
+            "FP16-ADAPT-FORMAT-001",
+            "FP16-ADAPT-DECODE-001",
+            "FP16-ADAPT-ENCODE-001",
+            "FP16-ADAPT-EXCEPTION-001",
+            "FP16-ADAPT-PROTOCOL-001",
+            "FP16-ADAPT-ABORT-001",
+            "FP16-ADAPT-START-001",
+            "FP16-ADAPT-RESIDUAL-001",
+            "FP16-ADAPT-DIMENSION-001",
+            "FP16-ADAPT-CYCLE-001",
+            "FP16-ADAPT-PROVENANCE-001"
+          ]
+        }
+      ]
+    },
+    {
+      "path": "ace3/rtl/ace3_fp16_rmsnorm_core.sv",
+      "sha256": "f302975fa91aefc20bb48f768fc08ffbddc088e83ca9cdb23b219c2f70d9fc2a",
+      "provenance": {
+        "classification": "first_party_ace3_rtl",
+        "copied_from_ace2": false,
+        "origin": "Authored for the ACE-3 native-AWQ W4A16 FP16 adaptation contract.",
+        "ace2_relationship": "Re-expresses the audited two-pass collect/normalize schedule, ready-valid control, and abort behavior while replacing INT8/Q7.8 arithmetic with exact Q24 decode, a 92-bit Q48 workspace, fixed epsilon, and bounded integer square root."
+      },
+      "modules": [
+        {
+          "name": "ace3_fp16_rmsnorm_core",
+          "kind": "sequential_two_pass_stream_core",
+          "parameters": [
+            {
+              "name": "HIDDEN_SIZE",
+              "declaration": "parameter integer HIDDEN_SIZE = 896",
+              "default": 896
+            },
+            {
+              "name": "EPSILON_Q48",
+              "declaration": "parameter [63:0] EPSILON_Q48 = 64'd281474977",
+              "default_decimal": 281474977
+            }
+          ],
+          "ports": [
+            {
+              "name": "clk_i",
+              "direction": "input",
+              "declaration": "input wire clk_i"
+            },
+            {
+              "name": "rst_ni",
+              "direction": "input",
+              "declaration": "input wire rst_ni"
+            },
+            {
+              "name": "clear_i",
+              "direction": "input",
+              "declaration": "input wire clear_i"
+            },
+            {
+              "name": "start_valid_i",
+              "direction": "input",
+              "declaration": "input wire start_valid_i"
+            },
+            {
+              "name": "start_ready_o",
+              "direction": "output",
+              "declaration": "output wire start_ready_o"
+            },
+            {
+              "name": "element_count_i",
+              "direction": "input",
+              "declaration": "input wire [12:0] element_count_i"
+            },
+            {
+              "name": "in_valid_i",
+              "direction": "input",
+              "declaration": "input wire in_valid_i"
+            },
+            {
+              "name": "in_ready_o",
+              "direction": "output",
+              "declaration": "output wire in_ready_o"
+            },
+            {
+              "name": "activation_f16_i",
+              "direction": "input",
+              "declaration": "input wire [15:0] activation_f16_i"
+            },
+            {
+              "name": "weight_f16_i",
+              "direction": "input",
+              "declaration": "input wire [15:0] weight_f16_i"
+            },
+            {
+              "name": "out_valid_o",
+              "direction": "output",
+              "declaration": "output wire out_valid_o"
+            },
+            {
+              "name": "out_ready_i",
+              "direction": "input",
+              "declaration": "input wire out_ready_i"
+            },
+            {
+              "name": "out_f16_o",
+              "direction": "output",
+              "declaration": "output wire [15:0] out_f16_o"
+            },
+            {
+              "name": "out_index_o",
+              "direction": "output",
+              "declaration": "output wire [12:0] out_index_o"
+            },
+            {
+              "name": "out_last_o",
+              "direction": "output",
+              "declaration": "output wire out_last_o"
+            },
+            {
+              "name": "invalid_operand_o",
+              "direction": "output",
+              "declaration": "output wire invalid_operand_o"
+            },
+            {
+              "name": "saturation_o",
+              "direction": "output",
+              "declaration": "output wire saturation_o"
+            },
+            {
+              "name": "busy_o",
+              "direction": "output",
+              "declaration": "output wire busy_o"
+            },
+            {
+              "name": "rms_q24_o",
+              "direction": "output",
+              "declaration": "output wire [45:0] rms_q24_o"
+            }
+          ],
+          "dependencies": [
+            "ace3_fp16_to_q24",
+            "ace3_q24_to_fp16_rne(WIDTH=84)"
+          ],
+          "requirement_ids": [
+            "FP16-ADAPT-FORMAT-001",
+            "FP16-ADAPT-DECODE-001",
+            "FP16-ADAPT-ENCODE-001",
+            "FP16-ADAPT-EXCEPTION-001",
+            "FP16-ADAPT-PROTOCOL-001",
+            "FP16-ADAPT-ABORT-001",
+            "FP16-ADAPT-START-001",
+            "FP16-ADAPT-RMSNORM-001",
+            "FP16-ADAPT-DIMENSION-001",
+            "FP16-ADAPT-CYCLE-001",
+            "FP16-ADAPT-PROVENANCE-001"
+          ]
+        }
+      ]
+    },
+    {
+      "path": "ace3/rtl/ace3_fp16_silu_gate_core.sv",
+      "sha256": "528b931da1f201c941e7f713a6ba0418f950bd44b64fbf10d92cb5a80f386997",
+      "provenance": {
+        "classification": "first_party_ace3_rtl",
+        "copied_from_ace2": false,
+        "origin": "Authored for the ACE-3 native-AWQ W4A16 FP16 adaptation contract.",
+        "ace2_relationship": "Re-expresses the audited stream scheduling, output retention, and abort behavior while replacing LUT, clipping, Q6.9/Q3.12, and INT8 arithmetic with the frozen rational Q0.24 sigmoid and wide FP16-domain gate product."
+      },
+      "modules": [
+        {
+          "name": "ace3_fp16_silu_gate_core",
+          "kind": "sequential_stream_core",
+          "parameters": [
+            {
+              "name": "INTERMEDIATE_SIZE",
+              "declaration": "parameter integer INTERMEDIATE_SIZE = 4864",
+              "default": 4864
+            }
+          ],
+          "ports": [
+            {
+              "name": "clk_i",
+              "direction": "input",
+              "declaration": "input wire clk_i"
+            },
+            {
+              "name": "rst_ni",
+              "direction": "input",
+              "declaration": "input wire rst_ni"
+            },
+            {
+              "name": "clear_i",
+              "direction": "input",
+              "declaration": "input wire clear_i"
+            },
+            {
+              "name": "start_valid_i",
+              "direction": "input",
+              "declaration": "input wire start_valid_i"
+            },
+            {
+              "name": "start_ready_o",
+              "direction": "output",
+              "declaration": "output wire start_ready_o"
+            },
+            {
+              "name": "element_count_i",
+              "direction": "input",
+              "declaration": "input wire [12:0] element_count_i"
+            },
+            {
+              "name": "in_valid_i",
+              "direction": "input",
+              "declaration": "input wire in_valid_i"
+            },
+            {
+              "name": "in_ready_o",
+              "direction": "output",
+              "declaration": "output wire in_ready_o"
+            },
+            {
+              "name": "gate_f16_i",
+              "direction": "input",
+              "declaration": "input wire [15:0] gate_f16_i"
+            },
+            {
+              "name": "up_f16_i",
+              "direction": "input",
+              "declaration": "input wire [15:0] up_f16_i"
+            },
+            {
+              "name": "out_valid_o",
+              "direction": "output",
+              "declaration": "output wire out_valid_o"
+            },
+            {
+              "name": "out_ready_i",
+              "direction": "input",
+              "declaration": "input wire out_ready_i"
+            },
+            {
+              "name": "out_f16_o",
+              "direction": "output",
+              "declaration": "output wire [15:0] out_f16_o"
+            },
+            {
+              "name": "out_index_o",
+              "direction": "output",
+              "declaration": "output wire [12:0] out_index_o"
+            },
+            {
+              "name": "out_last_o",
+              "direction": "output",
+              "declaration": "output wire out_last_o"
+            },
+            {
+              "name": "invalid_operand_o",
+              "direction": "output",
+              "declaration": "output wire invalid_operand_o"
+            },
+            {
+              "name": "saturation_o",
+              "direction": "output",
+              "declaration": "output wire saturation_o"
+            },
+            {
+              "name": "busy_o",
+              "direction": "output",
+              "declaration": "output wire busy_o"
+            }
+          ],
+          "dependencies": [
+            "ace3_fp16_to_q24",
+            "ace3_q24_to_fp16_rne(WIDTH=64)"
+          ],
+          "requirement_ids": [
+            "FP16-ADAPT-FORMAT-001",
+            "FP16-ADAPT-DECODE-001",
+            "FP16-ADAPT-ENCODE-001",
+            "FP16-ADAPT-EXCEPTION-001",
+            "FP16-ADAPT-PROTOCOL-001",
+            "FP16-ADAPT-ABORT-001",
+            "FP16-ADAPT-START-001",
+            "FP16-ADAPT-SILU-001",
+            "FP16-ADAPT-DIMENSION-001",
+            "FP16-ADAPT-CYCLE-001",
+            "FP16-ADAPT-PROVENANCE-001"
+          ]
+        }
+      ]
+    }
+  ],
+  "verification_surfaces": {
+    "independent_oracle": "ace3/model/fp16_adaptation_oracle.py",
+    "authenticated_vector_validator": "ace3/model/validate_fp16_adaptation_vectors.py",
+    "four_state_icarus_testbench": "ace3/tb/ace3_fp16_adaptation_tb.sv",
+    "two_state_verilator_harness": "ace3/tb/ace3_fp16_adaptation_main.cpp",
+    "verilator_top": "ace3/tb/ace3_fp16_adaptation_verilator_top.sv",
+    "fresh_regression_target": "make test"
+  }
+}

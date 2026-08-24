@@ -32,6 +32,7 @@ These are software-reference findings, not RTL or hardware evidence.
 | Profile | Intent | Status |
 | --- | --- | --- |
 | `AWQ_W4A16` | Native AWQ G128 weights with FP16 activations | Full-input sequential projection RTL verified |
+| `AWQ_W4A16_ADAPT` | FP16 residual, RMSNorm, and SiLU/gate streams | Bounded RTL simulation verified |
 | `ACE_W4A8` | Compatibility with the existing strict integer line | Planned |
 
 The implemented RTL boundary now includes the accepted G128 primitive and a
