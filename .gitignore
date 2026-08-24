@@ -1,0 +1,31 @@
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+
+# Simulation and build output
+build/
+out/
+work/
+*.vcd
+*.fst
+*.log
+
+# Model artifacts
+*.safetensors
+*.bin
+*.pt
+*.pth
+
+# Local tools and state
+.env
+.vscode/
+.idea/
+.argus/
+.argus_subagents/
+
+# Credentials
+*.pem
+*.key
+credentials*
+secrets*
