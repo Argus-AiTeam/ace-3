@@ -1,5 +1,7 @@
 # ACE-3 MP
 
+[English](README.md) | [简体中文](README.zh-CN.md)
+
 ACE-3 MP is an evidence-first mixed-precision accelerator project for
 transformer inference. Its first implementation profile targets the official
 Qwen2.5-0.5B-Instruct AWQ checkpoint with W4A16 execution.
@@ -33,7 +35,7 @@ These are software-reference findings, not RTL or hardware evidence.
 | --- | --- | --- |
 | `AWQ_W4A16` | Native AWQ G128 weights with FP16 activations | Full-input sequential projection RTL verified |
 | `AWQ_W4A16_ADAPT` | FP16 residual, RMSNorm, and SiLU/gate streams | Bounded RTL simulation verified |
-| `AWQ_W4A16_QKV` | Q/K/V projection geometry, Qwen RoPE, and FP16 K/V cache | Candidate under bounded RTL review |
+| `AWQ_W4A16_QKV` | Q/K/V projection geometry, Qwen RoPE, and FP16 K/V cache | Bounded RTL simulation verified and published |
 | `ACE_W4A8` | Compatibility with the existing strict integer line | Planned |
 
 The implemented RTL boundary now includes the accepted G128 primitive and a
