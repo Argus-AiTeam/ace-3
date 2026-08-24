@@ -1,0 +1,89 @@
+{
+  "schema_version": 1,
+  "conclusion": "START_ACE3_MP_AWQ_ADAPTATION",
+  "profiles": {
+    "ACE_W4A8": {
+      "implementation": "rtl/ace2_w4a8_proj_core.sv",
+      "status": "existing_unchanged",
+      "activation": "signed_int8",
+      "weight": "signed_int4",
+      "accumulator": "signed_int32",
+      "completion": "integer multiplier, ties-to-even right shift, signed-int8 saturation",
+      "protocol": {
+        "clock": "clk_i rising edge",
+        "reset": "rst_ni active-low asynchronous",
+        "clear": "clear_i synchronous",
+        "transactions": [
+          "start_valid_i/start_ready_o",
+          "pair_valid_i/pair_ready_o",
+          "meta_valid_i/meta_ready_o",
+          "out_valid_o/out_ready_i"
+        ]
+      }
+    },
+    "AWQ_W4A16": {
+      "implementation": "rtl/ace3_awq_w4a16_g128_dot_lane.sv",
+      "scope": "one native-AWQ G128 group and one logical output lane",
+      "ports": {
+        "clk_i": 1,
+        "rst_ni": 1,
+        "clear_i": 1,
+        "start_valid_i": 1,
+        "start_ready_o": 1,
+        "logical_lane_i": 3,
+        "qzeros_i": 32,
+        "scale_f16_i": 16,
+        "pair_valid_i": 1,
+        "pair_ready_o": 1,
+        "activation_f16_i": 16,
+        "qweight_i": 32,
+        "out_valid_o": 1,
+        "out_ready_i": 1,
+        "out_f16_o": 16,
+        "acc_q47_48_o": 96,
+        "invalid_operand_o": 1,
+        "saturation_o": 1
+      },
+      "protocol": {
+        "clock": "clk_i rising edge",
+        "reset": "rst_ni active-low asynchronous; aborts work and clears valid/status",
+        "clear": "clear_i active-high synchronous; aborts work and clears valid/status",
+        "start": "captures one logical lane, one packed qzero I32, and one F16 scale",
+        "pairs": "exactly 128 accepted activation/qweight pairs per start",
+        "backpressure": "producer holds valid payload until ready; DUT holds output payload/status/accumulator stable while out_valid_o && !out_ready_i"
+      },
+      "native_awq": {
+        "qweight_shape": [896, 112],
+        "qzeros_shape": [7, 112],
+        "scales_shape": [7, 896],
+        "group_size": 128,
+        "i32_nibble_shifts": [0, 4, 8, 12, 16, 20, 24, 28],
+        "logical_lane_to_physical_nibble": [0, 4, 1, 5, 2, 6, 3, 7],
+        "dequantization": "(qweight_nibble - qzero_nibble) * scale_f16",
+        "qzero_plus_one": false
+      },
+      "numeric": {
+        "accepted_operands": "finite IEEE-754 binary16 including signed zero and gradual subnormals",
+        "nonfinite": "flag invalid_operand_o, contribute zero, and return canonical positive zero",
+        "accumulator": "signed 96-bit Q47.48 exact fixed point; no intermediate rounding",
+        "completion": "one IEEE-754 binary16 round-to-nearest-ties-to-even conversion",
+        "zero": "canonical positive zero",
+        "underflow": "gradual binary16 subnormal rounding",
+        "overflow": "finite saturation to signed binary16 maximum (0x7bff or 0xfbff)",
+        "agreement": "zero ULP against the integer bit-level oracle"
+      }
+    }
+  },
+  "excluded": [
+    "RMSNorm",
+    "RoPE",
+    "attention score/value flow",
+    "softmax",
+    "KV cache",
+    "remaining projection groups and output lanes",
+    "lm_head",
+    "synthesis/PPA",
+    "full-model execution",
+    "chip or Stage-1 claims"
+  ]
+}

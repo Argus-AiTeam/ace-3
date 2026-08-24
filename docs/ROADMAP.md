@@ -10,12 +10,15 @@
 
 ## Phase 1: W4A16 projection
 
-- [ ] Freeze the implemented arithmetic and interface contract.
-- [ ] Implement a synthesizable unpack/dequant/product or dot-lane primitive.
-- [ ] Verify reset and backpressure.
-- [ ] Pass deterministic edge vectors.
-- [ ] Pass seeded random vectors against an independent bit oracle.
-- [ ] Bind vectors to an official Qwen projection tensor slice.
+- [x] Freeze the implemented arithmetic and interface contract.
+- [x] Implement a synthesizable unpack/dequant/product or dot-lane primitive.
+- [x] Verify reset and backpressure.
+- [x] Pass deterministic edge vectors.
+- [x] Pass seeded random vectors against an independent bit oracle.
+- [x] Bind vectors to an official Qwen projection tensor slice.
+- [ ] Reproduce the promoted primitive from the standalone repository layout.
+- [ ] Add bounded X/Z and protocol-property coverage.
+- [ ] Scale the primitive into a complete parameterized projection engine.
 
 ## Phase 2: decoder arithmetic
 
