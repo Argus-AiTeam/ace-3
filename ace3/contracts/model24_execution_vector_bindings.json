@@ -1,0 +1,28 @@
+{
+  "schema_version": 1,
+  "kind": "ace3_model24_execution_vector_bindings",
+  "generator": {
+    "algorithm": "model24-execution-v1",
+    "seed": 240483,
+    "serialization": "UTF-8 canonical JSON, sorted keys, compact separators, LF"
+  },
+  "inputs": {
+    "parent_commit": "3cf65b762d928e02e2b64fbba4389e294e1aa2c5",
+    "execution_contract_sha256": "4f191a557b53b31bcf954fafd5ef60875d48bb4f1b0e0b084027c24e9d42b4d4",
+    "tensor_map_sha256": "11a03bed8049cd815ac2c37384a7ba15d71d2f69ee397110d1cd443193474624",
+    "control_map_sha256": "3364dc4c2c585f4687d8ad7943792ca4c44265b85463b91ab2a1c6866690b611",
+    "decoder_source_sha256": "595a2374dec03ee5b6ae85d65758e9e64648342c36b9c8af96c7d3ae70572bd2",
+    "decoder_interface_sha256": "6d3177c5a3fdff424037ace6ce3162085a6c5cb15f15b7771edbf2396198a467"
+  },
+  "artifact_set": [
+    "manifest.json",
+    "official_schedule.json",
+    "small_geometry.json"
+  ],
+  "validation": {
+    "exact_artifact_set": true,
+    "duplicate_json_keys": "reject",
+    "recompute_vectors": true,
+    "mutation_policy": "reject any byte or semantic drift"
+  }
+}
