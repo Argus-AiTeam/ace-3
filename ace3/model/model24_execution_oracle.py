@@ -541,17 +541,34 @@ def validate_vector_bindings(bindings: Any, contract_sha256: str) -> None:
     )
 
 
-def require_parent_commit(repository_root: Path) -> None:
-    result = subprocess.run(
-        ["git", "rev-parse", "HEAD^"],
-        cwd=repository_root,
-        check=True,
-        capture_output=True,
-        text=True,
-    )
-    require(
-        result.stdout.strip() == PARENT_COMMIT,
-        f"publication parent mismatch: expected {PARENT_COMMIT}, got {result.stdout.strip()}",
+def require_provenance_commit(
+    repository_root: Path,
+    provenance_commit: str = PARENT_COMMIT,
+) -> None:
+    try:
+        result = subprocess.run(
+            ["git", "merge-base", "--is-ancestor", provenance_commit, "HEAD"],
+            cwd=repository_root,
+            check=False,
+            capture_output=True,
+            text=True,
+            shell=False,
+        )
+    except OSError as error:
+        raise ContractError(
+            f"unable to execute git while verifying required provenance commit "
+            f"{provenance_commit}: {error}"
+        ) from error
+    if result.returncode == 0:
+        return
+    if result.returncode == 1:
+        raise ContractError(
+            f"required provenance commit {provenance_commit} is not an ancestor of HEAD"
+        )
+    detail = result.stderr.strip() or result.stdout.strip() or "no git diagnostic"
+    raise ContractError(
+        f"unable to verify required provenance commit {provenance_commit}: "
+        f"git exited {result.returncode}: {detail}"
     )
 
 

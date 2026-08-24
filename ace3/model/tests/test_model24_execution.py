@@ -4,10 +4,12 @@
 from __future__ import annotations
 
 import copy
+import subprocess
 import sys
 import tempfile
 import unittest
 from pathlib import Path
+from unittest import mock
 
 MODEL_DIR = Path(__file__).resolve().parents[1]
 REPOSITORY_ROOT = MODEL_DIR.parents[1]
@@ -29,6 +31,7 @@ from model24_execution_oracle import (  # noqa: E402
     kv_owner,
     load_json_bytes,
     residual_handoffs,
+    require_provenance_commit,
     sha256_bytes,
     validate_execution_contract,
     validate_trajectory,
@@ -79,6 +82,87 @@ class Model24ExecutionTests(unittest.TestCase):
         snapshot = self.contract["decoder_snapshot_compatibility"]
         self.assertIn("not decoder acceptance", snapshot["status"])
 
+    def test_provenance_accepts_additive_commits_and_fails_closed(
+        self,
+    ) -> None:
+        def git(repository: Path, *arguments: str) -> str:
+            result = subprocess.run(
+                [
+                    "git",
+                    "-c",
+                    "user.name=Model24 Test",
+                    "-c",
+                    "user.email=model24-test@example.invalid",
+                    *arguments,
+                ],
+                cwd=repository,
+                check=True,
+                capture_output=True,
+                text=True,
+            )
+            return result.stdout.strip()
+
+        with tempfile.TemporaryDirectory() as temporary_directory:
+            root = Path(temporary_directory)
+            repository = root / "published"
+            repository.mkdir()
+            git(repository, "init", "--quiet")
+            (repository / "contract").write_text("pinned\n", encoding="ascii")
+            git(repository, "add", "contract")
+            git(repository, "commit", "--quiet", "-m", "pinned provenance")
+            provenance_commit = git(repository, "rev-parse", "HEAD")
+
+            for commit_number in (1, 2):
+                additive_path = repository / f"additive-{commit_number}"
+                additive_path.write_text(f"{commit_number}\n", encoding="ascii")
+                git(repository, "add", additive_path.name)
+                git(
+                    repository,
+                    "commit",
+                    "--quiet",
+                    "-m",
+                    f"additive commit {commit_number}",
+                )
+                require_provenance_commit(repository, provenance_commit)
+            git(repository, "checkout", "--quiet", "--orphan", "unrelated")
+            (repository / "other").write_text("unrelated\n", encoding="ascii")
+            git(repository, "add", "other")
+            git(repository, "commit", "--quiet", "-m", "unrelated history")
+            with self.assertRaisesRegex(
+                ContractError,
+                "required provenance commit .* is not an ancestor of HEAD",
+            ):
+                require_provenance_commit(repository, provenance_commit)
+
+            non_repository = root / "not-a-repository"
+            non_repository.mkdir()
+            with self.assertRaisesRegex(
+                ContractError,
+                "unable to verify required provenance commit",
+            ):
+                require_provenance_commit(non_repository, provenance_commit)
+
+            with mock.patch(
+                "model24_execution_oracle.subprocess.run",
+                side_effect=FileNotFoundError("git"),
+            ) as run_git:
+                with self.assertRaisesRegex(ContractError, "unable to execute git"):
+                    require_provenance_commit(repository, provenance_commit)
+                run_git.assert_called_once_with(
+                    [
+                        "git",
+                        "merge-base",
+                        "--is-ancestor",
+                        provenance_commit,
+                        "HEAD",
+                    ],
+                    cwd=repository,
+                    check=False,
+                    capture_output=True,
+                    text=True,
+                    shell=False,
+                )
+
     def test_official_schedule_and_lineage_are_complete(self) -> None:
         events = expected_schedule()
         self.assertEqual(len(events), 483)
@@ -123,6 +207,10 @@ class Model24ExecutionTests(unittest.TestCase):
         self.assertEqual(lm_head["output_logits"], 151936)
         self.assertEqual(argmax_first([5, 5, 4]), 0)
         self.assertEqual(argmax_first([-4, 9, 9]), 1)
+        with self.assertRaises(ContractError):
+            argmax_first([])
+        with self.assertRaises(ContractError):
+            argmax_first([1, True])
 
     def test_small_geometries_exhaust_every_legal_address(self) -> None:
         for layers in (1, 2, 3):
@@ -265,13 +353,6 @@ class Model24ExecutionTests(unittest.TestCase):
             official_path.unlink()
             with self.assertRaisesRegex(ContractError, "artifact set"):
                 validate_vector_directory(REPOSITORY_ROOT, output_dir)
-
-    def test_argmax_rejects_empty_and_non_integer_controls(self) -> None:
-        with self.assertRaises(ContractError):
-            argmax_first([])
-        with self.assertRaises(ContractError):
-            argmax_first([1, True])
-
 
 if __name__ == "__main__":
     unittest.main()

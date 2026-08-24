@@ -11,7 +11,7 @@ from model24_execution_oracle import (
     build_vector_artifacts,
     load_json_bytes,
     require,
-    require_parent_commit,
+    require_provenance_commit,
     sha256_bytes,
     validate_execution_contract,
     validate_vector_bindings,
@@ -38,7 +38,7 @@ def validate_vector_directory(repository_root: Path, vector_dir: Path) -> dict[s
     tensor_payload = (contracts / "model24_tensor_map.json").read_bytes()
     control_payload = (contracts / "model24_control.json").read_bytes()
 
-    require_parent_commit(repository_root)
+    require_provenance_commit(repository_root)
     contract = load_json_bytes(contract_payload, str(contract_path))
     bindings = load_json_bytes(bindings_payload, str(bindings_path))
     validate_execution_contract(contract, tensor_payload, control_payload)
