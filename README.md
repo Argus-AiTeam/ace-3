@@ -36,6 +36,7 @@ These are software-reference findings, not RTL or hardware evidence.
 | `AWQ_W4A16` | Native AWQ G128 weights with FP16 activations | Full-input sequential projection RTL verified |
 | `AWQ_W4A16_ADAPT` | FP16 residual, RMSNorm, and SiLU/gate streams | Bounded RTL simulation verified |
 | `AWQ_W4A16_QKV` | Q/K/V projection geometry, Qwen RoPE, and FP16 K/V cache | Bounded RTL simulation verified and published |
+| `AWQ_W4A16_ATTN` | Scaled QK, causal softmax, and cached-FP16 V composition | Bounded RTL simulation verified and published |
 | `ACE_W4A8` | Compatibility with the existing strict integer line | Planned |
 
 The implemented RTL boundary now includes the accepted G128 primitive and a
@@ -78,6 +79,12 @@ the oracle and JSON validation, recompiles and reruns both Icarus tests, and
 rebuilds and reruns Verilator. It separately regenerates, authenticates, and
 simulates full-input projection vectors before printing the aggregate pass
 line. No semantic check is stamp-cached.
+
+The attention target extends that flow with the fixed 14-query/2-KV-head GQA
+mapping, 64-element FP16 QK accumulation scaled by 1/8, causal masking,
+Q0.24 max-subtracted softmax, and cached-FP16 value composition. Its official
+inputs are deterministic hash-checked scale selections rather than captured
+runtime activations. The claim remains bounded to dynamic RTL simulation.
 
 The historical frozen manifest remains byte-identical. A separate
 source-controlled standalone binding contract authenticates SHA256, byte

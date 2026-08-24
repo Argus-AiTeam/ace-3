@@ -32,6 +32,7 @@ ACE-3 是一条独立的架构演进路线：在保持 ACE-2 作为独立且不�
 | `AWQ_W4A16` | 原生 AWQ G128 权重与 FP16 激活 | 完整输入的串行 projection RTL 已验证 |
 | `AWQ_W4A16_ADAPT` | FP16 residual、RMSNorm 和 SiLU/gate 数据流 | 有界 RTL 仿真已验证 |
 | `AWQ_W4A16_QKV` | Q/K/V projection 几何、Qwen RoPE 和 FP16 K/V cache | 有界 RTL 仿真已验证并发布 |
+| `AWQ_W4A16_ATTN` | scaled QK、causal softmax 和 cached-FP16 V composition | 有界 RTL 仿真已验证并发布 |
 | `ACE_W4A8` | 与现有严格整数路线兼容 | 计划中 |
 
 当前已实现的 RTL 边界包括已验收的 G128 primitive，以及一个参数化串行引擎。
@@ -69,6 +70,12 @@ make OFFICIAL_TENSOR_DIR=/home/argustest/ace-2/build/ace2_chat_demo/qwen25-05b-i
 校验，重新编译并运行两组 Icarus 测试，并重新构建和运行 Verilator。完整输入
 projection 向量也会被独立重新生成、认证和仿真，然后才打印聚合 PASS。
 语义检查不会通过 stamp cache 跳过。
+
+Attention target 在此流程上增加固定的 14-query/2-KV-head GQA mapping、
+64 元素 FP16 QK accumulation 与 1/8 scaling、causal masking、Q0.24
+max-subtracted softmax，以及 cached-FP16 value composition。其官方输入来自
+确定性且经过哈希检查的 scale selection，并非捕获的运行时 activation；
+相关 claim 仍严格限定在动态 RTL 仿真边界。
 
 历史冻结 manifest 保持逐字节不变。独立、受源码控制的 binding contract 会认证
 validator 或 simulator 消费的五个序列化 artifact 的 SHA256、字节数和行数：
