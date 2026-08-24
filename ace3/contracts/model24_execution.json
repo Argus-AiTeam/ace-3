@@ -1,0 +1,218 @@
+{
+  "schema_version": 1,
+  "kind": "ace3_model24_decoder_independent_execution",
+  "parent_commit": "3cf65b762d928e02e2b64fbba4389e294e1aa2c5",
+  "model_binding": {
+    "repository": "Qwen/Qwen2.5-0.5B-Instruct-AWQ",
+    "revision": "db09cd27ead7fee40cdee309693cf83601b9c899",
+    "tensor_map": {
+      "path": "ace3/contracts/model24_tensor_map.json",
+      "sha256": "11a03bed8049cd815ac2c37384a7ba15d71d2f69ee397110d1cd443193474624"
+    },
+    "control_map": {
+      "path": "ace3/contracts/model24_control.json",
+      "sha256": "3364dc4c2c585f4687d8ad7943792ca4c44265b85463b91ab2a1c6866690b611"
+    }
+  },
+  "decoder_snapshot_compatibility": {
+    "source": {
+      "path": "ace3/rtl/ace3_decoder_layer0_token_engine.sv",
+      "sha256": "595a2374dec03ee5b6ae85d65758e9e64648342c36b9c8af96c7d3ae70572bd2"
+    },
+    "interface": {
+      "path": "ace3/tb/ace3_decoder_width_boundary_tb.sv",
+      "sha256": "6d3177c5a3fdff424037ace6ce3162085a6c5cb15f15b7771edbf2396198a467"
+    },
+    "review_provenance": "decoder_wall_repair_review_cf03",
+    "status": "hash compatibility only; not decoder acceptance"
+  },
+  "numeric_profile": {
+    "projection": "native asymmetric packed INT4 AWQ W4A16 G128 GEMM",
+    "packed_nibble_order": [
+      0,
+      4,
+      1,
+      5,
+      2,
+      6,
+      3,
+      7
+    ],
+    "qzero_adjustment": "none",
+    "scales": "FP16",
+    "activations": "FP16",
+    "kv": "FP16"
+  },
+  "layers": {
+    "count": 24,
+    "bindings": [
+      {"layer_id": 0, "namespace": "model.layers.0.", "descriptor_sha256": "12c974f9aee6aa0ef84ecf483bac9f26186ff717f9a79ae10f44c332f75a069a"},
+      {"layer_id": 1, "namespace": "model.layers.1.", "descriptor_sha256": "c8a037c0043ededc764f02b14671781ceeb1fb5be3fa6b7f8e114d75a98ad8f4"},
+      {"layer_id": 2, "namespace": "model.layers.2.", "descriptor_sha256": "07b907a2f7a800af011b630ce2a026593f05fbd9447e3f106e8970be7888d916"},
+      {"layer_id": 3, "namespace": "model.layers.3.", "descriptor_sha256": "b2c2e5088b133b7ed99ac6615cc401d835775e356b1e0c56c47ffcf13cd0f000"},
+      {"layer_id": 4, "namespace": "model.layers.4.", "descriptor_sha256": "11b3bbde0e323e62992361dbeac9be0e25c75e92047a9773feee80f03cbeeab3"},
+      {"layer_id": 5, "namespace": "model.layers.5.", "descriptor_sha256": "438b0999de6d7d672877fda658d9f29b7ae031181530e55fe83f2d070239f1e1"},
+      {"layer_id": 6, "namespace": "model.layers.6.", "descriptor_sha256": "2f94cbd039aee46ec65b50c5f6ba339fb3a7a8d26fe14926f299add23bb5e3e7"},
+      {"layer_id": 7, "namespace": "model.layers.7.", "descriptor_sha256": "8de17beec10f3cebf6c355998fde0c2cd74228d03fdf089482026e4284ea6ca6"},
+      {"layer_id": 8, "namespace": "model.layers.8.", "descriptor_sha256": "e5c9b4522a33a7c01f6fe10e7f317a24cf6d26598773298f451c3789a631f757"},
+      {"layer_id": 9, "namespace": "model.layers.9.", "descriptor_sha256": "28f3aad0a3a79a814ea99f4c3edb1653ad97fbfb39dba23ec8525a5236e4cd63"},
+      {"layer_id": 10, "namespace": "model.layers.10.", "descriptor_sha256": "4b1070d1c34b1b572983b26f165f4d3f0c12b5f50aaca2c11e4e797934209a9f"},
+      {"layer_id": 11, "namespace": "model.layers.11.", "descriptor_sha256": "49893e2cdb478ba2f15ef93abac3e76c2be2307f650c4040f69e0614f77f26e0"},
+      {"layer_id": 12, "namespace": "model.layers.12.", "descriptor_sha256": "d5be9c0d3c9880575d3cdcde6f99fadd175d51cd60d52aff11093633e38b1dec"},
+      {"layer_id": 13, "namespace": "model.layers.13.", "descriptor_sha256": "f6aa64c1c0e66cf38e4168d50f7647910ee9aa4ed72c4f8b22ef4f8c117e8a42"},
+      {"layer_id": 14, "namespace": "model.layers.14.", "descriptor_sha256": "097759351e6eefc24d1a145e23d914dc4f3ee18a4205c4a25f6e277efed9ee5e"},
+      {"layer_id": 15, "namespace": "model.layers.15.", "descriptor_sha256": "739ffe2c23ed03ebaabcaf21cb3bcfb0418f2d26e34154a12de1d8ef275604e5"},
+      {"layer_id": 16, "namespace": "model.layers.16.", "descriptor_sha256": "d4ef31966fda5c4600a6978160055841813458a9ffa7ab9e25acc81d009161c5"},
+      {"layer_id": 17, "namespace": "model.layers.17.", "descriptor_sha256": "96b412fa9a8212bc41ac2aac2b58e093de6895ba441969d98619e7f15611224a"},
+      {"layer_id": 18, "namespace": "model.layers.18.", "descriptor_sha256": "81b33427c26bb8c92e038184a4f5350255167f4d8618f66126afa63fa32d41d2"},
+      {"layer_id": 19, "namespace": "model.layers.19.", "descriptor_sha256": "71282897c309636540962c48e65f9eb554c8225329de1708e33f8f3b8e080036"},
+      {"layer_id": 20, "namespace": "model.layers.20.", "descriptor_sha256": "90d923c29e25be17677293712cbb99342a208b860d65dfe75081b1b5c0a8486e"},
+      {"layer_id": 21, "namespace": "model.layers.21.", "descriptor_sha256": "af3c61e73991d0c38a61756beeaab9e1664ceca6376cc48d1a3b2cdd20bb5b36"},
+      {"layer_id": 22, "namespace": "model.layers.22.", "descriptor_sha256": "e9cf2e8e77a07c47bc331eca6d87093ef9ad515c84665c7727740df586571bc4"},
+      {"layer_id": 23, "namespace": "model.layers.23.", "descriptor_sha256": "9c1eef81355729ab3a32f6b21b58a5a17b3f6477f18f8553fe4bd74e7ea1592d"}
+    ],
+    "ownership": "a layer consumes only its bound namespace"
+  },
+  "schedule": {
+    "event_count": 483,
+    "initial": "embedding_lookup",
+    "per_layer": [
+      "input_rmsnorm",
+      "q_proj",
+      "k_proj",
+      "v_proj",
+      "q_rope",
+      "k_rope",
+      "kv_write",
+      "kv_read",
+      "attention_qk",
+      "attention_softmax",
+      "attention_value",
+      "o_proj",
+      "attention_residual_add",
+      "post_attention_rmsnorm",
+      "gate_proj",
+      "up_proj",
+      "silu",
+      "gated_multiply",
+      "down_proj",
+      "mlp_residual_add"
+    ],
+    "final": [
+      "final_rmsnorm",
+      "lm_head"
+    ],
+    "ordering": "strict; any missing, duplicate, reordered, or extra event faults"
+  },
+  "kv_cache": {
+    "format": "FP16",
+    "geometry": {
+      "layers": 24,
+      "cache_slots": 2,
+      "positions": 128,
+      "kv_heads": 2,
+      "head_dim": 64,
+      "hidden_size": 896,
+      "group_size": 128,
+      "vocab_size": 151936
+    },
+    "owner_key": [
+      "cache_slot",
+      "layer_id",
+      "K_or_V"
+    ],
+    "address_order": [
+      "K_or_V",
+      "cache_slot",
+      "layer_id",
+      "position",
+      "kv_head",
+      "dimension"
+    ],
+    "bounds": "reject without masking, wrapping, clamping, or aliasing",
+    "clear": "invalidate every slot and layer owner"
+  },
+  "residual_handoff": {
+    "format": "FP16",
+    "bindings": [
+      {"layer_id": 0, "input": "embedding.output", "attention_result": "residual.layer.0.attention", "output": "residual.layer.0.output"},
+      {"layer_id": 1, "input": "residual.layer.0.output", "attention_result": "residual.layer.1.attention", "output": "residual.layer.1.output"},
+      {"layer_id": 2, "input": "residual.layer.1.output", "attention_result": "residual.layer.2.attention", "output": "residual.layer.2.output"},
+      {"layer_id": 3, "input": "residual.layer.2.output", "attention_result": "residual.layer.3.attention", "output": "residual.layer.3.output"},
+      {"layer_id": 4, "input": "residual.layer.3.output", "attention_result": "residual.layer.4.attention", "output": "residual.layer.4.output"},
+      {"layer_id": 5, "input": "residual.layer.4.output", "attention_result": "residual.layer.5.attention", "output": "residual.layer.5.output"},
+      {"layer_id": 6, "input": "residual.layer.5.output", "attention_result": "residual.layer.6.attention", "output": "residual.layer.6.output"},
+      {"layer_id": 7, "input": "residual.layer.6.output", "attention_result": "residual.layer.7.attention", "output": "residual.layer.7.output"},
+      {"layer_id": 8, "input": "residual.layer.7.output", "attention_result": "residual.layer.8.attention", "output": "residual.layer.8.output"},
+      {"layer_id": 9, "input": "residual.layer.8.output", "attention_result": "residual.layer.9.attention", "output": "residual.layer.9.output"},
+      {"layer_id": 10, "input": "residual.layer.9.output", "attention_result": "residual.layer.10.attention", "output": "residual.layer.10.output"},
+      {"layer_id": 11, "input": "residual.layer.10.output", "attention_result": "residual.layer.11.attention", "output": "residual.layer.11.output"},
+      {"layer_id": 12, "input": "residual.layer.11.output", "attention_result": "residual.layer.12.attention", "output": "residual.layer.12.output"},
+      {"layer_id": 13, "input": "residual.layer.12.output", "attention_result": "residual.layer.13.attention", "output": "residual.layer.13.output"},
+      {"layer_id": 14, "input": "residual.layer.13.output", "attention_result": "residual.layer.14.attention", "output": "residual.layer.14.output"},
+      {"layer_id": 15, "input": "residual.layer.14.output", "attention_result": "residual.layer.15.attention", "output": "residual.layer.15.output"},
+      {"layer_id": 16, "input": "residual.layer.15.output", "attention_result": "residual.layer.16.attention", "output": "residual.layer.16.output"},
+      {"layer_id": 17, "input": "residual.layer.16.output", "attention_result": "residual.layer.17.attention", "output": "residual.layer.17.output"},
+      {"layer_id": 18, "input": "residual.layer.17.output", "attention_result": "residual.layer.18.attention", "output": "residual.layer.18.output"},
+      {"layer_id": 19, "input": "residual.layer.18.output", "attention_result": "residual.layer.19.attention", "output": "residual.layer.19.output"},
+      {"layer_id": 20, "input": "residual.layer.19.output", "attention_result": "residual.layer.20.attention", "output": "residual.layer.20.output"},
+      {"layer_id": 21, "input": "residual.layer.20.output", "attention_result": "residual.layer.21.attention", "output": "residual.layer.21.output"},
+      {"layer_id": 22, "input": "residual.layer.21.output", "attention_result": "residual.layer.22.attention", "output": "residual.layer.22.output"},
+      {"layer_id": 23, "input": "residual.layer.22.output", "attention_result": "residual.layer.23.attention", "output": "residual.layer.23.output"}
+    ],
+    "rule": "layer output is the sole residual input of the next layer"
+  },
+  "final_interfaces": {
+    "rmsnorm": {
+      "tensor": "model.norm.weight",
+      "dtype": "F16",
+      "features": 896,
+      "epsilon": 1e-06
+    },
+    "lm_head": {
+      "checkpoint_tensor": "lm_head.weight",
+      "checkpoint_dtype": "F16",
+      "tied_to": "model.embed_tokens.weight",
+      "tied_value_sha256": "d74257dc547b48be5ae7b93f1c9af072c0c42dbbb85503078e25c59cd09e68d0",
+      "input_features": 896,
+      "output_logits": 151936,
+      "execution_group_size": 128,
+      "execution_groups_per_logit": 7,
+      "execution_stream": "grouped native asymmetric AWQ W4A16 G128 interface",
+      "storage_boundary": "grouped execution interface only; no AWQ-packed lm_head checkpoint-storage claim"
+    },
+    "argmax": {
+      "input_order": "token_id ascending from 0 through 151935",
+      "selection": "greatest valid logit",
+      "tie_break": "lowest token_id",
+      "completion": "exactly 151936 logits accepted",
+      "invalid": "fault; no token result"
+    }
+  },
+  "reset_and_error": {
+    "fault_policy": "latched fail-closed until reset or clear",
+    "suppressed_while_faulted": [
+      "event_accept",
+      "kv_write",
+      "residual_handoff",
+      "logit_accept",
+      "argmax_valid",
+      "done"
+    ],
+    "reset": "return to embedding_lookup and invalidate all KV ownership"
+  },
+  "verification_boundary": {
+    "established": [
+      "24 namespace bindings and 483-event control trajectory",
+      "per-layer FP16 KV ownership and residual lineage",
+      "final RMSNorm, tied grouped lm_head, and deterministic argmax interfaces",
+      "fixed parent, reviewed map, and decoder snapshot hash compatibility"
+    ],
+    "excluded": [
+      "decoder RTL implementation or execution",
+      "official numerical model execution or dialogue",
+      "latency, throughput, synthesis, PPA, FPGA, or silicon",
+      "decoder acceptance"
+    ]
+  }
+}
