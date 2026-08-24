@@ -1,0 +1,39 @@
+{
+  "schema_version": 1,
+  "kind": "ace3_qkv_rope_cache_serialized_bindings",
+  "generation": {
+    "model_repository": "Qwen/Qwen2.5-0.5B-Instruct-AWQ",
+    "model_revision": "db09cd27ead7fee40cdee309693cf83601b9c899",
+    "query_heads": 14,
+    "kv_heads": 2,
+    "head_dim": 64,
+    "rope_case_count": 512,
+    "cache_case_count": 128
+  },
+  "serialized_artifacts": [
+    {
+      "file": "cache_cases.hex",
+      "sha256": "998dea856645d1c5295c01ea7d8c6fa254d029f144dd640b8a8d7d2dac0782c0",
+      "byte_count": 2176,
+      "line_count": 128
+    },
+    {
+      "file": "manifest.json",
+      "sha256": "f13acb452f4459c69b0494e706fdf98c7095852d145ef7d2a0b3e1433ff7b742",
+      "byte_count": 1042,
+      "line_count": 26
+    },
+    {
+      "file": "qkv_params.svh",
+      "sha256": "4b8d19f92ca9a1f77825336aec1e1a661dc22525cadd2bd8ba8d64f0b94b0ce6",
+      "byte_count": 86,
+      "line_count": 3
+    },
+    {
+      "file": "rope_cases.hex",
+      "sha256": "0a97b8a5b78158ffa2c6c5495be13120dc9c820f455a4883fde46db45d3f088d",
+      "byte_count": 16896,
+      "line_count": 512
+    }
+  ]
+}

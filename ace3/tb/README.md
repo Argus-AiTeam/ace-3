@@ -12,3 +12,8 @@ Projection testbenches verify eight complete official q-projection outputs,
 six directed outputs, 896- and 4,864-input cycle models, tiled output
 sequencing, indices, stalls, reset/clear, backpressure, and bounded Icarus X/Z
 behavior. Other projection geometries receive elaboration/lint coverage only.
+
+QKV tests authenticate 512 RoPE pairs spanning every one of 14 query heads and
+two key heads, then exercise every dimension of both value heads through indexed
+K/V writes and reads. Icarus adds bounded inactive X/Z probes; both simulators
+check retained outputs, overwrite, cache-slot/token isolation, reset, and clear.

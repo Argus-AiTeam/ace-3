@@ -63,6 +63,26 @@ FP16_BINDINGS := $(ROOT)/ace3/contracts/fp16_adaptation_vector_bindings.json
 FP16_TB := $(ROOT)/ace3/tb/ace3_fp16_adaptation_tb.sv
 FP16_VERILATOR_TOP := $(ROOT)/ace3/tb/ace3_fp16_adaptation_verilator_top.sv
 FP16_CPP_TB := $(ROOT)/ace3/tb/ace3_fp16_adaptation_main.cpp
+QKV_VECTOR_DIR := $(BUILD_DIR)/qkv_rope_cache_vectors
+QKV_TAMPER_DIR := $(BUILD_DIR)/tamper-qkv-rope-cache-vectors
+QKV_IVERILOG_DIR := $(BUILD_DIR)/qkv_iverilog
+QKV_IVERILOG_BIN := $(QKV_IVERILOG_DIR)/ace3_qkv_rope_cache.vvp
+QKV_GEOMETRY_BIN := $(QKV_IVERILOG_DIR)/ace3_qkv_projection_geometry.vvp
+QKV_VERILATOR_DIR := $(BUILD_DIR)/qkv_verilator
+QKV_VERILATOR_OBJ_DIR := $(QKV_VERILATOR_DIR)/obj_dir
+QKV_VERILATOR_BIN := $(QKV_VERILATOR_OBJ_DIR)/Vace3_qkv_rope_cache_verilator_top
+QKV_ROPE_RTL := $(ROOT)/ace3/rtl/ace3_qwen2_rope_pair.sv
+QKV_CACHE_RTL := $(ROOT)/ace3/rtl/ace3_fp16_kv_cache.sv
+QKV_CLUSTER_RTL := $(ROOT)/ace3/rtl/ace3_qkv_projection_cluster.sv
+QKV_ORACLE := $(ROOT)/ace3/model/qwen2_rope_oracle.py
+QKV_GENERATOR := $(ROOT)/ace3/model/generate_qkv_rope_cache_vectors.py
+QKV_VALIDATOR := $(ROOT)/ace3/model/validate_qkv_rope_cache_vectors.py
+QKV_CONTRACT := $(ROOT)/ace3/contracts/qkv_rope_kv_cache.json
+QKV_BINDINGS := $(ROOT)/ace3/contracts/qkv_rope_kv_cache_vector_bindings.json
+QKV_TB := $(ROOT)/ace3/tb/ace3_qkv_rope_cache_tb.sv
+QKV_GEOMETRY_TB := $(ROOT)/ace3/tb/ace3_qkv_projection_geometry_tb.sv
+QKV_VERILATOR_TOP := $(ROOT)/ace3/tb/ace3_qkv_rope_cache_verilator_top.sv
+QKV_CPP_TB := $(ROOT)/ace3/tb/ace3_qkv_rope_cache_main.cpp
 
 IVERILOG_BIN := $(IVERILOG_DIR)/ace3_awq_w4a16_g128_dot_lane.vvp
 PROTOCOL_BIN := $(IVERILOG_DIR)/ace3_awq_w4a16_g128_dot_lane_protocol.vvp
@@ -87,7 +107,11 @@ export PYTHONDONTWRITEBYTECODE := 1
 	fp16-adaptation fp16-oracle fp16-vectors fp16-json-validation \
 	fp16-tamper-rejection fp16-geometry fp16-iverilog-compile \
 	fp16-iverilog-simulation fp16-verilator-compile \
-	fp16-verilator-simulation clean
+	fp16-verilator-simulation \
+	qkv-rope-cache qkv-oracle qkv-vectors qkv-json-validation \
+	qkv-tamper-rejection qkv-geometry qkv-iverilog-compile \
+	qkv-iverilog-simulation qkv-verilator-compile \
+	qkv-verilator-simulation clean
 
 test:
 	@mkdir -p "$(LOG_DIR)"
@@ -109,13 +133,14 @@ test:
 	  printf '%s\n' '$ git check-ignore -q build/vectors/manifest.json'; \
 	  git -C "$(ROOT)" check-ignore -q build/vectors/manifest.json; \
 	  git -C "$(ROOT)" check-ignore -q build/projection_vectors/manifest.json; \
+	  git -C "$(ROOT)" check-ignore -q build/qkv_rope_cache_vectors/manifest.json; \
 	  test ! -e "$(ROOT)/ace3/generated"; \
 	  printf '%s\n' 'REPOSITORY_HYGIENE_PASS status_unchanged=yes build_ignored=yes legacy_generated_absent=yes diff_check=pass'; \
 	} > "$$log" 2>&1 || { status=$$?; cat "$$log"; exit $$status; }; \
 	cat "$$log"
-	@printf '%s\n' 'STANDALONE_VALIDATION_PASS semantic_checks=fresh primitive=pass projection=pass fp16_adaptation=pass serialized_sha256=pass tamper_rejection=pass iverilog=pass protocol_4state=pass verilator=pass geometry_parameters=pass hygiene=pass'
+	@printf '%s\n' 'STANDALONE_VALIDATION_PASS semantic_checks=fresh primitive=pass projection=pass fp16_adaptation=pass qkv_rope_cache=pass serialized_sha256=pass tamper_rejection=pass iverilog=pass protocol_4state=pass verilator=pass geometry_parameters=pass hygiene=pass'
 
-_validate: oracle tamper-rejection iverilog verilator projection fp16-adaptation
+_validate: oracle tamper-rejection iverilog verilator projection fp16-adaptation qkv-rope-cache
 
 oracle:
 	@mkdir -p "$(BUILD_DIR)" "$(LOG_DIR)"
@@ -516,6 +541,122 @@ fp16-verilator-simulation: fp16-verilator-compile
 	printf '%s\n' '$ build/fp16_verilator/obj_dir/Vace3_fp16_adaptation_verilator_top --vector-dir build/fp16_adaptation_vectors' > "$$log"; \
 	if cd "$(ROOT)" && "$(FP16_VERILATOR_BIN)" \
 	    --vector-dir "$(FP16_VECTOR_DIR)" >> "$$log" 2>&1; then :; \
+	else status=$$?; cat "$$log"; exit $$status; fi; \
+	cat "$$log"
+
+qkv-rope-cache: qkv-oracle qkv-tamper-rejection qkv-geometry \
+	qkv-iverilog-simulation qkv-verilator-simulation
+
+qkv-oracle:
+	@mkdir -p "$(BUILD_DIR)" "$(LOG_DIR)"
+	@set -eu; log="$(LOG_DIR)/qkv-rope-oracle.log"; \
+	printf '%s\n' '$ python3 ace3/model/qwen2_rope_oracle.py' > "$$log"; \
+	if cd "$(ROOT)" && "$(PYTHON)" "$(QKV_ORACLE)" >> "$$log" 2>&1; then :; \
+	else status=$$?; cat "$$log"; exit $$status; fi; \
+	cat "$$log"
+
+qkv-vectors:
+	@rm -rf "$(QKV_VECTOR_DIR)"
+	@mkdir -p "$(QKV_VECTOR_DIR)" "$(LOG_DIR)"
+	@set -eu; log="$(LOG_DIR)/qkv-rope-cache-vector-generation.log"; \
+	printf '%s\n' '$ python3 ace3/model/generate_qkv_rope_cache_vectors.py --official-tensor-dir "$(OFFICIAL_TENSOR_DIR)" --output-dir build/qkv_rope_cache_vectors' > "$$log"; \
+	if cd "$(ROOT)" && "$(PYTHON)" "$(QKV_GENERATOR)" \
+	    --official-tensor-dir "$(OFFICIAL_TENSOR_DIR)" \
+	    --output-dir "$(QKV_VECTOR_DIR)" >> "$$log" 2>&1; then :; \
+	else status=$$?; cat "$$log"; exit $$status; fi; \
+	cat "$$log"
+
+qkv-json-validation: qkv-vectors
+	@mkdir -p "$(LOG_DIR)"
+	@set -eu; log="$(LOG_DIR)/qkv-rope-cache-json-validation.log"; \
+	printf '%s\n' '$ python3 ace3/model/validate_qkv_rope_cache_vectors.py --generated-dir build/qkv_rope_cache_vectors --contract ace3/contracts/qkv_rope_kv_cache.json --bindings ace3/contracts/qkv_rope_kv_cache_vector_bindings.json' > "$$log"; \
+	if cd "$(ROOT)" && "$(PYTHON)" "$(QKV_VALIDATOR)" \
+	    --generated-dir "$(QKV_VECTOR_DIR)" \
+	    --contract "$(QKV_CONTRACT)" \
+	    --bindings "$(QKV_BINDINGS)" >> "$$log" 2>&1; then :; \
+	else status=$$?; cat "$$log"; exit $$status; fi; \
+	cat "$$log"
+
+qkv-tamper-rejection: qkv-json-validation
+	@rm -rf "$(QKV_TAMPER_DIR)"
+	@cp -a "$(QKV_VECTOR_DIR)" "$(QKV_TAMPER_DIR)"
+	@printf '0' >> "$(QKV_TAMPER_DIR)/rope_cases.hex"
+	@set -eu; attempt="$(LOG_DIR)/qkv-rope-cache-tamper-attempt.log"; \
+	log="$(LOG_DIR)/qkv-rope-cache-tamper-rejection.log"; \
+	if cd "$(ROOT)" && "$(PYTHON)" "$(QKV_VALIDATOR)" \
+	    --generated-dir "$(QKV_TAMPER_DIR)" \
+	    --contract "$(QKV_CONTRACT)" \
+	    --bindings "$(QKV_BINDINGS)" > "$$attempt" 2>&1; then \
+	  cat "$$attempt"; exit 1; \
+	fi; \
+	if ! grep -Fq 'rope_cases.hex SHA256 mismatch' "$$attempt"; then \
+	  cat "$$attempt"; exit 1; \
+	fi; \
+	printf '%s\n' 'QKV_ROPE_CACHE_TAMPER_REJECTION_PASS artifact=rope_cases.hex validator_exit=nonzero reason=sha256_mismatch originals=untouched' > "$$log"; \
+	cat "$$log"
+
+qkv-geometry: qkv-json-validation
+	@rm -rf "$(QKV_IVERILOG_DIR)"
+	@mkdir -p "$(QKV_IVERILOG_DIR)" "$(LOG_DIR)"
+	@set -eu; log="$(LOG_DIR)/qkv-projection-geometry.log"; \
+	: > "$$log"; \
+	"$(IVERILOG)" -g2012 -Wall -s ace3_qkv_projection_geometry_tb \
+	    -o "$(QKV_GEOMETRY_BIN)" \
+	    "$(PROJECTION_ROUNDER_RTL)" "$(RTL)" "$(PROJECTION_RTL)" \
+	    "$(QKV_CLUSTER_RTL)" "$(QKV_GEOMETRY_TB)" >> "$$log" 2>&1 \
+	    || { cat "$$log"; exit 1; }; \
+	"$(VVP)" "$(QKV_GEOMETRY_BIN)" >> "$$log" 2>&1 \
+	    || { cat "$$log"; exit 1; }; \
+	"$(VERILATOR)" --lint-only --Wall \
+	    --top-module ace3_qkv_projection_cluster \
+	    "$(PROJECTION_ROUNDER_RTL)" "$(RTL)" "$(PROJECTION_RTL)" \
+	    "$(QKV_CLUSTER_RTL)" >> "$$log" 2>&1 \
+	    || { cat "$$log"; exit 1; }; \
+	printf '%s\n' 'QKV_GEOMETRY_PASS simulators=iverilog,verilator q=896x896 k=896x128 v=896x128 query_heads=14 kv_heads=2 head_dim=64' >> "$$log"; \
+	cat "$$log"
+
+qkv-iverilog-compile: qkv-json-validation
+	@mkdir -p "$(QKV_IVERILOG_DIR)" "$(LOG_DIR)"
+	@rm -f "$(QKV_IVERILOG_BIN)"
+	@set -eu; log="$(LOG_DIR)/qkv-rope-cache-iverilog-compile.log"; \
+	: > "$$log"; \
+	if "$(IVERILOG)" -g2012 -Wall -I "$(QKV_VECTOR_DIR)" \
+	    -s ace3_qkv_rope_cache_tb -o "$(QKV_IVERILOG_BIN)" \
+	    "$(FP16_FIXED_RTL)" "$(PROJECTION_ROUNDER_RTL)" \
+	    "$(QKV_ROPE_RTL)" "$(QKV_CACHE_RTL)" "$(QKV_TB)" \
+	    >> "$$log" 2>&1; then :; \
+	else status=$$?; cat "$$log"; exit $$status; fi; \
+	cat "$$log"
+
+qkv-iverilog-simulation: qkv-iverilog-compile
+	@mkdir -p "$(LOG_DIR)"
+	@set -eu; log="$(LOG_DIR)/qkv-rope-cache-iverilog-simulation.log"; \
+	: > "$$log"; \
+	if cd "$(ROOT)" && "$(VVP)" "$(QKV_IVERILOG_BIN)" \
+	    +VECTOR_DIR="$(QKV_VECTOR_DIR)" >> "$$log" 2>&1; then :; \
+	else status=$$?; cat "$$log"; exit $$status; fi; \
+	cat "$$log"
+
+qkv-verilator-compile: qkv-json-validation
+	@rm -rf "$(QKV_VERILATOR_OBJ_DIR)"
+	@mkdir -p "$(QKV_VERILATOR_DIR)" "$(LOG_DIR)"
+	@set -eu; log="$(LOG_DIR)/qkv-rope-cache-verilator-compile.log"; \
+	: > "$$log"; \
+	if cd "$(ROOT)" && "$(VERILATOR)" --cc --exe --build --Wall \
+	    --top-module ace3_qkv_rope_cache_verilator_top \
+	    --Mdir "$(QKV_VERILATOR_OBJ_DIR)" \
+	    "$(FP16_FIXED_RTL)" "$(PROJECTION_ROUNDER_RTL)" \
+	    "$(QKV_ROPE_RTL)" "$(QKV_CACHE_RTL)" "$(QKV_VERILATOR_TOP)" \
+	    "$(QKV_CPP_TB)" >> "$$log" 2>&1; then :; \
+	else status=$$?; cat "$$log"; exit $$status; fi; \
+	test -x "$(QKV_VERILATOR_BIN)"; cat "$$log"
+
+qkv-verilator-simulation: qkv-verilator-compile
+	@mkdir -p "$(LOG_DIR)"
+	@set -eu; log="$(LOG_DIR)/qkv-rope-cache-verilator-simulation.log"; \
+	: > "$$log"; \
+	if cd "$(ROOT)" && "$(QKV_VERILATOR_BIN)" \
+	    --vector-dir "$(QKV_VECTOR_DIR)" >> "$$log" 2>&1; then :; \
 	else status=$$?; cat "$$log"; exit $$status; fi; \
 	cat "$$log"
 

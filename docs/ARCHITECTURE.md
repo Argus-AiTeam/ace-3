@@ -180,3 +180,19 @@ Passing one level does not certify a later level.
 The current evidence reaches level 3 for eight complete official layer-0
 `q_proj` outputs and directed arithmetic cases. It does not numerically certify
 the other projection modules or any decoder-layer behavior.
+
+## QKV, rotary, and cache boundary
+
+`ace3_qkv_projection_cluster` fixes three unchanged projection-engine instances
+to the checkpoint geometries: 896x896 Q and 896x128 K/V. Packed interface lane
+0 is Q, lane 1 is K, and lane 2 is V.
+
+`ace3_qwen2_rope_pair` implements Qwen2.5's 64-element half-split rotation:
+element `p` is paired with `p+32`. Each binary16 multiplication rounds before
+the binary16 addition. Cosine and sine are supplied through the indexed stream
+boundary; the core does not claim an on-chip transcendental generator.
+
+`ace3_fp16_kv_cache` stores rotated FP16 K and unrotated FP16 V by cache slot,
+position, KV head, and head dimension. Data arrays are not reset; reset and
+clear invalidate metadata and abort pending reads. This boundary excludes
+attention score generation, softmax, value composition, and decoder execution.

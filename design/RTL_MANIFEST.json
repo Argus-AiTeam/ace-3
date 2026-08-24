@@ -1,30 +1,44 @@
 {
-  "schema_version": 1,
-  "manifest_id": "ace3_fp16_model_adaptation_rtl",
+  "schema_version": 2,
+  "manifest_id": "ace3_fp16_adaptation_qkv_rope_kv_cache_rtl",
   "scope": {
-    "milestone": "bounded FP16 residual-add, RMSNorm, and SiLU/gate RTL simulation",
-    "baseline_commit": "d6f37f1c3bfcce0c9c71f7d28cd1cd5b97ef0ad6",
-    "baseline_subject": "feat(rtl): add native AWQ full projection",
+    "milestone": "bounded FP16 adaptation plus QKV projection, RoPE, and FP16 K/V-cache RTL simulation",
+    "baseline_commit": "241c977dda5ae4615681c583eb8301dfe9d3dd05",
+    "baseline_subject": "feat(rtl): add FP16 adaptation operators",
     "included_modules": [
       "ace3_fp16_to_q24",
       "ace3_q24_to_fp16_rne",
       "ace3_fp16_residual_add_core",
       "ace3_fp16_rmsnorm_core",
-      "ace3_fp16_silu_gate_core"
+      "ace3_fp16_silu_gate_core",
+      "ace3_qkv_projection_cluster",
+      "ace3_qwen2_rope_pair",
+      "ace3_fp16_kv_cache"
     ],
     "excluded_claims": [
-      "attention",
-      "decoder or full model",
+      "attention scores",
+      "softmax",
+      "value composition",
+      "decoder-layer or full-model execution",
       "correctly rounded transcendental SiLU",
       "synthesis, timing, area, power, FPGA, or silicon",
       "dialogue or model quality"
     ]
   },
-  "authoritative_contract": {
-    "path": "ace3/contracts/fp16_adaptation_operators.json",
-    "status": "frozen and unchanged by this manifest",
-    "human_traceability": "design/RTL_TRACEABILITY.md"
-  },
+  "authoritative_contracts": [
+    {
+      "path": "ace3/contracts/fp16_adaptation_operators.json",
+      "applies_to": "FP16-ADAPT-* requirements",
+      "status": "frozen and unchanged by this manifest"
+    },
+    {
+      "path": "ace3/contracts/qkv_rope_kv_cache.json",
+      "sha256": "4451a9044f82781dcfd861f44583b59e006f1044279c744f886c3f880ce7b098",
+      "applies_to": "QKV-* requirements",
+      "status": "frozen and unchanged by this manifest"
+    }
+  ],
+  "human_traceability": "design/RTL_TRACEABILITY.md",
   "requirement_catalog": [
     {
       "id": "FP16-ADAPT-FORMAT-001",
@@ -128,6 +142,100 @@
       "summary": "ACE-3 arithmetic is first-party RTL; only the enumerated ACE-2 control, protocol, dataflow, and verification structures are re-expressed.",
       "contract_refs": [
         "/ace2_reuse_audit"
+      ]
+    },
+    {
+      "id": "QKV-PROJECTION-001",
+      "summary": "The fixed projection cluster composes unchanged native asymmetric G128 AWQ engines as Q 896x896, K 896x128, and V 896x128 lanes.",
+      "contract_refs": [
+        "/projection_cluster/composition",
+        "/projection_cluster/engine"
+      ]
+    },
+    {
+      "id": "QKV-ROPE-GEOMETRY-001",
+      "summary": "RoPE accepts every one of 14 query heads and two key heads, pairs dimensions p and p+32 for 64-dimensional heads, and carries the 32768-position Qwen2.5 coefficient index.",
+      "contract_refs": [
+        "/model/query_heads",
+        "/model/key_value_heads",
+        "/model/head_dim",
+        "/model/max_position_embeddings",
+        "/model/rope_theta",
+        "/rope/pairing",
+        "/rope/coefficient_interface"
+      ]
+    },
+    {
+      "id": "QKV-ROPE-NUMERICAL-001",
+      "summary": "Each Qwen2.5 half-split rotation rounds both binary16 products before the binary16 sum, returns positive zero for non-finite operands, and saturates finite overflow.",
+      "contract_refs": [
+        "/rope/equations",
+        "/rope/operation_rounding",
+        "/rope/nonfinite",
+        "/rope/finite_overflow"
+      ]
+    },
+    {
+      "id": "QKV-ROPE-PROTOCOL-001",
+      "summary": "The one-entry RoPE ready-valid stage retains data, metadata, and status under backpressure; reset and clear abort its pending output.",
+      "contract_refs": [
+        "/rope/protocol",
+        "/rope/clear_reset"
+      ]
+    },
+    {
+      "id": "QKV-CACHE-INDEX-001",
+      "summary": "Separate FP16 K and V arrays plus validity metadata are indexed in cache-slot, position, K/V-head, dimension order with defaults 2x128x2x64.",
+      "contract_refs": [
+        "/kv_cache/key_format",
+        "/kv_cache/value_format",
+        "/kv_cache/index_order",
+        "/kv_cache/defaults",
+        "/kv_cache/storage"
+      ]
+    },
+    {
+      "id": "QKV-CACHE-READWRITE-001",
+      "summary": "Accepted writes update exactly one K/V index; reads return a retained hit or positive-zero miss; overwrites replace one entry and simultaneous same-address access is write-through.",
+      "contract_refs": [
+        "/kv_cache/read",
+        "/kv_cache/same_cycle",
+        "/kv_cache/overwrite"
+      ]
+    },
+    {
+      "id": "QKV-CACHE-ABORT-001",
+      "summary": "Reset and clear invalidate every cache entry and abort a pending response without claiming reset of K/V SRAM data bits.",
+      "contract_refs": [
+        "/kv_cache/storage",
+        "/kv_cache/clear_reset"
+      ]
+    },
+    {
+      "id": "QKV-EVIDENCE-001",
+      "summary": "The independent bit-level oracle and generated streams are bound to the fixed official checkpoint and cross-checked in Icarus and Verilator with tamper rejection.",
+      "contract_refs": [
+        "/model/repository",
+        "/model/revision",
+        "/model/config_sha256",
+        "/verification_boundary/official_derived",
+        "/verification_boundary/simulators"
+      ]
+    },
+    {
+      "id": "QKV-BOUNDARY-001",
+      "summary": "This milestone stops at QKV projection geometry, pairwise RoPE, and indexed FP16 K/V storage; all downstream model execution and physical implementation claims remain excluded.",
+      "contract_refs": [
+        "/verification_boundary/excluded"
+      ]
+    },
+    {
+      "id": "QKV-PROVENANCE-001",
+      "summary": "The projection wrapper, RoPE pair core, and K/V cache are first-party ACE-3 RTL with explicit dependencies on accepted ACE-3 arithmetic and projection modules.",
+      "contract_refs": [
+        "/projection_cluster/implementation",
+        "/rope/implementation",
+        "/kv_cache/implementation"
       ]
     }
   ],
@@ -620,14 +728,249 @@
           ]
         }
       ]
+    },
+    {
+      "path": "ace3/rtl/ace3_qkv_projection_cluster.sv",
+      "sha256": "a02880cc69110b226f0121053b3bad72355e33c1e576f7c749f9daf034305de1",
+      "provenance": {
+        "classification": "first_party_ace3_rtl",
+        "copied_from_ace2": false,
+        "origin": "Authored as an ACE-3 composition wrapper over the accepted native-AWQ projection engine.",
+        "ace2_relationship": "No ACE-2 source is copied; all arithmetic and control remain in the accepted ACE-3 projection engine instances."
+      },
+      "modules": [
+        {
+          "name": "ace3_qkv_projection_cluster",
+          "kind": "fixed_checkpoint_projection_composition",
+          "parameters": [],
+          "ports": [
+            {"name": "clk_i", "direction": "input", "declaration": "input wire clk_i"},
+            {"name": "rst_ni", "direction": "input", "declaration": "input wire rst_ni"},
+            {"name": "clear_i", "direction": "input", "declaration": "input wire clear_i"},
+            {"name": "start_valid_i", "direction": "input", "declaration": "input wire [2:0] start_valid_i"},
+            {"name": "start_ready_o", "direction": "output", "declaration": "output wire [2:0] start_ready_o"},
+            {"name": "first_output_channel_i", "direction": "input", "declaration": "input wire [38:0] first_output_channel_i"},
+            {"name": "output_count_i", "direction": "input", "declaration": "input wire [38:0] output_count_i"},
+            {"name": "meta_valid_i", "direction": "input", "declaration": "input wire [2:0] meta_valid_i"},
+            {"name": "meta_ready_o", "direction": "output", "declaration": "output wire [2:0] meta_ready_o"},
+            {"name": "meta_output_channel_o", "direction": "output", "declaration": "output wire [38:0] meta_output_channel_o"},
+            {"name": "meta_group_index_o", "direction": "output", "declaration": "output wire [17:0] meta_group_index_o"},
+            {"name": "meta_output_word_o", "direction": "output", "declaration": "output wire [29:0] meta_output_word_o"},
+            {"name": "meta_logical_lane_o", "direction": "output", "declaration": "output wire [8:0] meta_logical_lane_o"},
+            {"name": "qzeros_i", "direction": "input", "declaration": "input wire [95:0] qzeros_i"},
+            {"name": "scale_f16_i", "direction": "input", "declaration": "input wire [47:0] scale_f16_i"},
+            {"name": "pair_valid_i", "direction": "input", "declaration": "input wire [2:0] pair_valid_i"},
+            {"name": "pair_ready_o", "direction": "output", "declaration": "output wire [2:0] pair_ready_o"},
+            {"name": "pair_input_index_o", "direction": "output", "declaration": "output wire [38:0] pair_input_index_o"},
+            {"name": "pair_output_channel_o", "direction": "output", "declaration": "output wire [38:0] pair_output_channel_o"},
+            {"name": "pair_group_index_o", "direction": "output", "declaration": "output wire [17:0] pair_group_index_o"},
+            {"name": "pair_output_word_o", "direction": "output", "declaration": "output wire [29:0] pair_output_word_o"},
+            {"name": "pair_logical_lane_o", "direction": "output", "declaration": "output wire [8:0] pair_logical_lane_o"},
+            {"name": "activation_f16_i", "direction": "input", "declaration": "input wire [47:0] activation_f16_i"},
+            {"name": "qweight_i", "direction": "input", "declaration": "input wire [95:0] qweight_i"},
+            {"name": "out_valid_o", "direction": "output", "declaration": "output wire [2:0] out_valid_o"},
+            {"name": "out_ready_i", "direction": "input", "declaration": "input wire [2:0] out_ready_i"},
+            {"name": "out_channel_o", "direction": "output", "declaration": "output wire [38:0] out_channel_o"},
+            {"name": "out_f16_o", "direction": "output", "declaration": "output wire [47:0] out_f16_o"},
+            {"name": "acc_q53_48_o", "direction": "output", "declaration": "output wire [305:0] acc_q53_48_o"},
+            {"name": "invalid_operand_o", "direction": "output", "declaration": "output wire [2:0] invalid_operand_o"},
+            {"name": "saturation_o", "direction": "output", "declaration": "output wire [2:0] saturation_o"},
+            {"name": "busy_o", "direction": "output", "declaration": "output wire [2:0] busy_o"},
+            {"name": "all_idle_o", "direction": "output", "declaration": "output wire all_idle_o"}
+          ],
+          "dependencies": [
+            "ace3_awq_w4a16_projection_engine(IN_FEATURES=896,OUT_FEATURES=896) as q_projection",
+            "ace3_awq_w4a16_projection_engine(IN_FEATURES=896,OUT_FEATURES=128) as k_projection",
+            "ace3_awq_w4a16_projection_engine(IN_FEATURES=896,OUT_FEATURES=128) as v_projection"
+          ],
+          "requirement_ids": [
+            "QKV-PROJECTION-001",
+            "QKV-EVIDENCE-001",
+            "QKV-BOUNDARY-001",
+            "QKV-PROVENANCE-001"
+          ]
+        }
+      ]
+    },
+    {
+      "path": "ace3/rtl/ace3_qwen2_rope_pair.sv",
+      "sha256": "d6da922485f1f9818a08e604b3559d56fe407ad42fc2f7605d3bfdded3ee36b8",
+      "provenance": {
+        "classification": "first_party_ace3_rtl",
+        "copied_from_ace2": false,
+        "origin": "Authored for the fixed Qwen2.5 half-split rotary contract using accepted ACE-3 FP16 conversion modules.",
+        "ace2_relationship": "No ACE-2 source is copied and no ACE-2 W4A8 numerical path is used."
+      },
+      "modules": [
+        {
+          "name": "ace3_qwen2_rope_pair",
+          "kind": "sequential_ready_valid_pair_core",
+          "parameters": [],
+          "ports": [
+            {"name": "clk_i", "direction": "input", "declaration": "input wire clk_i"},
+            {"name": "rst_ni", "direction": "input", "declaration": "input wire rst_ni"},
+            {"name": "clear_i", "direction": "input", "declaration": "input wire clear_i"},
+            {"name": "in_valid_i", "direction": "input", "declaration": "input wire in_valid_i"},
+            {"name": "in_ready_o", "direction": "output", "declaration": "output wire in_ready_o"},
+            {"name": "is_key_i", "direction": "input", "declaration": "input wire is_key_i"},
+            {"name": "head_index_i", "direction": "input", "declaration": "input wire [3:0] head_index_i"},
+            {"name": "pair_index_i", "direction": "input", "declaration": "input wire [4:0] pair_index_i"},
+            {"name": "position_i", "direction": "input", "declaration": "input wire [14:0] position_i"},
+            {"name": "low_f16_i", "direction": "input", "declaration": "input wire [15:0] low_f16_i"},
+            {"name": "high_f16_i", "direction": "input", "declaration": "input wire [15:0] high_f16_i"},
+            {"name": "cos_f16_i", "direction": "input", "declaration": "input wire [15:0] cos_f16_i"},
+            {"name": "sin_f16_i", "direction": "input", "declaration": "input wire [15:0] sin_f16_i"},
+            {"name": "out_valid_o", "direction": "output", "declaration": "output wire out_valid_o"},
+            {"name": "out_ready_i", "direction": "input", "declaration": "input wire out_ready_i"},
+            {"name": "is_key_o", "direction": "output", "declaration": "output wire is_key_o"},
+            {"name": "head_index_o", "direction": "output", "declaration": "output wire [3:0] head_index_o"},
+            {"name": "pair_index_o", "direction": "output", "declaration": "output wire [4:0] pair_index_o"},
+            {"name": "position_o", "direction": "output", "declaration": "output wire [14:0] position_o"},
+            {"name": "low_f16_o", "direction": "output", "declaration": "output wire [15:0] low_f16_o"},
+            {"name": "high_f16_o", "direction": "output", "declaration": "output wire [15:0] high_f16_o"},
+            {"name": "invalid_operand_o", "direction": "output", "declaration": "output wire invalid_operand_o"},
+            {"name": "saturation_o", "direction": "output", "declaration": "output wire saturation_o"}
+          ],
+          "dependencies": [
+            "ace3_fp16_to_q24",
+            "ace3_q47_48_to_f16_rne(ACC_WIDTH=82)",
+            "ace3_q24_to_fp16_rne(WIDTH=42)"
+          ],
+          "requirement_ids": [
+            "QKV-ROPE-GEOMETRY-001",
+            "QKV-ROPE-NUMERICAL-001",
+            "QKV-ROPE-PROTOCOL-001",
+            "QKV-EVIDENCE-001",
+            "QKV-BOUNDARY-001",
+            "QKV-PROVENANCE-001"
+          ]
+        }
+      ]
+    },
+    {
+      "path": "ace3/rtl/ace3_fp16_kv_cache.sv",
+      "sha256": "fa2b30ca6f22fcc0e2f1fb7ac91761c1aa3d2440d3b9abed28bb76a0569ed179",
+      "provenance": {
+        "classification": "first_party_ace3_rtl",
+        "copied_from_ace2": false,
+        "origin": "Authored as parameterized SRAM-oriented indexed storage for rotated FP16 K and unrotated FP16 V.",
+        "ace2_relationship": "No ACE-2 source or W4A8 cache format is copied."
+      },
+      "modules": [
+        {
+          "name": "ace3_fp16_kv_cache",
+          "kind": "parameterized_indexed_storage_core",
+          "parameters": [
+            {"name": "CACHE_SLOTS", "declaration": "parameter [2:0] CACHE_SLOTS = 3'd2", "default": 2},
+            {"name": "MAX_TOKENS", "declaration": "parameter [15:0] MAX_TOKENS = 16'd128", "default": 128},
+            {"name": "KV_HEADS", "declaration": "parameter [4:0] KV_HEADS = 5'd2", "default": 2},
+            {"name": "HEAD_DIM", "declaration": "parameter [6:0] HEAD_DIM = 7'd64", "default": 64}
+          ],
+          "ports": [
+            {"name": "clk_i", "direction": "input", "declaration": "input wire clk_i"},
+            {"name": "rst_ni", "direction": "input", "declaration": "input wire rst_ni"},
+            {"name": "clear_i", "direction": "input", "declaration": "input wire clear_i"},
+            {"name": "write_valid_i", "direction": "input", "declaration": "input wire write_valid_i"},
+            {"name": "write_ready_o", "direction": "output", "declaration": "output wire write_ready_o"},
+            {"name": "write_cache_slot_i", "direction": "input", "declaration": "input wire [1:0] write_cache_slot_i"},
+            {"name": "write_position_i", "direction": "input", "declaration": "input wire [14:0] write_position_i"},
+            {"name": "write_head_i", "direction": "input", "declaration": "input wire [3:0] write_head_i"},
+            {"name": "write_dimension_i", "direction": "input", "declaration": "input wire [5:0] write_dimension_i"},
+            {"name": "write_k_f16_i", "direction": "input", "declaration": "input wire [15:0] write_k_f16_i"},
+            {"name": "write_v_f16_i", "direction": "input", "declaration": "input wire [15:0] write_v_f16_i"},
+            {"name": "read_valid_i", "direction": "input", "declaration": "input wire read_valid_i"},
+            {"name": "read_ready_o", "direction": "output", "declaration": "output wire read_ready_o"},
+            {"name": "read_cache_slot_i", "direction": "input", "declaration": "input wire [1:0] read_cache_slot_i"},
+            {"name": "read_position_i", "direction": "input", "declaration": "input wire [14:0] read_position_i"},
+            {"name": "read_head_i", "direction": "input", "declaration": "input wire [3:0] read_head_i"},
+            {"name": "read_dimension_i", "direction": "input", "declaration": "input wire [5:0] read_dimension_i"},
+            {"name": "out_valid_o", "direction": "output", "declaration": "output wire out_valid_o"},
+            {"name": "out_ready_i", "direction": "input", "declaration": "input wire out_ready_i"},
+            {"name": "out_hit_o", "direction": "output", "declaration": "output wire out_hit_o"},
+            {"name": "out_cache_slot_o", "direction": "output", "declaration": "output wire [1:0] out_cache_slot_o"},
+            {"name": "out_position_o", "direction": "output", "declaration": "output wire [14:0] out_position_o"},
+            {"name": "out_head_o", "direction": "output", "declaration": "output wire [3:0] out_head_o"},
+            {"name": "out_dimension_o", "direction": "output", "declaration": "output wire [5:0] out_dimension_o"},
+            {"name": "out_k_f16_o", "direction": "output", "declaration": "output wire [15:0] out_k_f16_o"},
+            {"name": "out_v_f16_o", "direction": "output", "declaration": "output wire [15:0] out_v_f16_o"}
+          ],
+          "dependencies": [],
+          "requirement_ids": [
+            "QKV-CACHE-INDEX-001",
+            "QKV-CACHE-READWRITE-001",
+            "QKV-CACHE-ABORT-001",
+            "QKV-EVIDENCE-001",
+            "QKV-BOUNDARY-001",
+            "QKV-PROVENANCE-001"
+          ]
+        }
+      ]
     }
   ],
   "verification_surfaces": {
-    "independent_oracle": "ace3/model/fp16_adaptation_oracle.py",
-    "authenticated_vector_validator": "ace3/model/validate_fp16_adaptation_vectors.py",
-    "four_state_icarus_testbench": "ace3/tb/ace3_fp16_adaptation_tb.sv",
-    "two_state_verilator_harness": "ace3/tb/ace3_fp16_adaptation_main.cpp",
-    "verilator_top": "ace3/tb/ace3_fp16_adaptation_verilator_top.sv",
-    "fresh_regression_target": "make test"
+    "fp16_adaptation": {
+      "independent_oracle": "ace3/model/fp16_adaptation_oracle.py",
+      "authenticated_vector_validator": "ace3/model/validate_fp16_adaptation_vectors.py",
+      "four_state_icarus_testbench": "ace3/tb/ace3_fp16_adaptation_tb.sv",
+      "two_state_verilator_harness": "ace3/tb/ace3_fp16_adaptation_main.cpp",
+      "verilator_top": "ace3/tb/ace3_fp16_adaptation_verilator_top.sv"
+    },
+    "qkv_rope_kv_cache": {
+      "frozen_contract": "ace3/contracts/qkv_rope_kv_cache.json",
+      "serialized_bindings": {
+        "path": "ace3/contracts/qkv_rope_kv_cache_vector_bindings.json",
+        "sha256": "a66bef29a3b97234b62168fe70fbd5393a248e275c888837e38e93696cdffb09"
+      },
+      "independent_bit_level_oracle": {
+        "path": "ace3/model/qwen2_rope_oracle.py",
+        "sha256": "59d7508463973f8a92de48c105df1aa26845b0fe4d05ff7cb9b723e5a6708cde"
+      },
+      "official_checkpoint_vector_generator": {
+        "path": "ace3/model/generate_qkv_rope_cache_vectors.py",
+        "sha256": "21ffc4de8da1cdd93a34b2ba4f499e8a0fb5053ac227919b6bafbbd674c0cdac"
+      },
+      "authenticated_vector_validator": {
+        "path": "ace3/model/validate_qkv_rope_cache_vectors.py",
+        "sha256": "ff3d451d3043101fc2808b4e54ce4ed204fc903b8143672d570cbf47a3b4fae6"
+      },
+      "projection_geometry_testbench": "ace3/tb/ace3_qkv_projection_geometry_tb.sv",
+      "four_state_icarus_testbench": "ace3/tb/ace3_qkv_rope_cache_tb.sv",
+      "two_state_verilator_harness": "ace3/tb/ace3_qkv_rope_cache_main.cpp",
+      "verilator_top": "ace3/tb/ace3_qkv_rope_cache_verilator_top.sv",
+      "targets": [
+        "make qkv-oracle",
+        "make qkv-tamper-rejection",
+        "make qkv-geometry",
+        "make qkv-iverilog-simulation",
+        "make qkv-verilator-simulation"
+      ],
+      "coverage_obligations": [
+        "Icarus executes Q 896x896, K 896x128, and V 896x128 geometry while Verilator lints the same fixed cluster.",
+        "Both dynamic simulators compare 512 RoPE cases bit-for-bit and require all 14 query heads, both key heads, metadata retention, and output backpressure stability.",
+        "Both dynamic simulators check indexed K/V writes and reads, both value heads, misses, overwrite, slot/position/head/dimension isolation, cache-output stalls, reset invalidation, and clear invalidation.",
+        "Icarus additionally checks same-address write-through and four-state X/Z non-acceptance for idle RoPE and cache inputs.",
+        "The validator rejects a modified rope_cases.hex by serialized SHA256 before simulation."
+      ]
+    },
+    "aggregate_regression": {
+      "fresh_nonclean_command": "make OFFICIAL_TENSOR_DIR=/home/argustest/ace-2/build/ace2_chat_demo/qwen25-05b-instruct-awq-software-baseline-cf01/official test",
+      "retained_targets": [
+        "oracle",
+        "tamper-rejection",
+        "iverilog",
+        "verilator",
+        "projection",
+        "fp16-adaptation",
+        "qkv-rope-cache"
+      ],
+      "bounded_claim_exclusions": [
+        "attention scores",
+        "softmax",
+        "value composition",
+        "decoder-layer or full-model execution",
+        "synthesis, timing, area, power, FPGA, or silicon",
+        "dialogue or model quality"
+      ]
+    }
   }
 }

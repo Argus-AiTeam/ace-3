@@ -1,0 +1,160 @@
+`timescale 1ns/1ps
+`default_nettype none
+
+module ace3_qkv_projection_cluster (
+    input  wire          clk_i,
+    input  wire          rst_ni,
+    input  wire          clear_i,
+
+    input  wire [2:0]    start_valid_i,
+    output wire [2:0]    start_ready_o,
+    input  wire [38:0]   first_output_channel_i,
+    input  wire [38:0]   output_count_i,
+
+    input  wire [2:0]    meta_valid_i,
+    output wire [2:0]    meta_ready_o,
+    output wire [38:0]   meta_output_channel_o,
+    output wire [17:0]   meta_group_index_o,
+    output wire [29:0]   meta_output_word_o,
+    output wire [8:0]    meta_logical_lane_o,
+    input  wire [95:0]   qzeros_i,
+    input  wire [47:0]   scale_f16_i,
+
+    input  wire [2:0]    pair_valid_i,
+    output wire [2:0]    pair_ready_o,
+    output wire [38:0]   pair_input_index_o,
+    output wire [38:0]   pair_output_channel_o,
+    output wire [17:0]   pair_group_index_o,
+    output wire [29:0]   pair_output_word_o,
+    output wire [8:0]    pair_logical_lane_o,
+    input  wire [47:0]   activation_f16_i,
+    input  wire [95:0]   qweight_i,
+
+    output wire [2:0]    out_valid_o,
+    input  wire [2:0]    out_ready_i,
+    output wire [38:0]   out_channel_o,
+    output wire [47:0]   out_f16_o,
+    output wire [305:0]  acc_q53_48_o,
+    output wire [2:0]    invalid_operand_o,
+    output wire [2:0]    saturation_o,
+    output wire [2:0]    busy_o,
+    output wire          all_idle_o
+);
+    assign all_idle_o = ~|busy_o;
+
+    ace3_awq_w4a16_projection_engine #(
+        .IN_FEATURES(896),
+        .OUT_FEATURES(896)
+    ) q_projection (
+        .clk_i(clk_i),
+        .rst_ni(rst_ni),
+        .clear_i(clear_i),
+        .start_valid_i(start_valid_i[0]),
+        .start_ready_o(start_ready_o[0]),
+        .first_output_channel_i(first_output_channel_i[12:0]),
+        .output_count_i(output_count_i[12:0]),
+        .meta_valid_i(meta_valid_i[0]),
+        .meta_ready_o(meta_ready_o[0]),
+        .meta_output_channel_o(meta_output_channel_o[12:0]),
+        .meta_group_index_o(meta_group_index_o[5:0]),
+        .meta_output_word_o(meta_output_word_o[9:0]),
+        .meta_logical_lane_o(meta_logical_lane_o[2:0]),
+        .qzeros_i(qzeros_i[31:0]),
+        .scale_f16_i(scale_f16_i[15:0]),
+        .pair_valid_i(pair_valid_i[0]),
+        .pair_ready_o(pair_ready_o[0]),
+        .pair_input_index_o(pair_input_index_o[12:0]),
+        .pair_output_channel_o(pair_output_channel_o[12:0]),
+        .pair_group_index_o(pair_group_index_o[5:0]),
+        .pair_output_word_o(pair_output_word_o[9:0]),
+        .pair_logical_lane_o(pair_logical_lane_o[2:0]),
+        .activation_f16_i(activation_f16_i[15:0]),
+        .qweight_i(qweight_i[31:0]),
+        .out_valid_o(out_valid_o[0]),
+        .out_ready_i(out_ready_i[0]),
+        .out_channel_o(out_channel_o[12:0]),
+        .out_f16_o(out_f16_o[15:0]),
+        .acc_q53_48_o(acc_q53_48_o[101:0]),
+        .invalid_operand_o(invalid_operand_o[0]),
+        .saturation_o(saturation_o[0]),
+        .busy_o(busy_o[0])
+    );
+
+    ace3_awq_w4a16_projection_engine #(
+        .IN_FEATURES(896),
+        .OUT_FEATURES(128)
+    ) k_projection (
+        .clk_i(clk_i),
+        .rst_ni(rst_ni),
+        .clear_i(clear_i),
+        .start_valid_i(start_valid_i[1]),
+        .start_ready_o(start_ready_o[1]),
+        .first_output_channel_i(first_output_channel_i[25:13]),
+        .output_count_i(output_count_i[25:13]),
+        .meta_valid_i(meta_valid_i[1]),
+        .meta_ready_o(meta_ready_o[1]),
+        .meta_output_channel_o(meta_output_channel_o[25:13]),
+        .meta_group_index_o(meta_group_index_o[11:6]),
+        .meta_output_word_o(meta_output_word_o[19:10]),
+        .meta_logical_lane_o(meta_logical_lane_o[5:3]),
+        .qzeros_i(qzeros_i[63:32]),
+        .scale_f16_i(scale_f16_i[31:16]),
+        .pair_valid_i(pair_valid_i[1]),
+        .pair_ready_o(pair_ready_o[1]),
+        .pair_input_index_o(pair_input_index_o[25:13]),
+        .pair_output_channel_o(pair_output_channel_o[25:13]),
+        .pair_group_index_o(pair_group_index_o[11:6]),
+        .pair_output_word_o(pair_output_word_o[19:10]),
+        .pair_logical_lane_o(pair_logical_lane_o[5:3]),
+        .activation_f16_i(activation_f16_i[31:16]),
+        .qweight_i(qweight_i[63:32]),
+        .out_valid_o(out_valid_o[1]),
+        .out_ready_i(out_ready_i[1]),
+        .out_channel_o(out_channel_o[25:13]),
+        .out_f16_o(out_f16_o[31:16]),
+        .acc_q53_48_o(acc_q53_48_o[203:102]),
+        .invalid_operand_o(invalid_operand_o[1]),
+        .saturation_o(saturation_o[1]),
+        .busy_o(busy_o[1])
+    );
+
+    ace3_awq_w4a16_projection_engine #(
+        .IN_FEATURES(896),
+        .OUT_FEATURES(128)
+    ) v_projection (
+        .clk_i(clk_i),
+        .rst_ni(rst_ni),
+        .clear_i(clear_i),
+        .start_valid_i(start_valid_i[2]),
+        .start_ready_o(start_ready_o[2]),
+        .first_output_channel_i(first_output_channel_i[38:26]),
+        .output_count_i(output_count_i[38:26]),
+        .meta_valid_i(meta_valid_i[2]),
+        .meta_ready_o(meta_ready_o[2]),
+        .meta_output_channel_o(meta_output_channel_o[38:26]),
+        .meta_group_index_o(meta_group_index_o[17:12]),
+        .meta_output_word_o(meta_output_word_o[29:20]),
+        .meta_logical_lane_o(meta_logical_lane_o[8:6]),
+        .qzeros_i(qzeros_i[95:64]),
+        .scale_f16_i(scale_f16_i[47:32]),
+        .pair_valid_i(pair_valid_i[2]),
+        .pair_ready_o(pair_ready_o[2]),
+        .pair_input_index_o(pair_input_index_o[38:26]),
+        .pair_output_channel_o(pair_output_channel_o[38:26]),
+        .pair_group_index_o(pair_group_index_o[17:12]),
+        .pair_output_word_o(pair_output_word_o[29:20]),
+        .pair_logical_lane_o(pair_logical_lane_o[8:6]),
+        .activation_f16_i(activation_f16_i[47:32]),
+        .qweight_i(qweight_i[95:64]),
+        .out_valid_o(out_valid_o[2]),
+        .out_ready_i(out_ready_i[2]),
+        .out_channel_o(out_channel_o[38:26]),
+        .out_f16_o(out_f16_o[47:32]),
+        .acc_q53_48_o(acc_q53_48_o[305:204]),
+        .invalid_operand_o(invalid_operand_o[2]),
+        .saturation_o(saturation_o[2]),
+        .busy_o(busy_o[2])
+    );
+endmodule
+
+`default_nettype wire
