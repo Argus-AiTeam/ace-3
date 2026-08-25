@@ -953,7 +953,7 @@
       ]
     },
     "aggregate_regression": {
-      "fresh_nonclean_command": "make OFFICIAL_TENSOR_DIR=/home/argustest/ace-2/build/ace2_chat_demo/qwen25-05b-instruct-awq-software-baseline-cf01/official test",
+      "fresh_nonclean_command": "make OFFICIAL_TENSOR_DIR=/path/to/official_tensors test",
       "retained_targets": [
         "oracle",
         "tamper-rejection",

@@ -1,156 +1,141 @@
 # ACE-3 MP
 
-[English](README.md) | [简体中文](README.zh-CN.md)
+[简体中文](README.zh-CN.md) · [Getting started](docs/GETTING_STARTED.md) ·
+[Architecture](docs/ARCHITECTURE.md) · [Roadmap](docs/ROADMAP.md) ·
+[Contributing](CONTRIBUTING.md)
 
-ACE-3 MP is an evidence-first mixed-precision accelerator project for
-transformer inference. Its first implementation profile targets the official
-Qwen2.5-0.5B-Instruct AWQ checkpoint with W4A16 execution.
+ACE-3 MP is an open research RTL project for mixed-precision transformer
+inference. The first profile targets native AWQ W4A16 execution for
+[`Qwen/Qwen2.5-0.5B-Instruct-AWQ`](https://huggingface.co/Qwen/Qwen2.5-0.5B-Instruct-AWQ):
+packed INT4 weights, group size 128, and FP16 activations.
 
-> **Private pre-release:** this repository does not yet claim a complete
-> accelerator, synthesized design, FPGA bitstream, measured hardware
-> performance, or fabricated chip.
+The repository is organized around one rule: **every result must name its
+execution boundary**. Software-oracle, RTL-simulation, synthesis, FPGA, and
+measured-hardware results are reported separately.
 
-## Why ACE-3
+> **Research preview:** the published source contains verified arithmetic and
+> decoder building blocks, not a complete accelerator. There is currently no
+> synthesis, timing, PPA, FPGA bitstream, or measured-hardware claim.
 
-ACE-2 explores a strict integer path based on signed INT4 weights, INT8
-activations, and Scale32 metadata. ACE-3 is a separate architecture line that
-adds mixed-precision execution while preserving ACE-2 as an independent,
-unchanged baseline.
+## What is available
 
-The initial AWQ software qualification established:
+| Area | Published boundary |
+| --- | --- |
+| Native AWQ G128 dot lane | Synthesizable RTL; independent bit oracle; Icarus and Verilator simulation |
+| Full-input AWQ projection | Parameterized 896/128/4864 geometries; complete 896-input official `q_proj` reductions; bounded simulation |
+| FP16 adaptation | Residual, RMSNorm, and SiLU/gate operators; bounded simulation |
+| QKV path | Q/K/V projection geometry, Qwen2 RoPE, and indexed FP16 K/V cache; bounded simulation |
+| Attention | Scaled QK score, causal softmax approximation, and cached-FP16 value composition; bounded simulation |
+| Model24 software schedule | Deterministic reduced-geometry 24-layer software/oracle execution |
 
-- the official AWQ tensor contract: G128, packed INT4 `qweight` and `qzeros`,
-  FP16 scales, and native GEMM ordering;
-- 168 reconstructed quantized transformer Linear modules;
-- viable CPU-reference dialogue, instruction following, multi-turn memory,
-  translation, summarization, safety refusal, and simple code generation;
-- remaining model weaknesses in exact JSON formatting, one factual explanation,
-  and a longer algebra problem.
+Not yet published as accepted hardware evidence:
 
-These are software-reference findings, not RTL or hardware evidence.
+- an integrated decoder-layer RTL result;
+- all 24 decoder layers and the tied language-model head in RTL;
+- RTL-backed readable multi-token dialogue;
+- synthesis, timing closure, PPA, FPGA deployment, or hardware performance.
 
-## Initial profiles
-
-| Profile | Intent | Status |
-| --- | --- | --- |
-| `AWQ_W4A16` | Native AWQ G128 weights with FP16 activations | Full-input sequential projection RTL verified |
-| `AWQ_W4A16_ADAPT` | FP16 residual, RMSNorm, and SiLU/gate streams | Bounded RTL simulation verified |
-| `AWQ_W4A16_QKV` | Q/K/V projection geometry, Qwen RoPE, and FP16 K/V cache | Bounded RTL simulation verified and published |
-| `AWQ_W4A16_ATTN` | Scaled QK, causal softmax, and cached-FP16 V composition | Bounded RTL simulation verified and published |
-| `ACE_W4A8` | Compatibility with the existing strict integer line | Planned |
-
-The implemented RTL boundary now includes the accepted G128 primitive and a
-parameterized sequential engine that composes every input group for a tiled
-set of output channels.
-
-## Repository layout
+## Repository map
 
 ```text
 ace3/
-  rtl/         Synthesizable ACE-3 RTL
-  tb/          RTL testbenches
-  model/       Bit-level software oracles and vector generation
-  contracts/   Implemented precision and interface contracts
-docs/          Architecture and roadmap
+  contracts/   Machine-readable arithmetic, interface, and evidence contracts
+  model/       Independent bit-level oracles and deterministic vector tools
+  rtl/         Synthesizable SystemVerilog modules
+  tb/          Icarus and Verilator testbenches
+design/        RTL manifest and requirement-to-evidence traceability
+docs/
+  results/     Reviewed, scope-bounded result notes
+  ARCHITECTURE.md
+  GETTING_STARTED.md
+  ROADMAP.md
 ```
 
-Generated logs, model weights, build outputs, and local evidence bundles are not
-source files and must not be committed by default.
+Generated vectors, logs, simulator objects, model files, and local state belong
+under ignored directories and are not source artifacts.
 
-## Standalone validation
+## Quick start
 
-The accepted G128 dot lane and full-input projection engine share a
-repository-root validation entry point using only Python, GNU Make, Icarus
-Verilog, and Verilator:
+Requirements:
+
+- Python 3.10 or newer;
+- GNU Make;
+- Icarus Verilog;
+- Verilator and a C++ compiler.
+
+List the supported entry points:
 
 ```sh
-make clean
-make OFFICIAL_TENSOR_DIR=/home/argustest/ace-2/build/ace2_chat_demo/qwen25-05b-instruct-awq-software-baseline-cf01/official test
+make help
 ```
 
-`OFFICIAL_TENSOR_DIR` is explicit and configurable; the default is the path
-shown above. The generator reads the three official layer-0 `q_proj` sample
-files in place, verifies their frozen SHA256 values, and never writes to that
-directory. Vectors, simulator objects, binaries, and logs are created only
-under ignored `build/`. `build/logs/` records each command and result.
+Run the self-contained Model24 reduced-geometry software/oracle smoke test. It
+does not download or require model weights:
 
-Every `make test` invocation deletes and regenerates `build/vectors/`, reruns
-the oracle and JSON validation, recompiles and reruns both Icarus tests, and
-rebuilds and reruns Verilator. It separately regenerates, authenticates, and
-simulates full-input projection vectors before printing the aggregate pass
-line. No semantic check is stamp-cached.
+```sh
+make model24-smoke
+```
 
-The attention target extends that flow with the fixed 14-query/2-KV-head GQA
-mapping, 64-element FP16 QK accumulation scaled by 1/8, causal masking,
-Q0.24 max-subtracted softmax, and cached-FP16 value composition. Its official
-inputs are deterministic hash-checked scale selections rather than captured
-runtime activations. The claim remains bounded to dynamic RTL simulation.
+Run the standalone arithmetic oracle:
 
-The historical frozen manifest remains byte-identical. A separate
-source-controlled standalone binding contract authenticates SHA256, byte
-count, and line count for all five serialized artifacts consumed by the
-validator or simulators: `manifest.json`, `meta.hex`, `pairs.hex`, `cases.txt`,
-and `vector_params.svh`. Validation occurs before simulation, and `make test`
-also confirms that a tampered copy of `meta.hex` is rejected.
+```sh
+make oracle
+```
 
-The target checks the integer-only oracle, deterministic seed `0xACE3CF01`, 30
-cases and 3,840 G128 pairs, exact accumulator values, zero-ULP binary16
-results, protocol invariants, Icarus four-state X/Z probes, and an independent
-Verilator run. Verilator is a two-state simulator in this configuration, so
-X/Z claims come only from the bounded Icarus test. These are dynamic
-simulation checks, not formal verification.
+The complete RTL regression uses small, hash-authenticated samples extracted
+from the official checkpoint. Model files are intentionally not redistributed.
+Place the required files in `official_tensors/`, or point
+`OFFICIAL_TENSOR_DIR` at your read-only fixture directory:
 
-## Full-input projection boundary
+```sh
+make OFFICIAL_TENSOR_DIR="$PWD/official_tensors" test
+```
 
-`ace3_awq_w4a16_projection_engine` is parameterized by `IN_FEATURES` and
-`OUT_FEATURES`. It sequences a contiguous output tile, consumes one metadata
-record and 128 activation/qweight pairs per AWQ group, sign-extends each exact
-96-bit Q47.48 group accumulator into a 102-bit Q53.48 cross-group accumulator,
-and rounds once after all groups. It never adds the primitive's already-rounded
-FP16 group outputs.
+The command regenerates vectors, validates every serialized input, runs tamper
+rejection, recompiles Icarus and Verilator, executes both simulators, and checks
+that the source tree remains unchanged. See
+[Getting started](docs/GETTING_STARTED.md) for the expected fixture names and
+target-specific commands.
 
-| Modules | Input features | Output features | Groups |
+## Implemented projection geometry
+
+`ace3_awq_w4a16_projection_engine` consumes all AWQ groups for each selected
+output channel and rounds only after the complete reduction.
+
+| Qwen2.5 projection | Input features | Output features | AWQ groups |
 | --- | ---: | ---: | ---: |
-| q/o projections | 896 | 896 | 7 |
-| k/v projections | 896 | 128 | 7 |
-| gate/up projections | 896 | 4864 | 7 |
-| down projection | 4864 | 896 | 38 |
+| Q / O | 896 | 896 | 7 |
+| K / V | 896 | 128 | 7 |
+| Gate / Up | 896 | 4864 | 7 |
+| Down | 4864 | 896 | 38 |
 
-Official-tensor numerical evidence uses authenticated layer-0 `q_proj`
-qweight, qzeros, and scales from
-`Qwen/Qwen2.5-0.5B-Instruct-AWQ@db09cd27ead7fee40cdee309693cf83601b9c899`
-with deterministic generated FP16 activations. It covers channels 4 through 11
-over all 896 inputs. Directed outputs cover cross-group round-once
-cancellation, saturation, subnormal, zero, and invalid operands. Other
-geometries are elaborated and linted with both simulators; they are not claimed
-as official-tensor numerical matches.
+The published official-tensor numerical evidence covers eight layer-0
+`q_proj` outputs over all 896 inputs. Other geometries have elaboration and
+bounded interface coverage; they are not presented as full official-tensor
+matches.
 
-Measured RTL-simulation latency for this intentionally sequential single-lane
-engine is 910 cycles from accepted start or previous output acceptance to
-`out_valid` for 896 inputs, and 4,940 cycles for a 4,864-input synthetic-zero
-output. Output acceptance takes one additional cycle. These are simulation
-cycle counts, not synthesis, timing, or performance measurements.
+The intentionally sequential reference engine takes 910 simulated cycles for
+one 896-input output and 4,940 simulated cycles for one synthetic-zero
+4,864-input output, plus one output-acceptance cycle. These are RTL simulation
+cycle counts, not synthesized frequency, latency, or throughput.
 
-## Evidence policy
+## Verification approach
 
-Every published claim must identify its execution boundary:
+- Arithmetic contracts define packing, widths, rounding, reset, and stream
+  behavior.
+- Python oracles are independent executable specifications, not generated from
+  the RTL.
+- Serialized vectors are bound by SHA-256 and validated before simulation.
+- Icarus provides four-state X/Z checks; Verilator provides an independent
+  two-state run.
+- Software fallback is never counted as RTL or hardware completion.
 
-- software reference;
-- RTL simulation;
-- synthesis and timing;
-- FPGA deployment;
-- or measured hardware.
+The model-bound artifacts identify the official checkpoint revision
+`db09cd27ead7fee40cdee309693cf83601b9c899`. Users are responsible for
+obtaining model assets under the upstream model license and terms.
 
-Software fallback is never reported as RTL or hardware completion. Unsupported
-precision modes remain absent rather than being represented by placeholders.
+## License
 
-## Relationship to ACE-2
-
-ACE-2 remains a separate project and continues its strict W4A8 productization
-path. ACE-3 does not move, rename, or overwrite ACE-2 RTL. Reuse must happen
-through explicit, reviewed interfaces and independently reproducible evidence.
-
-See [Architecture](docs/ARCHITECTURE.md),
-[Roadmap](docs/ROADMAP.md),
-[projection result](docs/results/AWQ_W4A16_PROJECTION_CF02.md), and
-[Contributing](CONTRIBUTING.md).
+ACE-3 source is licensed under the [Apache License 2.0](LICENSE). The Qwen model
+and any extracted checkpoint samples are separate upstream assets and are not
+included in this repository.

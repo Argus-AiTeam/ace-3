@@ -17,7 +17,16 @@ PYTHON ?= python3
 IVERILOG ?= iverilog
 VVP ?= vvp
 VERILATOR ?= verilator
-OFFICIAL_TENSOR_DIR ?= /home/argustest/ace-2/build/ace2_chat_demo/qwen25-05b-instruct-awq-software-baseline-cf01/official
+OFFICIAL_TENSOR_DIR ?= $(ROOT)/official_tensors
+
+OFFICIAL_TENSOR_FILES := \
+	autoawq-v0.2.9-packing_utils.py \
+	config.json \
+	model-api.json \
+	sample-model_layers_0_self_attn_q_proj-qweight.bin \
+	sample-model_layers_0_self_attn_q_proj-qzeros.bin \
+	sample-model_layers_0_self_attn_q_proj-scales.bin
+MODEL24_VECTOR_DIR := $(BUILD_DIR)/model24_execution/vectors
 
 RTL := $(ROOT)/ace3/rtl/ace3_awq_w4a16_g128_dot_lane.sv
 PROJECTION_ROUNDER_RTL := $(ROOT)/ace3/rtl/ace3_q47_48_to_f16_rne.sv
@@ -113,6 +122,7 @@ PROJECTION_VERILATOR_BIN := $(PROJECTION_VERILATOR_OBJ_DIR)/Vace3_awq_w4a16_proj
 export PYTHONDONTWRITEBYTECODE := 1
 
 .PHONY: \
+	help check-official-tensors model24-smoke \
 	test _validate oracle vectors json-validation tamper-rejection \
 	iverilog iverilog-compile iverilog-simulation \
 	iverilog-protocol-compile iverilog-protocol-simulation \
@@ -135,6 +145,46 @@ export PYTHONDONTWRITEBYTECODE := 1
 	attention-json-validation attention-tamper-rejection \
 	attention-iverilog-compile attention-iverilog-simulation \
 	attention-verilator-compile attention-verilator-simulation clean
+
+help:
+	@printf '%s\n' \
+	  'ACE-3 validation targets:' \
+	  '  make model24-smoke       Self-contained reduced-geometry software/oracle check' \
+	  '  make oracle              Standalone AWQ arithmetic oracle' \
+	  '  make projection          Full-input AWQ projection RTL regression' \
+	  '  make fp16-adaptation     FP16 residual/RMSNorm/SiLU RTL regression' \
+	  '  make qkv-rope-cache      QKV, RoPE, and FP16 KV-cache RTL regression' \
+	  '  make attention           Attention RTL regression' \
+	  '  make test                Complete published RTL regression' \
+	  '' \
+	  'Model-bound RTL targets require OFFICIAL_TENSOR_DIR.' \
+	  'See docs/GETTING_STARTED.md.'
+
+check-official-tensors:
+	@set -eu; missing=0; \
+	for name in $(OFFICIAL_TENSOR_FILES); do \
+	  if test ! -f "$(OFFICIAL_TENSOR_DIR)/$$name"; then \
+	    printf '%s\n' "missing official tensor fixture: $(OFFICIAL_TENSOR_DIR)/$$name" >&2; \
+	    missing=1; \
+	  fi; \
+	done; \
+	if test "$$missing" -ne 0; then \
+	  printf '%s\n' \
+	    'Model files are not distributed with this repository.' \
+	    'See docs/GETTING_STARTED.md or set OFFICIAL_TENSOR_DIR=/path/to/fixtures.' >&2; \
+	  exit 2; \
+	fi; \
+	printf '%s\n' "OFFICIAL_TENSOR_FIXTURES_PRESENT directory=$(OFFICIAL_TENSOR_DIR)"
+
+model24-smoke:
+	@rm -rf "$(MODEL24_VECTOR_DIR)"
+	@mkdir -p "$(MODEL24_VECTOR_DIR)" "$(LOG_DIR)"
+	@"$(PYTHON)" "$(ROOT)/ace3/model/generate_model24_execution_vectors.py" \
+	  --output-dir "$(MODEL24_VECTOR_DIR)"
+	@"$(PYTHON)" "$(ROOT)/ace3/model/validate_model24_execution_vectors.py" \
+	  --vector-dir "$(MODEL24_VECTOR_DIR)"
+	@printf '%s\n' \
+	  'MODEL24_SMOKE_PASS boundary=reduced_geometry_software_oracle rtl=not_demonstrated'
 
 test:
 	@mkdir -p "$(LOG_DIR)"
@@ -164,7 +214,7 @@ test:
 	cat "$$log"
 	@printf '%s\n' 'STANDALONE_VALIDATION_PASS semantic_checks=fresh primitive=pass projection=pass fp16_adaptation=pass qkv_rope_cache=pass attention=pass serialized_sha256=pass tamper_rejection=pass iverilog=pass protocol_4state=pass verilator=pass geometry_parameters=pass hygiene=pass'
 
-_validate: oracle tamper-rejection iverilog verilator projection fp16-adaptation qkv-rope-cache attention
+_validate: check-official-tensors oracle tamper-rejection iverilog verilator projection fp16-adaptation qkv-rope-cache attention
 
 oracle:
 	@mkdir -p "$(BUILD_DIR)" "$(LOG_DIR)"

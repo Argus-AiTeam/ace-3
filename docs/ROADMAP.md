@@ -51,5 +51,7 @@
 
 ## Release
 
-ACE-3 remains private until the repository contains reproducible source,
-contracts, tests, and evidence appropriate to the claims being published.
+- [x] Publish source, contracts, tests, and scope-bounded evidence.
+- [x] Document reproducible public entry points and model-asset boundaries.
+- [ ] Publish an integrated decoder-layer RTL result after independent review.
+- [ ] Publish end-to-end RTL dialogue only after reproducible acceptance.

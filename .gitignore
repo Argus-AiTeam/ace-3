@@ -16,6 +16,7 @@ work/
 *.bin
 *.pt
 *.pth
+/official_tensors/
 
 # Local tools and state
 .env
@@ -23,6 +24,7 @@ work/
 .idea/
 .argus/
 .argus_subagents/
+.autors/
 
 # Credentials
 *.pem

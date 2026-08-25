@@ -85,9 +85,9 @@ Verilog 11.0, and Verilator 4.038:
 
 ```sh
 make clean
-make OFFICIAL_TENSOR_DIR=/home/argustest/ace-2/build/ace2_chat_demo/qwen25-05b-instruct-awq-software-baseline-cf01/official test
+make OFFICIAL_TENSOR_DIR=/path/to/official_tensors test
 printf 'corrupt\n' >> build/projection_vectors/pairs.hex
-make OFFICIAL_TENSOR_DIR=/home/argustest/ace-2/build/ace2_chat_demo/qwen25-05b-instruct-awq-software-baseline-cf01/official test
+make OFFICIAL_TENSOR_DIR=/path/to/official_tensors test
 ```
 
 The second non-clean run regenerates both primitive and projection vectors,

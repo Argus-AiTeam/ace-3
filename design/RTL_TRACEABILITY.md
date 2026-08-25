@@ -346,7 +346,7 @@ The authenticated QKV surfaces are:
 | Authenticated vector validator | `ace3/model/validate_qkv_rope_cache_vectors.py` (`ff3d451d3043101fc2808b4e54ce4ed204fc903b8143672d570cbf47a3b4fae6`) |
 | Icarus geometry and four-state protocol | `ace3/tb/ace3_qkv_projection_geometry_tb.sv`, `ace3/tb/ace3_qkv_rope_cache_tb.sv` |
 | Verilator two-state cross-check | `ace3/tb/ace3_qkv_rope_cache_verilator_top.sv`, `ace3/tb/ace3_qkv_rope_cache_main.cpp` |
-| Fresh aggregate regression | `make OFFICIAL_TENSOR_DIR=/home/argustest/ace-2/build/ace2_chat_demo/qwen25-05b-instruct-awq-software-baseline-cf01/official test` |
+| Fresh aggregate regression | `make OFFICIAL_TENSOR_DIR=/path/to/official_tensors test` |
 
 The official-derived QKV streams are deterministic selections from
 hash-authenticated layer-0 `q_proj` FP16 scale samples, not captured runtime
