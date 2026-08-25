@@ -10,6 +10,14 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, Iterable, Mapping, Sequence
 
+import numpy as np
+
+from decoder_layer0_oracle import run_token as run_decoder_layer_token
+from fp16_adaptation_oracle import rmsnorm
+from model24_oracle import CHECKPOINT_SHA256, authenticate_checkpoint
+from projection_oracle import complete_projection_output
+from qwen2_rope_oracle import qwen2_coefficient
+
 PARENT_COMMIT = "3cf65b762d928e02e2b64fbba4389e294e1aa2c5"
 MODEL_REPOSITORY = "Qwen/Qwen2.5-0.5B-Instruct-AWQ"
 MODEL_REVISION = "db09cd27ead7fee40cdee309693cf83601b9c899"
@@ -123,6 +131,11 @@ LAYER_DESCRIPTOR_SHA256 = (
 )
 
 
+LAYER0_VL15_FINAL_ROWS_SHA256 = (
+    "22768ac6b337f920faac7de59b4eb43a203e1db45cdf688820fcbb35cdfe3446"
+)
+
+
 class ContractError(RuntimeError):
     """Raised when an execution contract or vector fails closed."""
 
@@ -232,6 +245,339 @@ def layer_bindings() -> list[dict[str, Any]]:
         }
         for layer_id, descriptor_sha256 in enumerate(LAYER_DESCRIPTOR_SHA256)
     ]
+
+
+def indexed_layer_binding(layer_index: int) -> dict[str, Any]:
+    require(
+        type(layer_index) is int and 0 <= layer_index < len(LAYER_DESCRIPTOR_SHA256),
+        "layer_index out of range",
+    )
+    return layer_bindings()[layer_index]
+
+
+def indexed_layer_tensor_records(
+    tensor_map: Mapping[str, Any],
+    layer_index: int,
+) -> list[dict[str, Any]]:
+    binding = indexed_layer_binding(layer_index)
+    namespaces = tensor_map.get("layer_namespaces")
+    require(isinstance(namespaces, list), "tensor map layer_namespaces missing")
+    matches = [
+        item
+        for item in namespaces
+        if isinstance(item, dict) and item.get("layer_id") == layer_index
+    ]
+    require(len(matches) == 1, "selected layer namespace is not unique")
+    require_document(
+        {
+            **binding,
+            "tensor_count": 26,
+        },
+        {
+            "layer_id": matches[0].get("layer_id"),
+            "namespace": matches[0].get("namespace"),
+            "descriptor_sha256": matches[0].get("descriptor_sha256"),
+            "tensor_count": matches[0].get("tensor_count"),
+        },
+        "selected layer namespace",
+    )
+    tensors = tensor_map.get("tensors")
+    require(isinstance(tensors, list), "tensor map tensors missing")
+    records = [
+        dict(item)
+        for item in tensors
+        if isinstance(item, dict)
+        and isinstance(item.get("name"), str)
+        and item["name"].startswith(binding["namespace"])
+    ]
+    require(len(records) == 26, "selected layer tensor count mismatch")
+    require(
+        all(item["name"].count(".") >= 4 for item in records),
+        "selected layer tensor name mismatch",
+    )
+    return sorted(records, key=lambda item: item["name"])
+
+
+def load_two_token_handoff(
+    path: Path,
+    *,
+    expected_sha256: str | None = None,
+) -> tuple[list[list[int]], dict[str, Any]]:
+    payload = path.read_bytes()
+    digest = sha256_bytes(payload)
+    if expected_sha256 is not None:
+        require(digest == expected_sha256, "two-token handoff SHA256 mismatch")
+    require(payload.endswith(b"\n"), "two-token handoff must be LF terminated")
+    lines = payload.splitlines()
+    require(len(lines) == 2 * OFFICIAL_GEOMETRY.hidden_size, "two-token handoff row count")
+    rows = [
+        [0] * OFFICIAL_GEOMETRY.hidden_size
+        for _ in range(2)
+    ]
+    for ordinal, line in enumerate(lines):
+        require(len(line) == 10, f"two-token handoff row {ordinal} width")
+        try:
+            token = int(line[0:2], 16)
+            index = int(line[2:6], 16)
+            value = int(line[6:10], 16)
+        except ValueError as error:
+            raise ContractError(f"two-token handoff row {ordinal} is not hex") from error
+        expected_token, expected_index = divmod(
+            ordinal,
+            OFFICIAL_GEOMETRY.hidden_size,
+        )
+        require(
+            (token, index) == (expected_token, expected_index),
+            f"two-token handoff row {ordinal} is out of sequence",
+        )
+        rows[token][index] = value
+    return rows, {
+        "sha256": digest,
+        "rows": len(lines),
+        "shape": [2, OFFICIAL_GEOMETRY.hidden_size],
+        "dtype": "F16",
+        "record_format": "token[7:0] index[15:0] f16[15:0]",
+    }
+
+
+def _layer_tensor_payloads(
+    checkpoint_path: Path,
+    tensor_map_path: Path,
+    layer_index: int,
+) -> tuple[dict[str, bytes], list[dict[str, Any]], dict[str, Any]]:
+    authenticate_checkpoint(checkpoint_path)
+    tensor_map_payload = tensor_map_path.read_bytes()
+    require(
+        sha256_bytes(tensor_map_payload) == TENSOR_MAP_SHA256,
+        "reviewed tensor map SHA256 mismatch",
+    )
+    tensor_map = load_json_bytes(tensor_map_payload, "tensor map")
+    require(isinstance(tensor_map, dict), "tensor map root must be an object")
+    records = indexed_layer_tensor_records(tensor_map, layer_index)
+    try:
+        from safetensors import safe_open
+    except ImportError as error:
+        raise ContractError("the safetensors package is required") from error
+    payloads: dict[str, bytes] = {}
+    with safe_open(checkpoint_path, framework="np") as checkpoint:
+        for record in records:
+            name = record["name"]
+            value = np.asarray(checkpoint.get_tensor(name))
+            dtype = {"F16": "<f2", "I32": "<i4"}.get(record.get("dtype"))
+            require(dtype is not None, f"{name} unsupported tensor dtype")
+            require(list(value.shape) == record.get("shape"), f"{name} shape mismatch")
+            raw = np.ascontiguousarray(value, dtype=dtype).tobytes()
+            require(len(raw) == record.get("byte_length"), f"{name} byte length mismatch")
+            payloads[name] = raw
+    return payloads, records, indexed_layer_binding(layer_index)
+
+
+def indexed_layer_tensor_value_hashes(
+    checkpoint_path: Path,
+    tensor_map_path: Path,
+    layer_index: int,
+) -> dict[str, str]:
+    payloads, _, _ = _layer_tensor_payloads(
+        checkpoint_path,
+        tensor_map_path,
+        layer_index,
+    )
+    return {
+        name: sha256_bytes(payload)
+        for name, payload in sorted(payloads.items())
+    }
+
+
+def sampled_indexed_q_projection_rows(
+    checkpoint_path: Path,
+    tensor_map_path: Path,
+    handoff_path: Path,
+    layer_index: int,
+    channels: Sequence[int] = (0, 127, 895),
+) -> list[dict[str, int]]:
+    require(
+        all(type(channel) is int and 0 <= channel < OFFICIAL_GEOMETRY.hidden_size
+            for channel in channels),
+        "sampled q_proj channel out of range",
+    )
+    payloads, _, binding = _layer_tensor_payloads(
+        checkpoint_path,
+        tensor_map_path,
+        layer_index,
+    )
+    handoff, _ = load_two_token_handoff(handoff_path)
+    prefix = binding["namespace"]
+
+    def words(suffix: str, unit: int) -> list[int]:
+        raw = payloads[prefix + suffix]
+        dtype = "<u2" if unit == 2 else "<u4"
+        return np.frombuffer(raw, dtype=dtype).astype(np.uint64).tolist()
+
+    norm1 = rmsnorm(
+        handoff[0],
+        words("input_layernorm.weight", 2),
+    )[0]
+    require(not any(invalid for _, invalid, _ in norm1), "sampled input RMSNorm invalid")
+    activation = [value for value, _, _ in norm1]
+    qweight = words("self_attn.q_proj.qweight", 4)
+    qzeros = words("self_attn.q_proj.qzeros", 4)
+    scales = words("self_attn.q_proj.scales", 2)
+    bias = words("self_attn.q_proj.bias", 2)
+    groups = OFFICIAL_GEOMETRY.hidden_size // OFFICIAL_GEOMETRY.group_size
+    packed_words = OFFICIAL_GEOMETRY.hidden_size // 8
+    result: list[dict[str, int]] = []
+    for channel in channels:
+        packed, lane = divmod(channel, 8)
+        _, value, invalid, _, _ = complete_projection_output(
+            activation,
+            [
+                qweight[index * packed_words + packed]
+                for index in range(OFFICIAL_GEOMETRY.hidden_size)
+            ],
+            [qzeros[group * packed_words + packed] for group in range(groups)],
+            [scales[group * OFFICIAL_GEOMETRY.hidden_size + channel]
+             for group in range(groups)],
+            lane,
+            bias[channel],
+        )
+        require(not invalid, f"sampled q_proj channel {channel} invalid")
+        result.append({"channel": channel, "f16": value})
+    return result
+
+
+def materialize_indexed_decoder_vectors(
+    checkpoint_path: Path,
+    tensor_map_path: Path,
+    handoff_path: Path,
+    output_dir: Path,
+    *,
+    layer_index: int,
+) -> dict[str, Any]:
+    handoff, handoff_binding = load_two_token_handoff(
+        handoff_path,
+        expected_sha256=LAYER0_VL15_FINAL_ROWS_SHA256,
+    )
+    payloads, records, binding = _layer_tensor_payloads(
+        checkpoint_path,
+        tensor_map_path,
+        layer_index,
+    )
+    require(not output_dir.exists(), "indexed decoder output directory already exists")
+    tensor_dir = output_dir / "tensors"
+    tensor_dir.mkdir(parents=True)
+    prefix = binding["namespace"]
+    values: dict[str, list[int]] = {}
+    tensor_manifest: list[dict[str, Any]] = []
+    for record in records:
+        name = record["name"]
+        suffix = name.removeprefix(prefix)
+        dtype = record["dtype"]
+        unit = 2 if dtype == "F16" else 4
+        serialized = (
+            f"layer{layer_index}_{suffix.replace('.', '_')}."
+            f"{'fp16le.bin' if unit == 2 else 'i32le.bin'}"
+        )
+        raw = payloads[name]
+        (tensor_dir / f"{serialized}.hex").write_text(
+            "".join(
+                f"{int.from_bytes(raw[index:index + unit], 'little'):0{unit * 2}x}\n"
+                for index in range(0, len(raw), unit)
+            ),
+            encoding="ascii",
+        )
+        values[f"model.layers.0.{suffix}:"] = (
+            np.frombuffer(raw, dtype="<u2" if unit == 2 else "<u4")
+            .astype(np.uint64)
+            .tolist()
+        )
+        tensor_manifest.append(
+            {
+                "checkpoint_name": name,
+                "serialized_hex": f"tensors/{serialized}.hex",
+                "dtype": dtype,
+                "shape": record["shape"],
+                "bytes": len(raw),
+                "sha256": sha256_bytes(raw),
+            }
+        )
+
+    cache_k: list[list[int]] = []
+    cache_v: list[list[int]] = []
+    all_trace: list[tuple[int, int, int, int, int]] = []
+    final_rows: list[list[int]] = []
+    for token, activation in enumerate(handoff):
+        final, trace = run_decoder_layer_token(
+            values,
+            activation,
+            token,
+            cache_k,
+            cache_v,
+        )
+        final_rows.append(final)
+        all_trace.extend(
+            (token, stage, index, item, position)
+            for stage, index, item, position in trace
+        )
+
+    inputs_payload = handoff_path.read_bytes()
+    (output_dir / "inputs.hex").write_bytes(inputs_payload)
+    (output_dir / "trace.hex").write_text(
+        "".join(
+            f"{token:02x}{position:04x}{stage:02x}{index:04x}{item:04x}\n"
+            for token, stage, index, item, position in all_trace
+        ),
+        encoding="ascii",
+    )
+    (output_dir / "final.hex").write_text(
+        "".join(
+            f"{token:02x}{index:04x}{item:04x}\n"
+            for token, row in enumerate(final_rows)
+            for index, item in enumerate(row)
+        ),
+        encoding="ascii",
+    )
+    rope = []
+    for position in range(2):
+        for pair in range(32):
+            cosine, sine = qwen2_coefficient(position, pair)
+            rope.append(f"{position:04x}{pair:02x}{cosine:04x}{sine:04x}\n")
+    (output_dir / "rope_coefficients.hex").write_text("".join(rope), encoding="ascii")
+    stage_counts: dict[str, int] = {}
+    for _, stage, _, _, _ in all_trace:
+        stage_counts[str(stage)] = stage_counts.get(str(stage), 0) + 1
+    manifest = {
+        "schema_version": 1,
+        "kind": "ace3_indexed_decoder_layer_two_token_trace",
+        "model_binding": {
+            "repository": MODEL_REPOSITORY,
+            "revision": MODEL_REVISION,
+            "checkpoint_sha256": CHECKPOINT_SHA256,
+            "tensor_map_sha256": TENSOR_MAP_SHA256,
+        },
+        "layer_binding": binding,
+        "input_handoff": {
+            **handoff_binding,
+            "source": "authenticated vl15 layer-0 raw final rows",
+            "byte_preserved_as": "inputs.hex",
+        },
+        "positions": [0, 1],
+        "cache_slot": 0,
+        "trace_records": len(all_trace),
+        "final_records": sum(len(row) for row in final_rows),
+        "stage_counts": stage_counts,
+        "consumed_tensors": tensor_manifest,
+        "numeric_profile": {
+            "projection": "native asymmetric packed INT4 AWQ W4A16 G128 GEMM",
+            "qzero_adjustment": "none",
+            "activations": "FP16",
+            "kv": "FP16",
+        },
+    }
+    (output_dir / "boundary_manifest.json").write_text(
+        json.dumps(manifest, indent=2, sort_keys=True) + "\n",
+        encoding="ascii",
+    )
+    return manifest
 
 
 def residual_handoffs(geometry: Geometry) -> list[dict[str, Any]]:
