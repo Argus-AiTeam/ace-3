@@ -30,6 +30,11 @@ module ace3_qkv_projection_cluster (
     input  wire [47:0]   activation_f16_i,
     input  wire [95:0]   qweight_i,
 
+    input  wire [2:0]    bias_valid_i,
+    output wire [2:0]    bias_ready_o,
+    output wire [38:0]   bias_output_channel_o,
+    input  wire [47:0]   bias_f16_i,
+
     output wire [2:0]    out_valid_o,
     input  wire [2:0]    out_ready_i,
     output wire [38:0]   out_channel_o,
@@ -44,7 +49,8 @@ module ace3_qkv_projection_cluster (
 
     ace3_awq_w4a16_projection_engine #(
         .IN_FEATURES(896),
-        .OUT_FEATURES(896)
+        .OUT_FEATURES(896),
+        .BIAS_ENABLE(1)
     ) q_projection (
         .clk_i(clk_i),
         .rst_ni(rst_ni),
@@ -70,6 +76,10 @@ module ace3_qkv_projection_cluster (
         .pair_logical_lane_o(pair_logical_lane_o[2:0]),
         .activation_f16_i(activation_f16_i[15:0]),
         .qweight_i(qweight_i[31:0]),
+        .bias_valid_i(bias_valid_i[0]),
+        .bias_ready_o(bias_ready_o[0]),
+        .bias_output_channel_o(bias_output_channel_o[12:0]),
+        .bias_f16_i(bias_f16_i[15:0]),
         .out_valid_o(out_valid_o[0]),
         .out_ready_i(out_ready_i[0]),
         .out_channel_o(out_channel_o[12:0]),
@@ -82,7 +92,8 @@ module ace3_qkv_projection_cluster (
 
     ace3_awq_w4a16_projection_engine #(
         .IN_FEATURES(896),
-        .OUT_FEATURES(128)
+        .OUT_FEATURES(128),
+        .BIAS_ENABLE(1)
     ) k_projection (
         .clk_i(clk_i),
         .rst_ni(rst_ni),
@@ -108,6 +119,10 @@ module ace3_qkv_projection_cluster (
         .pair_logical_lane_o(pair_logical_lane_o[5:3]),
         .activation_f16_i(activation_f16_i[31:16]),
         .qweight_i(qweight_i[63:32]),
+        .bias_valid_i(bias_valid_i[1]),
+        .bias_ready_o(bias_ready_o[1]),
+        .bias_output_channel_o(bias_output_channel_o[25:13]),
+        .bias_f16_i(bias_f16_i[31:16]),
         .out_valid_o(out_valid_o[1]),
         .out_ready_i(out_ready_i[1]),
         .out_channel_o(out_channel_o[25:13]),
@@ -120,7 +135,8 @@ module ace3_qkv_projection_cluster (
 
     ace3_awq_w4a16_projection_engine #(
         .IN_FEATURES(896),
-        .OUT_FEATURES(128)
+        .OUT_FEATURES(128),
+        .BIAS_ENABLE(1)
     ) v_projection (
         .clk_i(clk_i),
         .rst_ni(rst_ni),
@@ -146,6 +162,10 @@ module ace3_qkv_projection_cluster (
         .pair_logical_lane_o(pair_logical_lane_o[8:6]),
         .activation_f16_i(activation_f16_i[47:32]),
         .qweight_i(qweight_i[95:64]),
+        .bias_valid_i(bias_valid_i[2]),
+        .bias_ready_o(bias_ready_o[2]),
+        .bias_output_channel_o(bias_output_channel_o[38:26]),
+        .bias_f16_i(bias_f16_i[47:32]),
         .out_valid_o(out_valid_o[2]),
         .out_ready_i(out_ready_i[2]),
         .out_channel_o(out_channel_o[38:26]),

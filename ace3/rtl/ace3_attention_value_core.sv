@@ -37,23 +37,28 @@ module ace3_attention_value_core #(
     output wire        saturation_o,
     output wire        busy_o
 );
+    localparam integer CONTEXT_INDEX_WIDTH =
+        (CONTEXT_MAX <= 1) ? 1 : $clog2(CONTEXT_MAX);
+    localparam integer CONTEXT_COUNT_WIDTH =
+        (CONTEXT_MAX <= 1) ? 1 : $clog2(CONTEXT_MAX + 1);
+
     reg active_q;
-    reg [15:0] context_count_q;
-    reg [15:0] term_index_q;
+    reg [CONTEXT_COUNT_WIDTH-1:0] context_count_q;
+    reg [CONTEXT_INDEX_WIDTH-1:0] term_index_q;
     reg signed [89:0] accumulator_q;
     reg row_error_q;
     reg cache_miss_q;
     reg invalid_q;
     reg [3:0] query_head_q;
     reg [3:0] value_head_q;
-    reg [14:0] query_position_q;
+    reg [6:0] query_position_q;
     reg [5:0] dimension_q;
 
     reg out_valid_q;
     reg [15:0] out_value_f16_q;
     reg [3:0] out_query_head_q;
     reg [3:0] out_value_head_q;
-    reg [14:0] out_query_position_q;
+    reg [6:0] out_query_position_q;
     reg [5:0] out_dimension_q;
     reg out_row_error_q;
     reg out_cache_miss_q;
@@ -85,13 +90,20 @@ module ace3_attention_value_core #(
 
     wire [3:0] mapped_value_head_w =
         (query_head_i < 4'd7) ? 4'd0 : 4'd1;
+    wire [31:0] dimension_ext_w = {26'd0, dimension_i};
+    wire [31:0] context_count_ext_w = {16'd0, context_count_i};
+    wire [31:0] query_position_ext_w = {17'd0, query_position_i};
+    wire [CONTEXT_COUNT_WIDTH-1:0] term_count_index_w =
+        {{(CONTEXT_COUNT_WIDTH-CONTEXT_INDEX_WIDTH){1'b0}},
+         term_index_q};
     wire config_valid_w =
         (query_head_i < 4'd14) &&
         (value_head_i < 4'd2) &&
         (value_head_i == mapped_value_head_w) &&
-        (dimension_i < HEAD_DIM) &&
+        (dimension_ext_w < HEAD_DIM) &&
         (context_count_i != 16'd0) &&
-        (context_count_i <= CONTEXT_MAX);
+        (context_count_ext_w <= CONTEXT_MAX) &&
+        (query_position_ext_w < CONTEXT_MAX);
     wire start_metadata_known_w =
         known4(query_head_i) && known4(value_head_i) &&
         known15(query_position_i) && known6(dimension_i) &&
@@ -101,7 +113,7 @@ module ace3_attention_value_core #(
         ((value_hit_i === 1'b0) || (value_hit_i === 1'b1)) &&
         ((row_error_i === 1'b0) || (row_error_i === 1'b1));
 
-    wire signed [63:0] composed_q24_w =
+    wire signed [66:0] composed_q24_w =
         round_q48_to_q24(accumulator_next_w);
     wire [15:0] rounded_value_f16_w;
     wire rounded_saturation_w;
@@ -121,7 +133,7 @@ module ace3_attention_value_core #(
     );
 
     ace3_q24_to_fp16_rne #(
-        .WIDTH(64)
+        .WIDTH(67)
     ) round_composition (
         .q24_i(composed_q24_w),
         .zero_sign_i(1'b0),
@@ -130,50 +142,54 @@ module ace3_attention_value_core #(
     );
 
     function automatic known4;
-        input [3:0] value;
+        input [3:0] candidate_i;
         begin
-            known4 = ((^value === 1'b0) || (^value === 1'b1));
+            known4 = ((^candidate_i === 1'b0) ||
+                      (^candidate_i === 1'b1));
         end
     endfunction
 
     function automatic known6;
-        input [5:0] value;
+        input [5:0] candidate_i;
         begin
-            known6 = ((^value === 1'b0) || (^value === 1'b1));
+            known6 = ((^candidate_i === 1'b0) ||
+                      (^candidate_i === 1'b1));
         end
     endfunction
 
     function automatic known15;
-        input [14:0] value;
+        input [14:0] candidate_i;
         begin
-            known15 = ((^value === 1'b0) || (^value === 1'b1));
+            known15 = ((^candidate_i === 1'b0) ||
+                       (^candidate_i === 1'b1));
         end
     endfunction
 
     function automatic known16;
-        input [15:0] value;
+        input [15:0] candidate_i;
         begin
-            known16 = ((^value === 1'b0) || (^value === 1'b1));
+            known16 = ((^candidate_i === 1'b0) ||
+                       (^candidate_i === 1'b1));
         end
     endfunction
 
-    function automatic signed [63:0] round_q48_to_q24;
-        input signed [89:0] value;
+    function automatic signed [66:0] round_q48_to_q24;
+        input signed [89:0] q48_value_i;
         reg negative;
         reg [89:0] magnitude;
-        reg [62:0] base;
+        reg [65:0] base;
         reg [23:0] remainder;
         reg increment;
-        reg [63:0] rounded;
+        reg [66:0] rounded;
         begin
-            negative = value[89];
-            magnitude = negative ? (~value + 90'd1) : value;
-            base = magnitude >> 24;
+            negative = q48_value_i[89];
+            magnitude = negative ? (~q48_value_i + 90'd1) : q48_value_i;
+            base = magnitude[89:24];
             remainder = magnitude[23:0];
             increment =
                 (remainder > 24'h800000) ||
                 ((remainder == 24'h800000) && base[0]);
-            rounded = {1'b0, base} + {{63{1'b0}}, increment};
+            rounded = {1'b0, base} + {{66{1'b0}}, increment};
             round_q48_to_q24 =
                 negative ? -$signed(rounded) : $signed(rounded);
         end
@@ -188,7 +204,7 @@ module ace3_attention_value_core #(
     assign value_f16_o = out_value_f16_q;
     assign query_head_o = out_query_head_q;
     assign value_head_o = out_value_head_q;
-    assign query_position_o = out_query_position_q;
+    assign query_position_o = {8'd0, out_query_position_q};
     assign dimension_o = out_dimension_q;
     assign row_error_o = out_row_error_q;
     assign cache_miss_o = out_cache_miss_q;
@@ -199,21 +215,21 @@ module ace3_attention_value_core #(
     always @(posedge clk_i or negedge rst_ni) begin
         if (!rst_ni) begin
             active_q <= 1'b0;
-            context_count_q <= 16'd0;
-            term_index_q <= 16'd0;
+            context_count_q <= {CONTEXT_COUNT_WIDTH{1'b0}};
+            term_index_q <= {CONTEXT_INDEX_WIDTH{1'b0}};
             accumulator_q <= 90'sd0;
             row_error_q <= 1'b0;
             cache_miss_q <= 1'b0;
             invalid_q <= 1'b0;
             query_head_q <= 4'd0;
             value_head_q <= 4'd0;
-            query_position_q <= 15'd0;
+            query_position_q <= 7'd0;
             dimension_q <= 6'd0;
             out_valid_q <= 1'b0;
             out_value_f16_q <= 16'd0;
             out_query_head_q <= 4'd0;
             out_value_head_q <= 4'd0;
-            out_query_position_q <= 15'd0;
+            out_query_position_q <= 7'd0;
             out_dimension_q <= 6'd0;
             out_row_error_q <= 1'b0;
             out_cache_miss_q <= 1'b0;
@@ -221,21 +237,21 @@ module ace3_attention_value_core #(
             out_saturation_q <= 1'b0;
         end else if (clear_i) begin
             active_q <= 1'b0;
-            context_count_q <= 16'd0;
-            term_index_q <= 16'd0;
+            context_count_q <= {CONTEXT_COUNT_WIDTH{1'b0}};
+            term_index_q <= {CONTEXT_INDEX_WIDTH{1'b0}};
             accumulator_q <= 90'sd0;
             row_error_q <= 1'b0;
             cache_miss_q <= 1'b0;
             invalid_q <= 1'b0;
             query_head_q <= 4'd0;
             value_head_q <= 4'd0;
-            query_position_q <= 15'd0;
+            query_position_q <= 7'd0;
             dimension_q <= 6'd0;
             out_valid_q <= 1'b0;
             out_value_f16_q <= 16'd0;
             out_query_head_q <= 4'd0;
             out_value_head_q <= 4'd0;
-            out_query_position_q <= 15'd0;
+            out_query_position_q <= 7'd0;
             out_dimension_q <= 6'd0;
             out_row_error_q <= 1'b0;
             out_cache_miss_q <= 1'b0;
@@ -247,15 +263,16 @@ module ace3_attention_value_core #(
 
             if (start_valid_i && start_ready_o) begin
                 active_q <= 1'b1;
-                context_count_q <= context_count_i;
-                term_index_q <= 16'd0;
+                context_count_q <=
+                    context_count_i[CONTEXT_COUNT_WIDTH-1:0];
+                term_index_q <= {CONTEXT_INDEX_WIDTH{1'b0}};
                 accumulator_q <= 90'sd0;
                 row_error_q <= 1'b0;
                 cache_miss_q <= 1'b0;
                 invalid_q <= 1'b0;
                 query_head_q <= query_head_i;
                 value_head_q <= value_head_i;
-                query_position_q <= query_position_i;
+                query_position_q <= query_position_i[6:0];
                 dimension_q <= dimension_i;
             end
 
@@ -264,9 +281,11 @@ module ace3_attention_value_core #(
                 row_error_q <= row_error_next_w;
                 cache_miss_q <= cache_miss_next_w;
                 invalid_q <= invalid_next_w;
-                if (term_index_q == context_count_q - 1'b1) begin
+                if (term_count_index_w ==
+                    context_count_q -
+                    {{(CONTEXT_COUNT_WIDTH-1){1'b0}}, 1'b1}) begin
                     active_q <= 1'b0;
-                    term_index_q <= 16'd0;
+                    term_index_q <= {CONTEXT_INDEX_WIDTH{1'b0}};
                     out_valid_q <= 1'b1;
                     out_value_f16_q <=
                         (row_error_next_w || cache_miss_next_w ||

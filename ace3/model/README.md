@@ -21,3 +21,9 @@ scaled Q48 score and value accumulation, and the frozen Q0.24 softmax
 approximation. Its generator re-authenticates the accepted checkpoint samples;
 its validator recomputes all serialized stage results and enforces SHA-256
 bindings before simulation.
+
+`decoder_layer0_oracle.py` composes those independent integer oracles with the
+native-AWQ projection oracle for two sequential tokens. The generated trace
+retains stage and tensor indices, including Qwen half-split RoPE handoffs, and
+the validator reruns the composition before either RTL simulator executes.
+

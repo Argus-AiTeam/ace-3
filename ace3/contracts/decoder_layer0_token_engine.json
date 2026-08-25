@@ -1,0 +1,76 @@
+{
+  "schema_version": 1,
+  "kind": "ace3_decoder_layer0_token_engine_simulation_contract",
+  "implementation": "ace3/rtl/ace3_decoder_layer0_token_engine.sv",
+  "scope": {
+    "included": [
+      "one serial Qwen2.5 layer-0 token engine in RTL simulation",
+      "two authenticated Hello world embedding rows at positions 0 and 1 in cache slot 0",
+      "native asymmetric AWQ W4A16 projection pull interfaces",
+      "FP16 post-projection Q/K/V bias, Qwen2 RoPE, retained FP16 K/V cache, 14:2 GQA attention, MLP, residuals, and trace comparison"
+    ],
+    "excluded": [
+      "full model or all 24 decoder layers",
+      "dialogue, generation quality, tokenizer execution beyond the fixed authenticated IDs",
+      "synthesis, timing, power, area, PPA, FPGA, or silicon claims",
+      "automatic DMA, SRAM implementation, and tensor transport architecture"
+    ]
+  },
+  "geometry": {
+    "hidden_size": 896,
+    "intermediate_size": 4864,
+    "query_heads": 14,
+    "key_value_heads": 2,
+    "head_dim": 64,
+    "cache_slots": 2,
+    "tested_cache_slot": 0,
+    "tested_positions": [0, 1]
+  },
+  "trace": {
+    "record_fields": {
+      "stage": "stage[4:0]",
+      "index": "index[12:0]",
+      "f16": "f16[15:0]",
+      "position": "position[14:0]",
+      "token_ordinal": "vector-file field for disambiguating the two sequential starts"
+    },
+    "stage_ids": {
+      "0": "norm1",
+      "1": "biased Q",
+      "2": "biased K",
+      "3": "biased V",
+      "4": "rotated Q",
+      "5": "rotated K",
+      "6": "cache-write K",
+      "7": "cache-write V",
+      "8": "score",
+      "9": "probability",
+      "10": "attention value",
+      "11": "O",
+      "12": "residual1",
+      "13": "norm2",
+      "14": "gate",
+      "15": "up",
+      "16": "SiLU",
+      "17": "down",
+      "18": "final residual"
+    },
+    "emission_order": "The expected stream follows the token-engine state machine: norm1, Q, rotated Q in Qwen half-split pair order (p then p+32), K, V, rotated K in the same half-split pair order, alternating cache K/V writes, then per query-head score rows, probability rows, value dimensions, O, residual1, norm2, gate, up, SiLU, down, and final residual."
+  },
+  "numerical_order": {
+    "projection": "native AWQ G128 group accumulators sum in signed Q53.48; every complete projection is rounded once to binary16",
+    "bias": "Q, K, and V each add their FP16 checkpoint bias only after that complete projection rounding",
+    "rope": "Qwen2 half-split RoPE uses binary16 multiply/multiply/add",
+    "attention": "causal 14:2 GQA uses the accepted fixed-point score, softmax, and value operators over retained FP16 cache rows",
+    "mlp": "rational integer SiLU gate uses the accepted adaptation oracle"
+  },
+  "oracle_integer_safety": {
+    "host_representation": "Python arbitrary-precision integers are used for all fixed-point products and sums; no host fixed-width integer can overflow.",
+    "projection_check": "The composed projection oracle checks every G128 signed Q47.48 group and every signed Q53.48 complete sum against its contract width before binary16 rounding.",
+    "adaptation_check": "RMSNorm, residual, SiLU, and attention use exact integer intermediate arithmetic from their independent existing oracles."
+  },
+  "protocol_responsibilities": {
+    "testbench": ["reset", "clear", "backpressure", "X/Z rejection", "projection/rope pull response timing"],
+    "vectors": ["authenticated source identity", "finite data values", "exact trace/final records", "artifact hashes and inventory"]
+  }
+}

@@ -110,6 +110,53 @@ PROJECTION_4864_BIN := $(IVERILOG_DIR)/ace3_awq_w4a16_projection_4864_cycle.vvp
 VERILATOR_BIN := $(VERILATOR_OBJ_DIR)/Vace3_awq_w4a16_g128_dot_lane
 PROJECTION_VERILATOR_BIN := $(PROJECTION_VERILATOR_OBJ_DIR)/Vace3_awq_w4a16_projection_engine
 
+DECODER_VECTOR_DIR := $(BUILD_DIR)/decoder_layer0_vectors
+DECODER_TAMPER_DIR := $(BUILD_DIR)/tamper-decoder-layer0-vectors
+DECODER_IVERILOG_DIR := $(BUILD_DIR)/decoder_layer0_iverilog
+DECODER_IVERILOG_BIN := $(DECODER_IVERILOG_DIR)/ace3_decoder_layer0_token_engine.vvp
+DECODER_VERILATOR_DIR := $(BUILD_DIR)/decoder_layer0_verilator
+DECODER_VERILATOR_OBJ_DIR := $(DECODER_VERILATOR_DIR)/obj_dir
+DECODER_VERILATOR_BIN := $(DECODER_VERILATOR_OBJ_DIR)/Vace3_decoder_layer0_token_engine
+DECODER_WIDTH_DIR := $(BUILD_DIR)/decoder_width_boundary
+DECODER_WIDTH_IVERILOG_BIN := $(DECODER_WIDTH_DIR)/ace3_decoder_width_boundary.vvp
+DECODER_WIDTH_VERILATOR_OBJ_DIR := $(DECODER_WIDTH_DIR)/obj_dir
+DECODER_WIDTH_VERILATOR_BIN := $(DECODER_WIDTH_VERILATOR_OBJ_DIR)/Vace3_decoder_layer0_token_engine
+DECODER_PRELOAD_DIR := $(BUILD_DIR)/decoder_preload_micro_cf01
+DECODER_PRELOAD_IVERILOG_BIN := $(DECODER_PRELOAD_DIR)/ace3_decoder_preload.vvp
+DECODER_PRELOAD_VERILATOR_OBJ_DIR := $(DECODER_PRELOAD_DIR)/verilator_obj
+DECODER_PRELOAD_VERILATOR_BIN := $(DECODER_PRELOAD_VERILATOR_OBJ_DIR)/Vace3_decoder_layer0_token_engine
+DECODER_SILU_DIR := $(BUILD_DIR)/decoder_silu_streaming
+DECODER_SILU_IVERILOG_BIN := $(DECODER_SILU_DIR)/ace3_decoder_silu_streaming.vvp
+DECODER_SILU_VERILATOR_DIR := $(DECODER_SILU_DIR)/verilator
+DECODER_QZEROS_DIR := $(BUILD_DIR)/decoder_qzeros_boundary
+DECODER_QZEROS_IVERILOG_BIN := $(DECODER_QZEROS_DIR)/ace3_decoder_qzeros_boundary.vvp
+DECODER_QZEROS_VERILATOR_DIR := $(DECODER_QZEROS_DIR)/verilator_obj
+DECODER_QZEROS_VERILATOR_BIN := $(DECODER_QZEROS_VERILATOR_DIR)/Vace3_decoder_qzeros_address
+DECODER_QZEROS_ADDRESS_RTL := $(ROOT)/ace3/rtl/ace3_decoder_qzeros_address.sv
+DECODER_QZEROS_TB := $(ROOT)/ace3/tb/ace3_decoder_qzeros_boundary_tb.sv
+DECODER_QZEROS_CPP_TB := $(ROOT)/ace3/tb/ace3_decoder_qzeros_boundary_main.cpp
+DECODER_ENGINE_RTL := $(ROOT)/ace3/rtl/ace3_decoder_layer0_token_engine.sv
+DECODER_RTL := $(FP16_FIXED_RTL) $(PROJECTION_ROUNDER_RTL) $(RTL) \
+	$(PROJECTION_RTL) $(FP16_RMS_RTL) $(FP16_RESIDUAL_RTL) \
+	$(FP16_SILU_RTL) $(QKV_ROPE_RTL) $(QKV_CACHE_RTL) \
+	$(ATTENTION_RTL) $(DECODER_QZEROS_ADDRESS_RTL) $(DECODER_ENGINE_RTL)
+DECODER_GENERATOR := $(ROOT)/ace3/model/generate_decoder_layer0_vectors.py
+DECODER_VALIDATOR := $(ROOT)/ace3/model/validate_decoder_layer0_vectors.py
+DECODER_CONTRACT := $(ROOT)/ace3/contracts/decoder_layer0_token_engine.json
+DECODER_BINDINGS := $(ROOT)/ace3/contracts/decoder_layer0_vector_bindings.json
+DECODER_TB := $(ROOT)/ace3/tb/ace3_decoder_layer0_token_engine_tb.sv
+DECODER_CPP_TB := $(ROOT)/ace3/tb/ace3_decoder_layer0_token_engine_main.cpp
+DECODER_WIDTH_TB := $(ROOT)/ace3/tb/ace3_decoder_width_boundary_tb.sv
+DECODER_WIDTH_CPP_TB := $(ROOT)/ace3/tb/ace3_decoder_width_boundary_main.cpp
+DECODER_PRELOAD_TB := $(ROOT)/ace3/tb/ace3_decoder_preload_tb.sv
+DECODER_PRELOAD_CPP_TB := $(ROOT)/ace3/tb/ace3_decoder_preload_main.cpp
+DECODER_SILU_TB := $(ROOT)/ace3/tb/ace3_decoder_silu_streaming_tb.sv
+DECODER_SILU_CPP_TB := $(ROOT)/ace3/tb/ace3_decoder_silu_streaming_main.cpp
+MODEL24_LAYER_HANDOFF_TEST := $(ROOT)/ace3/tb/test_model24_layer_indexed_handoff.py
+MODEL24_TENSOR_MAP := $(ROOT)/ace3/contracts/model24_tensor_map.json
+VL15_LAYER0_HANDOFF ?= $(BUILD_DIR)/model24-prep-worktree/build/freshlayer0execute37-vl15/raw-final.rows
+OFFICIAL_MODEL24_CHECKPOINT ?= $(ROOT)/model24_execution_vectors/model.safetensors
+
 export PYTHONDONTWRITEBYTECODE := 1
 
 .PHONY: \
@@ -783,3 +830,233 @@ attention-verilator-simulation: attention-verilator-compile
 
 clean:
 	rm -rf "$(BUILD_DIR)"
+
+.PHONY: projection-bias projection-bias-vectors projection-bias-json-validation projection-bias-tamper-rejection projection-bias-iverilog projection-bias-verilator decoder-layer0 decoder-layer0-vectors decoder-layer0-json-validation decoder-layer0-tamper-rejection decoder-layer0-width-boundary decoder-layer0-width-iverilog decoder-layer0-iverilog-compile decoder-layer0-iverilog-simulation decoder-layer0-verilator-compile decoder-layer0-verilator-simulation decoder-preload-micro decoder-preload-micro-iverilog decoder-preload-micro-verilator decoder-silu-streaming decoder-silu-streaming-iverilog decoder-silu-streaming-verilator decoder-qzeros-boundary decoder-qzeros-boundary-iverilog decoder-qzeros-boundary-verilator model24-layer-indexed-handoff
+
+
+model24-layer-indexed-handoff:
+	@cd "$(ROOT)" && "$(PYTHON)" "$(MODEL24_LAYER_HANDOFF_TEST)" \
+	    --repository-root "$(ROOT)" \
+	    --checkpoint "$(OFFICIAL_MODEL24_CHECKPOINT)" \
+	    --tensor-map "$(MODEL24_TENSOR_MAP)" \
+	    --handoff "$(VL15_LAYER0_HANDOFF)"
+
+decoder-layer0: decoder-layer0-tamper-rejection decoder-layer0-width-boundary \
+	decoder-layer0-iverilog-simulation decoder-layer0-verilator-simulation
+	@printf '%s\n' 'DECODER_LAYER0_PASS scope=two_authenticated_tokens trace=46676 final=1792 cache_reuse=pass reset=pass clear=pass fault_injection=pass iverilog=pass verilator=pass'
+
+decoder-silu-streaming: decoder-silu-streaming-iverilog decoder-silu-streaming-verilator
+	@printf '%s\n' 'DECODER_SILU_STREAMING_DUAL_PASS simulators=iverilog,verilator projection_kind=5 phase=32 inputs=4864 outputs=4864 successor_phase=4 full_layer=not_run'
+
+decoder-silu-streaming-iverilog:
+	@rm -rf "$(DECODER_SILU_DIR)/iverilog" "$(DECODER_SILU_IVERILOG_BIN)"
+	@mkdir -p "$(DECODER_SILU_DIR)/iverilog"
+	@"$(IVERILOG)" -g2012 -Wall -s ace3_decoder_silu_streaming_iverilog_tb \
+	    -o "$(DECODER_SILU_IVERILOG_BIN)" $(DECODER_RTL) "$(DECODER_SILU_TB)" \
+	    >"$(DECODER_SILU_DIR)/iverilog/compile.log" 2>&1
+	@"$(VVP)" "$(DECODER_SILU_IVERILOG_BIN)" \
+	    >"$(DECODER_SILU_DIR)/iverilog/run.log" 2>&1
+	@cat "$(DECODER_SILU_DIR)/iverilog/run.log"
+
+decoder-silu-streaming-verilator:
+	@rm -rf "$(DECODER_SILU_VERILATOR_DIR)"
+	@mkdir -p "$(DECODER_SILU_VERILATOR_DIR)"
+	@cd "$(ROOT)" && "$(VERILATOR)" --cc --exe --build --Wall -Wno-fatal \
+	    --top-module ace3_decoder_silu_streaming_tb \
+	    --Mdir "$(DECODER_SILU_VERILATOR_DIR)" $(DECODER_RTL) \
+	    "$(DECODER_SILU_TB)" "$(DECODER_SILU_CPP_TB)" \
+	    >"$(DECODER_SILU_DIR)/verilator-compile.log" 2>&1
+	@"$(DECODER_SILU_VERILATOR_DIR)/Vace3_decoder_silu_streaming_tb" \
+	    >"$(DECODER_SILU_DIR)/verilator-run.log" 2>&1
+	@cat "$(DECODER_SILU_DIR)/verilator-run.log"
+
+decoder-layer0-vectors:
+	@rm -rf "$(DECODER_VECTOR_DIR)"
+	@mkdir -p "$(DECODER_VECTOR_DIR)" "$(LOG_DIR)"
+	@set -eu; log="$(LOG_DIR)/decoder-layer0-vector-generation.log"; \
+	printf '%s\n' '$ python3 ace3/model/generate_decoder_layer0_vectors.py --official-tensor-dir "$(OFFICIAL_TENSOR_DIR)" --output-dir build/decoder_layer0_vectors' > "$$log"; \
+	if cd "$(ROOT)" && "$(PYTHON)" "$(DECODER_GENERATOR)" \
+	    --official-tensor-dir "$(OFFICIAL_TENSOR_DIR)" \
+	    --output-dir "$(DECODER_VECTOR_DIR)" >> "$$log" 2>&1; then :; \
+	else status=$$?; cat "$$log"; exit $$status; fi; \
+	cat "$$log"
+
+decoder-layer0-json-validation: decoder-layer0-vectors
+	@mkdir -p "$(LOG_DIR)"
+	@set -eu; log="$(LOG_DIR)/decoder-layer0-vector-validation.log"; \
+	printf '%s\n' '$ python3 ace3/model/validate_decoder_layer0_vectors.py --official-tensor-dir "$(OFFICIAL_TENSOR_DIR)" --generated-dir build/decoder_layer0_vectors --bindings ace3/contracts/decoder_layer0_vector_bindings.json' > "$$log"; \
+	if cd "$(ROOT)" && "$(PYTHON)" "$(DECODER_VALIDATOR)" \
+	    --official-tensor-dir "$(OFFICIAL_TENSOR_DIR)" \
+	    --generated-dir "$(DECODER_VECTOR_DIR)" \
+	    --bindings "$(DECODER_BINDINGS)" >> "$$log" 2>&1; then :; \
+	else status=$$?; cat "$$log"; exit $$status; fi; \
+	cat "$$log"
+
+decoder-layer0-tamper-rejection: decoder-layer0-json-validation
+	@rm -rf "$(DECODER_TAMPER_DIR)"
+	@cp -a "$(DECODER_VECTOR_DIR)" "$(DECODER_TAMPER_DIR)"
+	@printf '0' >> "$(DECODER_TAMPER_DIR)/trace.hex"
+	@set -eu; attempt="$(LOG_DIR)/decoder-layer0-tamper-attempt.log"; \
+	log="$(LOG_DIR)/decoder-layer0-tamper-rejection.log"; \
+	printf '%s\n' '$ printf 0 >> build/tamper-decoder-layer0-vectors/trace.hex' > "$$attempt"; \
+	printf '%s\n' '$ python3 ace3/model/validate_decoder_layer0_vectors.py ... (expected failure)' >> "$$attempt"; \
+	if cd "$(ROOT)" && "$(PYTHON)" "$(DECODER_VALIDATOR)" \
+	    --official-tensor-dir "$(OFFICIAL_TENSOR_DIR)" \
+	    --generated-dir "$(DECODER_TAMPER_DIR)" \
+	    --bindings "$(DECODER_BINDINGS)" >> "$$attempt" 2>&1; then \
+	  cat "$$attempt"; exit 1; \
+	fi; \
+	if ! grep -Fq 'trace.hex SHA256' "$$attempt"; then \
+	  cat "$$attempt"; exit 1; \
+	fi; \
+	printf '%s\n' 'DECODER_LAYER0_TAMPER_REJECTION_PASS artifact=trace.hex validator_exit=nonzero reason=sha256_mismatch originals=untouched' > "$$log"; \
+	cat "$$log"
+
+decoder-layer0-width-iverilog:
+	@rm -rf "$(DECODER_WIDTH_DIR)"
+	@mkdir -p "$(DECODER_WIDTH_DIR)" "$(LOG_DIR)"
+	@set -eu; log="$(LOG_DIR)/decoder-layer0-width-iverilog.log"; \
+	printf '%s\n' '$ iverilog/vvp decoder width, reset, clear, and fault boundary' > "$$log"; \
+	"$(IVERILOG)" -g2012 -Wall -s ace3_decoder_width_boundary_tb \
+	    -o "$(DECODER_WIDTH_IVERILOG_BIN)" $(DECODER_RTL) \
+	    "$(DECODER_WIDTH_TB)" >> "$$log" 2>&1 \
+	    || { cat "$$log"; exit 1; }; \
+	"$(VVP)" "$(DECODER_WIDTH_IVERILOG_BIN)" >> "$$log" 2>&1 \
+	    || { cat "$$log"; exit 1; }; \
+	printf '%s\n' 'DECODER_WIDTH_IVERILOG_PASS q_index=895 kv_index=127 intermediate_index=4863 position=127 half_split_rope=pass reset=pass clear=pass fault_injection=pass' >> "$$log"; \
+	cat "$$log"
+
+decoder-layer0-width-boundary: decoder-layer0-width-iverilog
+	@rm -rf "$(DECODER_WIDTH_VERILATOR_OBJ_DIR)"
+	@mkdir -p "$(DECODER_WIDTH_DIR)" "$(LOG_DIR)"
+	@set -eu; log="$(LOG_DIR)/decoder-layer0-width-verilator.log"; \
+	printf '%s\n' '$ verilator decoder width, reset, clear, and fault boundary' > "$$log"; \
+	cd "$(ROOT)" && "$(VERILATOR)" --cc --exe --build --Wall -Wno-fatal \
+	    --top-module ace3_decoder_layer0_token_engine \
+	    --Mdir "$(DECODER_WIDTH_VERILATOR_OBJ_DIR)" $(DECODER_RTL) \
+	    "$(DECODER_WIDTH_CPP_TB)" >> "$$log" 2>&1 \
+	    || { cat "$$log"; exit 1; }; \
+	test -x "$(DECODER_WIDTH_VERILATOR_BIN)"; \
+	"$(DECODER_WIDTH_VERILATOR_BIN)" >> "$$log" 2>&1 \
+	    || { cat "$$log"; exit 1; }; \
+	cat "$$log"
+	@printf '%s\n' 'DECODER_WIDTH_BOUNDARY_PASS simulators=iverilog,verilator q_index=895 kv_index=127 intermediate_index=4863 position=127 half_split_rope=pass reset=pass clear=pass fault_injection=pass'
+
+decoder-preload-micro: decoder-preload-micro-iverilog decoder-preload-micro-verilator
+	@printf '%s\n' 'DECODER_PRELOAD_MICRO_PASS simulators=iverilog,verilator epoch_handshakes=2688 total_handshakes=5376 epochs=2 reset=pass sequence=1,2,0 flags=pass ready_known=pass final_index=895 start_transition=0_to_1 clear_reload=pass bounded_timeout=pass'
+
+decoder-preload-micro-iverilog:
+	@rm -rf "$(DECODER_PRELOAD_DIR)/iverilog" "$(DECODER_PRELOAD_IVERILOG_BIN)"
+	@mkdir -p "$(DECODER_PRELOAD_DIR)/iverilog"
+	@set -eu; log="$(DECODER_PRELOAD_DIR)/iverilog/run.log"; \
+	timeout_log="$(DECODER_PRELOAD_DIR)/iverilog/timeout.log"; \
+	printf '%s\n' '$ iverilog/vvp decoder preload-only lifecycle' > "$$log"; \
+	"$(IVERILOG)" -g2012 -Wall -s ace3_decoder_preload_tb \
+	    -o "$(DECODER_PRELOAD_IVERILOG_BIN)" $(DECODER_RTL) "$(DECODER_PRELOAD_TB)" >> "$$log" 2>&1 \
+	    || { cat "$$log"; exit 1; }; \
+	"$(VVP)" "$(DECODER_PRELOAD_IVERILOG_BIN)" >> "$$log" 2>&1 \
+	    || { cat "$$log"; exit 1; }; \
+	printf '%s\n' '$ vvp ace3_decoder_preload.vvp +EXPECT_TIMEOUT (expected failure)' > "$$timeout_log"; \
+	if "$(VVP)" "$(DECODER_PRELOAD_IVERILOG_BIN)" +EXPECT_TIMEOUT >> "$$timeout_log" 2>&1; then \
+	  cat "$$timeout_log"; exit 1; \
+	fi; \
+	grep -F 'DECODER_PRELOAD_TIMEOUT kind=1 index=1' "$$timeout_log" >/dev/null \
+	    || { cat "$$timeout_log"; exit 1; }; \
+	grep -F 'phase=0 accepts=0,0,0' "$$timeout_log" >/dev/null \
+	    || { cat "$$timeout_log"; exit 1; }; \
+	cat "$$log"; cat "$$timeout_log"
+
+decoder-preload-micro-verilator:
+	@rm -rf "$(DECODER_PRELOAD_VERILATOR_OBJ_DIR)"
+	@mkdir -p "$(DECODER_PRELOAD_VERILATOR_OBJ_DIR)"
+	@set -eu; log="$(DECODER_PRELOAD_DIR)/verilator.log"; \
+	timeout_log="$(DECODER_PRELOAD_DIR)/verilator-timeout.log"; \
+	printf '%s\n' '$ verilator decoder preload-only lifecycle' > "$$log"; \
+	cd "$(ROOT)" && "$(VERILATOR)" --cc --exe --build --Wall -Wno-fatal \
+	    --top-module ace3_decoder_layer0_token_engine \
+	    --Mdir "$(DECODER_PRELOAD_VERILATOR_OBJ_DIR)" $(DECODER_RTL) \
+	    "$(DECODER_PRELOAD_CPP_TB)" >> "$$log" 2>&1 \
+	    || { cat "$$log"; exit 1; }; \
+	test -x "$(DECODER_PRELOAD_VERILATOR_BIN)"; \
+	"$(DECODER_PRELOAD_VERILATOR_BIN)" >> "$$log" 2>&1 \
+	    || { cat "$$log"; exit 1; }; \
+	printf '%s\n' '$ Vace3_decoder_layer0_token_engine --expect-timeout (expected failure)' > "$$timeout_log"; \
+	if "$(DECODER_PRELOAD_VERILATOR_BIN)" --expect-timeout >> "$$timeout_log" 2>&1; then \
+	  cat "$$timeout_log"; exit 1; \
+	fi; \
+	grep -F 'DECODER_PRELOAD_TIMEOUT kind=1 index=1' "$$timeout_log" >/dev/null \
+	    || { cat "$$timeout_log"; exit 1; }; \
+	grep -F 'phase=0 accepts=0,0,0' "$$timeout_log" >/dev/null \
+	    || { cat "$$timeout_log"; exit 1; }; \
+	cat "$$log"; cat "$$timeout_log"
+
+decoder-qzeros-boundary: decoder-qzeros-boundary-iverilog decoder-qzeros-boundary-verilator
+	@printf '%s\n' 'DECODER_QZEROS_BOUNDARY_PASS simulators=iverilog,verilator domains=q:0..783,k:0..111,v:0..111,o:0..783,gate:0..4255,up:0..4255,down:0..4255 q_to_k_stale=qualified live_oob=rejected serialized_edges=exact'
+
+decoder-qzeros-boundary-iverilog: decoder-layer0-json-validation
+	@rm -rf "$(DECODER_QZEROS_DIR)/iverilog" "$(DECODER_QZEROS_IVERILOG_BIN)"
+	@mkdir -p "$(DECODER_QZEROS_DIR)/iverilog"
+	@set -eu; log="$(DECODER_QZEROS_DIR)/iverilog/run.log"; \
+	"$(IVERILOG)" -g2012 -Wall -s ace3_decoder_qzeros_boundary_tb \
+	    -o "$(DECODER_QZEROS_IVERILOG_BIN)" "$(DECODER_QZEROS_ADDRESS_RTL)" "$(DECODER_QZEROS_TB)" \
+	    > "$$log" 2>&1 || { cat "$$log"; exit 1; }; \
+	cd "$(ROOT)" && "$(VVP)" "$(DECODER_QZEROS_IVERILOG_BIN)" \
+	    +VECTOR_DIR="$(DECODER_VECTOR_DIR)" >> "$$log" 2>&1 \
+	    || { cat "$$log"; exit 1; }; \
+	cat "$$log"
+
+decoder-qzeros-boundary-verilator: decoder-layer0-json-validation
+	@rm -rf "$(DECODER_QZEROS_VERILATOR_DIR)"
+	@mkdir -p "$(DECODER_QZEROS_VERILATOR_DIR)"
+	@set -eu; log="$(DECODER_QZEROS_DIR)/verilator.log"; \
+	cd "$(ROOT)" && "$(VERILATOR)" --cc --exe --build --Wall -Wno-fatal \
+	    --top-module ace3_decoder_qzeros_address \
+	    --Mdir "$(DECODER_QZEROS_VERILATOR_DIR)" \
+	    "$(DECODER_QZEROS_ADDRESS_RTL)" "$(DECODER_QZEROS_CPP_TB)" > "$$log" 2>&1 \
+	    || { cat "$$log"; exit 1; }; \
+	cd "$(ROOT)" && "$(DECODER_QZEROS_VERILATOR_BIN)" \
+	    --vector-dir "$(DECODER_VECTOR_DIR)" >> "$$log" 2>&1 \
+	    || { cat "$$log"; exit 1; }; \
+	cat "$$log"
+
+decoder-layer0-iverilog-compile: decoder-layer0-json-validation
+	@rm -rf "$(DECODER_IVERILOG_DIR)"
+	@mkdir -p "$(DECODER_IVERILOG_DIR)" "$(LOG_DIR)"
+	@set -eu; log="$(LOG_DIR)/decoder-layer0-iverilog-compile.log"; \
+	printf '%s\n' '$ iverilog -g2012 -Wall -s ace3_decoder_layer0_token_engine_tb -o build/decoder_layer0_iverilog/ace3_decoder_layer0_token_engine.vvp ...' > "$$log"; \
+	if "$(IVERILOG)" -g2012 -Wall -s ace3_decoder_layer0_token_engine_tb \
+	    -o "$(DECODER_IVERILOG_BIN)" $(DECODER_RTL) "$(DECODER_TB)" \
+	    >> "$$log" 2>&1; then :; \
+	else status=$$?; cat "$$log"; exit $$status; fi; \
+	cat "$$log"
+
+decoder-layer0-iverilog-simulation: decoder-layer0-iverilog-compile
+	@mkdir -p "$(LOG_DIR)"
+	@set -eu; log="$(LOG_DIR)/decoder-layer0-iverilog-simulation.log"; \
+	printf '%s\n' '$ vvp build/decoder_layer0_iverilog/ace3_decoder_layer0_token_engine.vvp +VECTOR_DIR=build/decoder_layer0_vectors' > "$$log"; \
+	if cd "$(ROOT)" && "$(VVP)" "$(DECODER_IVERILOG_BIN)" \
+	    +VECTOR_DIR="$(DECODER_VECTOR_DIR)" +PROGRESS_INTERVAL=1000000 >> "$$log" 2>&1; then :; \
+	else status=$$?; cat "$$log"; exit $$status; fi; \
+	cat "$$log"
+
+decoder-layer0-verilator-compile: decoder-layer0-json-validation
+	@rm -rf "$(DECODER_VERILATOR_OBJ_DIR)"
+	@mkdir -p "$(DECODER_VERILATOR_DIR)" "$(LOG_DIR)"
+	@set -eu; log="$(LOG_DIR)/decoder-layer0-verilator-compile.log"; \
+	printf '%s\n' '$ verilator --cc --exe --build --Wall -Wno-fatal --top-module ace3_decoder_layer0_token_engine --Mdir build/decoder_layer0_verilator/obj_dir ...' > "$$log"; \
+	if cd "$(ROOT)" && "$(VERILATOR)" --cc --exe --build --Wall -Wno-fatal \
+	    --top-module ace3_decoder_layer0_token_engine \
+	    --Mdir "$(DECODER_VERILATOR_OBJ_DIR)" $(DECODER_RTL) \
+	    "$(DECODER_CPP_TB)" >> "$$log" 2>&1; then :; \
+	else status=$$?; cat "$$log"; exit $$status; fi; \
+	test -x "$(DECODER_VERILATOR_BIN)"; cat "$$log"
+
+decoder-layer0-verilator-simulation: decoder-layer0-verilator-compile
+	@mkdir -p "$(LOG_DIR)"
+	@set -eu; log="$(LOG_DIR)/decoder-layer0-verilator-simulation.log"; \
+	printf '%s\n' '$ build/decoder_layer0_verilator/obj_dir/Vace3_decoder_layer0_token_engine --vector-dir build/decoder_layer0_vectors' > "$$log"; \
+	if cd "$(ROOT)" && "$(DECODER_VERILATOR_BIN)" \
+	    --vector-dir "$(DECODER_VECTOR_DIR)" >> "$$log" 2>&1; then :; \
+	else status=$$?; cat "$$log"; exit $$status; fi; \
+	cat "$$log"
+

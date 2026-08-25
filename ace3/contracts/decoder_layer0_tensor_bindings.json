@@ -1,0 +1,371 @@
+{
+  "claim_boundary": "Fixed authenticated layer-0 tensor and two embedding-row identity only; it does not claim full-model execution, all layers, dialogue quality, synthesis, PPA, or FPGA results.",
+  "expected_manifest": {
+    "awq": {
+      "bits": 4,
+      "group_size": 128,
+      "logical_lane_to_physical_nibble": [
+        0,
+        4,
+        1,
+        5,
+        2,
+        6,
+        3,
+        7
+      ],
+      "qzero_plus_one": false,
+      "version": "gemm",
+      "zero_point": true
+    },
+    "geometry": {
+      "group_size": 128,
+      "head_dim": 64,
+      "hidden_size": 896,
+      "intermediate_size": 4864,
+      "key_value_heads": 2,
+      "max_position_embeddings": 32768,
+      "query_heads": 14,
+      "rope_theta": 1000000.0
+    },
+    "kind": "ace3_fixed_revision_decoder_layer0_tensors",
+    "model_repository": "Qwen/Qwen2.5-0.5B-Instruct-AWQ",
+    "model_revision": "db09cd27ead7fee40cdee309693cf83601b9c899",
+    "schema_version": 1,
+    "sources": {
+      "config_sha256": "bd20ae34a91eb38230b870d39f56677d1cda1e8b6688ad627e6efb6ca9f44090",
+      "model_api_sha256": "9a4a3beea2283031c91d0de501fcb1a8613f9b5f5d6039111eac421833d5a768",
+      "model_safetensors_byte_count": 730652248,
+      "model_safetensors_sha256": "c50d807b7bed7ff314308972e0f4bcf4e5a70bc60ad88fc7df53940831ed0c1b",
+      "qwen2_modeling_source_sha256": "90da2d6a23d53a4c62d1a16e9ab5c472c9145aac85689218161a54eef52b8105",
+      "tokenizer_config_sha256": "5b5d4f65d0acd3b2d56a35b56d374a36cbc1c8fa5cf3b3febbbfabf22f359583",
+      "tokenizer_sha256": "c0382117ea329cdf097041132f6d735924b697924d6f6fc3945713e96ce87539",
+      "transformers_version": "4.41.1",
+      "transformers_wheel_sha256": "f0680e0b1a01067eccd11f62f0522409422c7d6f91d532fe0f50b136a406129d"
+    },
+    "tensors": [
+      {
+        "byte_count": 1792,
+        "checkpoint_name": "model.layers.0.input_layernorm.weight",
+        "dtype": "float16",
+        "serialized_file": "layer0_input_layernorm_weight.fp16le.bin",
+        "sha256": "870fae45e6c73031d339e11391519f9e556484f64341ebf479d4602d15eddca0",
+        "shape": [
+          896
+        ]
+      },
+      {
+        "byte_count": 2179072,
+        "checkpoint_name": "model.layers.0.mlp.down_proj.qweight",
+        "dtype": "int32",
+        "serialized_file": "layer0_mlp_down_proj_qweight.i32le.bin",
+        "sha256": "2c13a8d3f06d8f0fa631e440b966b51bed53428c13babd7cd5cc041d05445c0c",
+        "shape": [
+          4864,
+          112
+        ]
+      },
+      {
+        "byte_count": 17024,
+        "checkpoint_name": "model.layers.0.mlp.down_proj.qzeros",
+        "dtype": "int32",
+        "serialized_file": "layer0_mlp_down_proj_qzeros.i32le.bin",
+        "sha256": "2959715fdd0c1053f350f137a9e25e4edc01d503976ffb377f79cb12fb85d5ca",
+        "shape": [
+          38,
+          112
+        ]
+      },
+      {
+        "byte_count": 68096,
+        "checkpoint_name": "model.layers.0.mlp.down_proj.scales",
+        "dtype": "float16",
+        "serialized_file": "layer0_mlp_down_proj_scales.fp16le.bin",
+        "sha256": "5462785bab49a23dc904c9bbaa377ee065fc4409e02134d1c749ac8080d4f0fd",
+        "shape": [
+          38,
+          896
+        ]
+      },
+      {
+        "byte_count": 2179072,
+        "checkpoint_name": "model.layers.0.mlp.gate_proj.qweight",
+        "dtype": "int32",
+        "serialized_file": "layer0_mlp_gate_proj_qweight.i32le.bin",
+        "sha256": "6dfde12b9161488b4afc071c20b40f99bce51ebf475561c726469fc56b9cfd39",
+        "shape": [
+          896,
+          608
+        ]
+      },
+      {
+        "byte_count": 17024,
+        "checkpoint_name": "model.layers.0.mlp.gate_proj.qzeros",
+        "dtype": "int32",
+        "serialized_file": "layer0_mlp_gate_proj_qzeros.i32le.bin",
+        "sha256": "b47a8551b4b3e383660db480fca4837043217bc16125cd0105f2e207e342b375",
+        "shape": [
+          7,
+          608
+        ]
+      },
+      {
+        "byte_count": 68096,
+        "checkpoint_name": "model.layers.0.mlp.gate_proj.scales",
+        "dtype": "float16",
+        "serialized_file": "layer0_mlp_gate_proj_scales.fp16le.bin",
+        "sha256": "c0293a55853e091765697c3aeeecedca1d6762826e347de0baf0bb09ead66d5c",
+        "shape": [
+          7,
+          4864
+        ]
+      },
+      {
+        "byte_count": 2179072,
+        "checkpoint_name": "model.layers.0.mlp.up_proj.qweight",
+        "dtype": "int32",
+        "serialized_file": "layer0_mlp_up_proj_qweight.i32le.bin",
+        "sha256": "e79dc28b77e8585fba8892138043e6267d409ddb553cd08eaebb481f4757b947",
+        "shape": [
+          896,
+          608
+        ]
+      },
+      {
+        "byte_count": 17024,
+        "checkpoint_name": "model.layers.0.mlp.up_proj.qzeros",
+        "dtype": "int32",
+        "serialized_file": "layer0_mlp_up_proj_qzeros.i32le.bin",
+        "sha256": "f183566f407956ea547b14cf7d25cd274ec162b220f833f359d20f7a88c27086",
+        "shape": [
+          7,
+          608
+        ]
+      },
+      {
+        "byte_count": 68096,
+        "checkpoint_name": "model.layers.0.mlp.up_proj.scales",
+        "dtype": "float16",
+        "serialized_file": "layer0_mlp_up_proj_scales.fp16le.bin",
+        "sha256": "4e670cb7c50c8aa0ebde0ddbd2d11917b8e1e40410d212f385da8e94f9562361",
+        "shape": [
+          7,
+          4864
+        ]
+      },
+      {
+        "byte_count": 1792,
+        "checkpoint_name": "model.layers.0.post_attention_layernorm.weight",
+        "dtype": "float16",
+        "serialized_file": "layer0_post_attention_layernorm_weight.fp16le.bin",
+        "sha256": "fe1626b78ab16da772646b9447b325e8f7186689812203fe766c39cd342f48ac",
+        "shape": [
+          896
+        ]
+      },
+      {
+        "byte_count": 256,
+        "checkpoint_name": "model.layers.0.self_attn.k_proj.bias",
+        "dtype": "float16",
+        "serialized_file": "layer0_self_attn_k_proj_bias.fp16le.bin",
+        "sha256": "f2e734d74baaf83323766390c88032ba71e2c3450b49ad59bff48cb1b6153b14",
+        "shape": [
+          128
+        ]
+      },
+      {
+        "byte_count": 57344,
+        "checkpoint_name": "model.layers.0.self_attn.k_proj.qweight",
+        "dtype": "int32",
+        "serialized_file": "layer0_self_attn_k_proj_qweight.i32le.bin",
+        "sha256": "317c4bf89c6c520ae370d8866c0758d5c13b9478457e75b88560874a3e0b4919",
+        "shape": [
+          896,
+          16
+        ]
+      },
+      {
+        "byte_count": 448,
+        "checkpoint_name": "model.layers.0.self_attn.k_proj.qzeros",
+        "dtype": "int32",
+        "serialized_file": "layer0_self_attn_k_proj_qzeros.i32le.bin",
+        "sha256": "a147e8a7ee49fc1b9c66616edf91eaa3fd835bd3f0ea8663385e9c44ac81542d",
+        "shape": [
+          7,
+          16
+        ]
+      },
+      {
+        "byte_count": 1792,
+        "checkpoint_name": "model.layers.0.self_attn.k_proj.scales",
+        "dtype": "float16",
+        "serialized_file": "layer0_self_attn_k_proj_scales.fp16le.bin",
+        "sha256": "c1ba623cd0e6f3427610636813f6f86c375d8bf142a3080b5e32c6b13b5a1df8",
+        "shape": [
+          7,
+          128
+        ]
+      },
+      {
+        "byte_count": 401408,
+        "checkpoint_name": "model.layers.0.self_attn.o_proj.qweight",
+        "dtype": "int32",
+        "serialized_file": "layer0_self_attn_o_proj_qweight.i32le.bin",
+        "sha256": "458319c35aafc2c5db11b34c1b8c364ee99bb0288460632804cd20c8df38d1ab",
+        "shape": [
+          896,
+          112
+        ]
+      },
+      {
+        "byte_count": 3136,
+        "checkpoint_name": "model.layers.0.self_attn.o_proj.qzeros",
+        "dtype": "int32",
+        "serialized_file": "layer0_self_attn_o_proj_qzeros.i32le.bin",
+        "sha256": "fa284a49a5a5801248866428762d74db731259c79d386e57cdf77f51779c8505",
+        "shape": [
+          7,
+          112
+        ]
+      },
+      {
+        "byte_count": 12544,
+        "checkpoint_name": "model.layers.0.self_attn.o_proj.scales",
+        "dtype": "float16",
+        "serialized_file": "layer0_self_attn_o_proj_scales.fp16le.bin",
+        "sha256": "324314c1c80e8247d5fc4476479bcdc8d875124aab356a7c33eb24aa157ff5fc",
+        "shape": [
+          7,
+          896
+        ]
+      },
+      {
+        "byte_count": 1792,
+        "checkpoint_name": "model.layers.0.self_attn.q_proj.bias",
+        "dtype": "float16",
+        "serialized_file": "layer0_self_attn_q_proj_bias.fp16le.bin",
+        "sha256": "e9612c72520a62dd903796d9535de2081e1cd15a724b2972513599ff276b9e72",
+        "shape": [
+          896
+        ]
+      },
+      {
+        "byte_count": 401408,
+        "checkpoint_name": "model.layers.0.self_attn.q_proj.qweight",
+        "dtype": "int32",
+        "serialized_file": "layer0_self_attn_q_proj_qweight.i32le.bin",
+        "sha256": "db4770023698611ff0115d220590fdb8232fbe5dcbd22fbe80e0bcdc838caf87",
+        "shape": [
+          896,
+          112
+        ]
+      },
+      {
+        "byte_count": 3136,
+        "checkpoint_name": "model.layers.0.self_attn.q_proj.qzeros",
+        "dtype": "int32",
+        "serialized_file": "layer0_self_attn_q_proj_qzeros.i32le.bin",
+        "sha256": "3cf7cd5712dd7523db3c7dd47c2b1d582e19545036f75b95ff0331c1fc0c596c",
+        "shape": [
+          7,
+          112
+        ]
+      },
+      {
+        "byte_count": 12544,
+        "checkpoint_name": "model.layers.0.self_attn.q_proj.scales",
+        "dtype": "float16",
+        "serialized_file": "layer0_self_attn_q_proj_scales.fp16le.bin",
+        "sha256": "687adc7d7bcd6e45a065f914dd27a1284b7e48260491bb0d26ae1e13b78ac321",
+        "shape": [
+          7,
+          896
+        ]
+      },
+      {
+        "byte_count": 256,
+        "checkpoint_name": "model.layers.0.self_attn.v_proj.bias",
+        "dtype": "float16",
+        "serialized_file": "layer0_self_attn_v_proj_bias.fp16le.bin",
+        "sha256": "ab149ae196a853c3ba8a632b5c2967f863791c4a154ebeeeb25924e71ebb6e77",
+        "shape": [
+          128
+        ]
+      },
+      {
+        "byte_count": 57344,
+        "checkpoint_name": "model.layers.0.self_attn.v_proj.qweight",
+        "dtype": "int32",
+        "serialized_file": "layer0_self_attn_v_proj_qweight.i32le.bin",
+        "sha256": "10489a051595da56b98922ee012cf4758802a4b2cb791d9f697d7d6845681a80",
+        "shape": [
+          896,
+          16
+        ]
+      },
+      {
+        "byte_count": 448,
+        "checkpoint_name": "model.layers.0.self_attn.v_proj.qzeros",
+        "dtype": "int32",
+        "serialized_file": "layer0_self_attn_v_proj_qzeros.i32le.bin",
+        "sha256": "17f6395454631f98f7fb6acfbf5ffbaf56de9a04131b9c46d2b3ed22a39e8942",
+        "shape": [
+          7,
+          16
+        ]
+      },
+      {
+        "byte_count": 1792,
+        "checkpoint_name": "model.layers.0.self_attn.v_proj.scales",
+        "dtype": "float16",
+        "serialized_file": "layer0_self_attn_v_proj_scales.fp16le.bin",
+        "sha256": "ac75b583638863504667fc755b9f42b2ce85437ef02a79f428f11bac6b739d00",
+        "shape": [
+          7,
+          128
+        ]
+      }
+    ],
+    "token_embeddings": [
+      {
+        "byte_count": 1792,
+        "checkpoint_name": "model.embed_tokens.weight",
+        "dtype": "float16",
+        "row_shape": [
+          896
+        ],
+        "serialized_file": "token_0_id_9707_embedding.fp16le.bin",
+        "sha256": "150deee94cfa96d5e9342ca4e5041b2b662ab649e7174e4280a0a1b062d10d06",
+        "token_id": 9707,
+        "token_index": 0
+      },
+      {
+        "byte_count": 1792,
+        "checkpoint_name": "model.embed_tokens.weight",
+        "dtype": "float16",
+        "row_shape": [
+          896
+        ],
+        "serialized_file": "token_1_id_1879_embedding.fp16le.bin",
+        "sha256": "e53571236e61d5517340953dbd4ac3cb0cc2acb144ff42c8017d02f33bb308a8",
+        "token_id": 1879,
+        "token_index": 1
+      }
+    ],
+    "tokenization": {
+      "add_special_tokens": false,
+      "prompt_utf8_hex": "48656c6c6f20776f726c64",
+      "token_ids": [
+        9707,
+        1879
+      ],
+      "tokens": [
+        "Hello",
+        "\u0120world"
+      ]
+    },
+    "transformers_qkv_bias_boundary": "FP16 bias is added after each complete quantized projection output has rounded to FP16 and before Q/K RoPE or V cache insertion."
+  },
+  "kind": "ace3_decoder_layer0_tensor_bindings",
+  "schema_version": 1
+}

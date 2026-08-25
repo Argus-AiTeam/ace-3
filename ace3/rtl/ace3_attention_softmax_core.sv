@@ -35,6 +35,10 @@ module ace3_attention_softmax_core #(
     output wire        invalid_operand_o,
     output wire        busy_o
 );
+    localparam integer CONTEXT_INDEX_WIDTH =
+        (CONTEXT_MAX <= 1) ? 1 : $clog2(CONTEXT_MAX);
+    localparam integer CONTEXT_COUNT_WIDTH =
+        (CONTEXT_MAX <= 1) ? 1 : $clog2(CONTEXT_MAX + 1);
     localparam [1:0] ST_IDLE = 2'd0;
     localparam [1:0] ST_COLLECT = 2'd1;
     localparam [1:0] ST_EXP = 2'd2;
@@ -42,9 +46,9 @@ module ace3_attention_softmax_core #(
 
     reg [1:0] state_q;
     reg [3:0] query_head_q;
-    reg [14:0] query_position_q;
-    reg [15:0] context_count_q;
-    reg [15:0] index_q;
+    reg [6:0] query_position_q;
+    reg [CONTEXT_COUNT_WIDTH-1:0] context_count_q;
+    reg [CONTEXT_INDEX_WIDTH-1:0] index_q;
     reg signed [40:0] max_score_q;
     reg eligible_seen_q;
     reg row_cache_miss_q;
@@ -52,14 +56,18 @@ module ace3_attention_softmax_core #(
     reg [32:0] exp_sum_q;
 
     reg signed [40:0] score_mem [0:CONTEXT_MAX-1];
-    reg [14:0] key_position_mem [0:CONTEXT_MAX-1];
+    reg [6:0] key_position_mem [0:CONTEXT_MAX-1];
     reg causal_mem [0:CONTEXT_MAX-1];
     reg [24:0] exp_mem [0:CONTEXT_MAX-1];
 
     wire signed [40:0] score_q24_w;
     wire score_finite_w;
     wire unused_score_sign_w;
-    wire expected_causal_w = key_position_i <= query_position_q;
+    wire [31:0] query_position_ext_w = {17'd0, query_position_i};
+    wire [31:0] key_position_ext_w = {17'd0, key_position_i};
+    wire [31:0] context_count_ext_w = {16'd0, context_count_i};
+    wire expected_causal_w =
+        key_position_i[6:0] <= query_position_q;
     wire causal_mismatch_w = causal_i != expected_causal_w;
     wire score_controls_known_w =
         ((causal_i === 1'b0) || (causal_i === 1'b1)) &&
@@ -74,7 +82,10 @@ module ace3_attention_softmax_core #(
     wire config_valid_w =
         (query_head_i < 4'd14) &&
         (context_count_i != 16'd0) &&
-        (context_count_i <= CONTEXT_MAX);
+        (context_count_ext_w <= CONTEXT_MAX) &&
+        (query_position_ext_w < CONTEXT_MAX);
+    wire score_position_valid_w =
+        key_position_ext_w < CONTEXT_MAX;
     wire row_error_w =
         row_cache_miss_q || row_invalid_q || !eligible_seen_q;
 
@@ -91,9 +102,11 @@ module ace3_attention_softmax_core #(
         exp_sum_q + {{8{1'b0}}, current_exp_w};
 
     reg [49:0] probability_numerator_w;
+    reg [49:0] probability_divisor_w;
     reg [49:0] probability_quotient_w;
-    reg [32:0] probability_remainder_w;
+    reg [49:0] probability_remainder_w;
     reg probability_increment_w;
+    reg [25:0] probability_rounded_w;
     reg [24:0] probability_q24_w;
     wire signed [25:0] probability_q24_signed_w =
         $signed({1'b0, probability_q24_w});
@@ -165,7 +178,7 @@ module ace3_attention_softmax_core #(
     function automatic [24:0] exp_approx_q24;
         input [41:0] delta_q24;
         reg [58:0] log_product;
-        reg [34:0] y_q16;
+        reg [58:0] y_q16;
         reg [4:0] integer_part;
         reg [3:0] table_index;
         reg [11:0] fraction;
@@ -184,7 +197,9 @@ module ace3_attention_softmax_core #(
         reg shift_increment;
         begin
             log_product = delta_q24 * 17'd94548;
-            y_q16 = log_product >> 24;
+            // The oracle floors this positive fixed-point product; it never
+            // rounds the discarded Q24 residue.
+            y_q16 = log_product / 59'd16777216;
             integer_part = y_q16[20:16];
             table_index = y_q16[15:12];
             fraction = y_q16[11:0];
@@ -194,7 +209,7 @@ module ace3_attention_softmax_core #(
             );
             table_difference = upper_value - lower_value;
             interpolation_product = table_difference * fraction;
-            interpolation_base = interpolation_product >> 12;
+            interpolation_base = interpolation_product[36:12];
             interpolation_increment =
                 (interpolation_product[11:0] > 12'h800) ||
                 ((interpolation_product[11:0] == 12'h800) &&
@@ -228,26 +243,34 @@ module ace3_attention_softmax_core #(
 
     always @* begin
         probability_numerator_w = 50'd0;
+        probability_divisor_w = 50'd0;
         probability_quotient_w = 50'd0;
-        probability_remainder_w = 33'd0;
+        probability_remainder_w = 50'd0;
         probability_increment_w = 1'b0;
+        probability_rounded_w = 26'd0;
         probability_q24_w = 25'd0;
         if (!row_error_w && (exp_sum_q != 33'd0)) begin
             probability_numerator_w =
-                {exp_mem[index_q], 24'd0};
+                {1'b0, exp_mem[index_q], 24'd0};
+            probability_divisor_w = {17'd0, exp_sum_q};
             probability_quotient_w =
-                probability_numerator_w / exp_sum_q;
+                probability_numerator_w / probability_divisor_w;
             probability_remainder_w =
-                probability_numerator_w % exp_sum_q;
+                probability_numerator_w % probability_divisor_w;
             probability_increment_w =
                 ({probability_remainder_w, 1'b0} >
-                 {1'b0, exp_sum_q}) ||
+                 {1'b0, probability_divisor_w}) ||
                 (({probability_remainder_w, 1'b0} ==
-                  {1'b0, exp_sum_q}) &&
+                  {1'b0, probability_divisor_w}) &&
                  probability_quotient_w[0]);
-            probability_q24_w =
-                probability_quotient_w[24:0] +
-                {{24{1'b0}}, probability_increment_w};
+            probability_rounded_w =
+                {1'b0, probability_quotient_w[24:0]} +
+                {{25{1'b0}}, probability_increment_w};
+            if ((|probability_quotient_w[49:25]) ||
+                (probability_rounded_w > 26'h1000000))
+                probability_q24_w = 25'h1000000;
+            else
+                probability_q24_w = probability_rounded_w[24:0];
         end
     end
 
@@ -256,16 +279,22 @@ module ace3_attention_softmax_core #(
         start_metadata_known_w && config_valid_w;
     assign score_ready_o =
         rst_ni && !clear_i && (state_q == ST_COLLECT) &&
-        score_controls_known_w && score_payload_known_w;
+        score_controls_known_w && score_payload_known_w &&
+        score_position_valid_w;
     assign out_valid_o = state_q == ST_OUTPUT;
     assign probability_f16_o =
         row_error_w ? 16'h0000 : rounded_probability_f16_w;
     assign query_head_o = query_head_q;
-    assign query_position_o = query_position_q;
-    assign key_position_o = key_position_mem[index_q];
-    assign out_index_o = index_q;
+    assign query_position_o = {8'd0, query_position_q};
+    assign key_position_o = {8'd0, key_position_mem[index_q]};
+    assign out_index_o =
+        {{(16-CONTEXT_INDEX_WIDTH){1'b0}}, index_q};
     assign out_last_o =
-        (state_q == ST_OUTPUT) && (index_q == context_count_q - 1'b1);
+        (state_q == ST_OUTPUT) &&
+        ({{(CONTEXT_COUNT_WIDTH-CONTEXT_INDEX_WIDTH){1'b0}},
+          index_q} ==
+         context_count_q -
+         {{(CONTEXT_COUNT_WIDTH-1){1'b0}}, 1'b1});
     assign row_error_o = row_error_w;
     assign cache_miss_o = row_cache_miss_q;
     assign invalid_operand_o = row_invalid_q || !eligible_seen_q;
@@ -275,9 +304,9 @@ module ace3_attention_softmax_core #(
         if (!rst_ni) begin
             state_q <= ST_IDLE;
             query_head_q <= 4'd0;
-            query_position_q <= 15'd0;
-            context_count_q <= 16'd0;
-            index_q <= 16'd0;
+            query_position_q <= 7'd0;
+            context_count_q <= {CONTEXT_COUNT_WIDTH{1'b0}};
+            index_q <= {CONTEXT_INDEX_WIDTH{1'b0}};
             max_score_q <= 41'sd0;
             eligible_seen_q <= 1'b0;
             row_cache_miss_q <= 1'b0;
@@ -286,9 +315,9 @@ module ace3_attention_softmax_core #(
         end else if (clear_i) begin
             state_q <= ST_IDLE;
             query_head_q <= 4'd0;
-            query_position_q <= 15'd0;
-            context_count_q <= 16'd0;
-            index_q <= 16'd0;
+            query_position_q <= 7'd0;
+            context_count_q <= {CONTEXT_COUNT_WIDTH{1'b0}};
+            index_q <= {CONTEXT_INDEX_WIDTH{1'b0}};
             max_score_q <= 41'sd0;
             eligible_seen_q <= 1'b0;
             row_cache_miss_q <= 1'b0;
@@ -300,9 +329,10 @@ module ace3_attention_softmax_core #(
                     if (start_valid_i && start_ready_o) begin
                         state_q <= ST_COLLECT;
                         query_head_q <= query_head_i;
-                        query_position_q <= query_position_i;
-                        context_count_q <= context_count_i;
-                        index_q <= 16'd0;
+                        query_position_q <= query_position_i[6:0];
+                        context_count_q <=
+                            context_count_i[CONTEXT_COUNT_WIDTH-1:0];
+                        index_q <= {CONTEXT_INDEX_WIDTH{1'b0}};
                         max_score_q <= 41'sd0;
                         eligible_seen_q <= 1'b0;
                         row_cache_miss_q <= 1'b0;
@@ -314,7 +344,7 @@ module ace3_attention_softmax_core #(
                 ST_COLLECT: begin
                     if (score_valid_i && score_ready_o) begin
                         score_mem[index_q] <= score_q24_w;
-                        key_position_mem[index_q] <= key_position_i;
+                        key_position_mem[index_q] <= key_position_i[6:0];
                         causal_mem[index_q] <= expected_causal_w;
                         if (expected_causal_w) begin
                             if (!eligible_seen_q ||
@@ -327,9 +357,12 @@ module ace3_attention_softmax_core #(
                         if (causal_mismatch_w ||
                             invalid_operand_i || !score_finite_w)
                             row_invalid_q <= 1'b1;
-                        if (index_q == context_count_q - 1'b1) begin
+                        if ({{(CONTEXT_COUNT_WIDTH-CONTEXT_INDEX_WIDTH){1'b0}},
+                             index_q} ==
+                            context_count_q -
+                            {{(CONTEXT_COUNT_WIDTH-1){1'b0}}, 1'b1}) begin
                             state_q <= ST_EXP;
-                            index_q <= 16'd0;
+                            index_q <= {CONTEXT_INDEX_WIDTH{1'b0}};
                             exp_sum_q <= 33'd0;
                         end else begin
                             index_q <= index_q + 1'b1;
@@ -340,9 +373,12 @@ module ace3_attention_softmax_core #(
                 ST_EXP: begin
                     exp_mem[index_q] <= current_exp_w;
                     exp_sum_q <= exp_sum_next_w;
-                    if (index_q == context_count_q - 1'b1) begin
+                    if ({{(CONTEXT_COUNT_WIDTH-CONTEXT_INDEX_WIDTH){1'b0}},
+                         index_q} ==
+                        context_count_q -
+                        {{(CONTEXT_COUNT_WIDTH-1){1'b0}}, 1'b1}) begin
                         state_q <= ST_OUTPUT;
-                        index_q <= 16'd0;
+                        index_q <= {CONTEXT_INDEX_WIDTH{1'b0}};
                     end else begin
                         index_q <= index_q + 1'b1;
                     end
@@ -350,9 +386,12 @@ module ace3_attention_softmax_core #(
 
                 ST_OUTPUT: begin
                     if (out_valid_o && out_ready_i) begin
-                        if (index_q == context_count_q - 1'b1) begin
+                        if ({{(CONTEXT_COUNT_WIDTH-CONTEXT_INDEX_WIDTH){1'b0}},
+                             index_q} ==
+                            context_count_q -
+                            {{(CONTEXT_COUNT_WIDTH-1){1'b0}}, 1'b1}) begin
                             state_q <= ST_IDLE;
-                            index_q <= 16'd0;
+                            index_q <= {CONTEXT_INDEX_WIDTH{1'b0}};
                         end else begin
                             index_q <= index_q + 1'b1;
                         end

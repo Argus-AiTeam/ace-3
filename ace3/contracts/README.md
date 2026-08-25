@@ -17,3 +17,8 @@ projection simulator streams.
 `attention_block.json` freezes the three attention interfaces, GQA/causal
 policy, fixed-point widths, rounding, approximation bound, and error behavior.
 `attention_vector_bindings.json` authenticates every generated simulator input.
+
+`decoder_layer0_token_engine.json` limits the composed engine contract to one
+fixed-checkpoint decoder layer and two sequential token positions.
+`decoder_layer0_vector_bindings.json` binds the complete stage trace, final
+outputs, coefficients, and serialized layer-0 tensors used by both simulators.
