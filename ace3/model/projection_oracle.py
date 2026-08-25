@@ -4,6 +4,7 @@
 from __future__ import annotations
 
 from awq_bit_oracle import GROUP_SIZE, dot_group, q47_48_to_f16
+from fp16_adaptation_oracle import residual_add
 
 GROUP_ACC_BITS = 96
 MAX_GROUPS = 38
@@ -16,6 +17,7 @@ def complete_projection_output(
     qzeros_i32: list[int],
     scales_f16: list[int],
     logical_lane: int,
+    bias_f16: int | None = None,
 ) -> tuple[int, int, bool, bool, list[int]]:
     if len(activations_f16) != len(qweights_i32):
         raise ValueError("activation and qweight lengths differ")
@@ -51,6 +53,15 @@ def complete_projection_output(
     if invalid:
         return accumulator, 0x0000, True, False, group_accumulators
     result, saturated = q47_48_to_f16(accumulator)
+    if bias_f16 is not None:
+        result, bias_invalid, bias_saturated = residual_add(result, bias_f16)
+        return (
+            accumulator,
+            result,
+            bias_invalid,
+            saturated or bias_saturated,
+            group_accumulators,
+        )
     return accumulator, result, False, saturated, group_accumulators
 
 
@@ -75,11 +86,15 @@ def self_test() -> None:
     assert q47_48_to_f16(1 << 24) == (0x0001, False)
     assert q47_48_to_f16(1 << 80) == (0x7BFF, True)
     assert q47_48_to_f16(-(1 << 80)) == (0xFBFF, True)
+    biased = complete_projection_output(
+        activations, qweights, qzeros, scales, 0, 0x3C00
+    )
+    assert biased[1:4] == (0x3C00, False, False)
     assert 38 * ((1 << 95) - 1) <= (1 << 101) - 1
     assert -(38 * (1 << 95)) >= -(1 << 101)
     print(
-        "PROJECTION_ORACLE_PASS checks=9 group_acc_bits=96 "
-        "cross_acc_bits=102 max_groups=38 round_once=pass"
+        "PROJECTION_ORACLE_PASS checks=10 group_acc_bits=96 "
+        "cross_acc_bits=102 max_groups=38 round_once=pass fp16_bias=pass"
     )
 
 

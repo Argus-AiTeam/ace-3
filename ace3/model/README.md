@@ -36,3 +36,32 @@ python3 ace3/model/validate_model24_execution_vectors.py --vector-dir build/mode
 The evidence is bounded to reduced-geometry software/oracle execution. It does
 not establish official-checkpoint logits or dialogue, decoder RTL acceptance,
 accelerator latency, synthesis, PPA, or FPGA behavior.
+
+## Official Model24 continuation suite
+
+`official_model24_systematic_continuations.py` runs the authenticated official
+checkpoint and tokenizer through a deterministic 32-case English and Chinese
+suite. Every row preserves the serialized prompt, raw decoded output, token IDs,
+stop reason, per-step Primary/PyTorch comparisons, FP16 KV lineage, failures,
+and source/checkpoint/tokenizer hashes.
+
+The checkpoint and tokenizer are not distributed by this repository. Supply the
+authenticated `Qwen/Qwen2.5-0.5B-Instruct-AWQ` assets when regenerating:
+
+```sh
+make OFFICIAL_MODEL24_CHECKPOINT=/path/to/model.safetensors \
+  OFFICIAL_MODEL24_TOKENIZER_DIR=/path/to/tokenizer \
+  official-model24-systematic-continuations
+```
+
+The Python CLIs accept `--official-checkpoint` and
+`--official-tokenizer-dir`; their portable defaults can also be configured with
+`ACE3_OFFICIAL_MODEL24_CHECKPOINT` and
+`ACE3_OFFICIAL_MODEL24_TOKENIZER_DIR`. Without configuration, the tokenizer
+defaults to the repository-relative `model24_execution_vectors/tokenizer/` and
+fails with an explicit configuration error when that directory is absent.
+
+The independently reviewed result set is tracked under
+[`results/model24-systematic-continuations/`](../../results/model24-systematic-continuations/).
+It is bounded software/oracle evidence, not RTL, synthesis, PPA, FPGA, latency,
+throughput, or broad model-quality evidence.

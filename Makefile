@@ -27,6 +27,11 @@ OFFICIAL_TENSOR_FILES := \
 	sample-model_layers_0_self_attn_q_proj-qzeros.bin \
 	sample-model_layers_0_self_attn_q_proj-scales.bin
 MODEL24_VECTOR_DIR := $(BUILD_DIR)/model24_execution/vectors
+OFFICIAL_MODEL24_SYSTEMATIC_VECTOR_DIR := $(BUILD_DIR)/official_model24_systematic_continuations
+OFFICIAL_MODEL24_SYSTEMATIC_EXECUTOR := $(ROOT)/ace3/model/official_model24_systematic_continuations.py
+OFFICIAL_MODEL24_SYSTEMATIC_TEST := $(ROOT)/ace3/model/tests/test_official_model24_systematic_continuations.py
+OFFICIAL_MODEL24_CHECKPOINT ?= $(ROOT)/model24_execution_vectors/model.safetensors
+OFFICIAL_MODEL24_TOKENIZER_DIR ?=
 
 RTL := $(ROOT)/ace3/rtl/ace3_awq_w4a16_g128_dot_lane.sv
 PROJECTION_ROUNDER_RTL := $(ROOT)/ace3/rtl/ace3_q47_48_to_f16_rne.sv
@@ -144,12 +149,18 @@ export PYTHONDONTWRITEBYTECODE := 1
 	attention attention-oracle attention-vectors \
 	attention-json-validation attention-tamper-rejection \
 	attention-iverilog-compile attention-iverilog-simulation \
-	attention-verilator-compile attention-verilator-simulation clean
+	attention-verilator-compile attention-verilator-simulation \
+	official-model24-systematic-continuations \
+	official-model24-systematic-continuations-vectors \
+	official-model24-systematic-continuations-validation \
+	official-model24-systematic-continuations-tests clean
 
 help:
 	@printf '%s\n' \
 	  'ACE-3 validation targets:' \
 	  '  make model24-smoke       Self-contained reduced-geometry software/oracle check' \
+	  '  make official-model24-systematic-continuations' \
+	  '                           Authenticated 32-case software/oracle continuation suite' \
 	  '  make oracle              Standalone AWQ arithmetic oracle' \
 	  '  make projection          Full-input AWQ projection RTL regression' \
 	  '  make fp16-adaptation     FP16 residual/RMSNorm/SiLU RTL regression' \
@@ -828,6 +839,54 @@ attention-verilator-simulation: attention-verilator-compile
 	printf '%s\n' '$ build/attention_verilator/obj_dir/Vace3_attention_verilator_top --vector-dir=build/attention_vectors' > "$$log"; \
 	if cd "$(ROOT)" && "$(ATTENTION_VERILATOR_BIN)" \
 	    --vector-dir="$(ATTENTION_VECTOR_DIR)" >> "$$log" 2>&1; then :; \
+	else status=$$?; cat "$$log"; exit $$status; fi; \
+	cat "$$log"
+
+official-model24-systematic-continuations: \
+	official-model24-systematic-continuations-validation \
+	official-model24-systematic-continuations-tests
+	@cd "$(ROOT)" && "$(PYTHON)" -c 'import json; from pathlib import Path; s=json.loads(Path("build/official_model24_systematic_continuations/summary.json").read_text()); r=s["results"]; print(f"OFFICIAL_MODEL24_SYSTEMATIC_CONTINUATIONS_PASS cases={r['\''cases'\'']} completed={r['\''completed_cases'\'']} steps={r['\''steps'\'']} mismatches={r['\''mismatches'\'']} execution_failures={r['\''execution_failures'\'']} baseline=showcasecontinuations15c unreviewed_486e5d848245=excluded_claim_evidence rtl=not_demonstrated synthesis=not_run ppa=not_measured fpga=not_run latency=diagnostic_only throughput=not_measured broader_quality=bounded_suite_only")'
+
+official-model24-systematic-continuations-vectors:
+	@test -n "$(strip $(OFFICIAL_MODEL24_TOKENIZER_DIR))" || { \
+	    printf '%s\n' 'OFFICIAL_MODEL24_TOKENIZER_DIR is required'; exit 2; }
+	@rm -rf "$(OFFICIAL_MODEL24_SYSTEMATIC_VECTOR_DIR)"
+	@mkdir -p "$(OFFICIAL_MODEL24_SYSTEMATIC_VECTOR_DIR)" "$(LOG_DIR)"
+	@set -eu; log="$(LOG_DIR)/official-model24-systematic-continuations-generation.log"; \
+	printf '%s\n' '$ python3 ace3/model/official_model24_systematic_continuations.py generate --output-dir build/official_model24_systematic_continuations --official-checkpoint "$$OFFICIAL_MODEL24_CHECKPOINT" --official-tokenizer-dir "$$OFFICIAL_MODEL24_TOKENIZER_DIR"' > "$$log"; \
+	if cd "$(ROOT)" && "$(PYTHON)" "$(OFFICIAL_MODEL24_SYSTEMATIC_EXECUTOR)" generate \
+	    --output-dir "$(OFFICIAL_MODEL24_SYSTEMATIC_VECTOR_DIR)" \
+	    --official-checkpoint "$(OFFICIAL_MODEL24_CHECKPOINT)" \
+	    --official-tokenizer-dir "$(OFFICIAL_MODEL24_TOKENIZER_DIR)" >> "$$log" 2>&1; then :; \
+	else status=$$?; cat "$$log"; exit $$status; fi; \
+	cat "$$log"
+
+official-model24-systematic-continuations-validation: \
+	official-model24-systematic-continuations-vectors
+	@mkdir -p "$(LOG_DIR)"
+	@set -eu; log="$(LOG_DIR)/official-model24-systematic-continuations-validation.log"; \
+	printf '%s\n' '$ python3 ace3/model/official_model24_systematic_continuations.py validate --vector-dir build/official_model24_systematic_continuations --official-checkpoint "$$OFFICIAL_MODEL24_CHECKPOINT" --official-tokenizer-dir "$$OFFICIAL_MODEL24_TOKENIZER_DIR"' > "$$log"; \
+	if cd "$(ROOT)" && "$(PYTHON)" "$(OFFICIAL_MODEL24_SYSTEMATIC_EXECUTOR)" validate \
+	    --vector-dir "$(OFFICIAL_MODEL24_SYSTEMATIC_VECTOR_DIR)" \
+	    --official-checkpoint "$(OFFICIAL_MODEL24_CHECKPOINT)" \
+	    --official-tokenizer-dir "$(OFFICIAL_MODEL24_TOKENIZER_DIR)" >> "$$log" 2>&1; then :; \
+	else status=$$?; cat "$$log"; exit $$status; fi; \
+	cat "$$log"
+
+official-model24-systematic-continuations-tests: \
+	official-model24-systematic-continuations-vectors
+	@mkdir -p "$(LOG_DIR)"
+	@set -eu; log="$(LOG_DIR)/official-model24-systematic-continuations-tests.log"; \
+	printf '%s\n' '$ python3 -m py_compile ace3/model/official_model24_systematic_continuations.py ace3/model/tests/test_official_model24_systematic_continuations.py' > "$$log"; \
+	printf '%s\n' '$ python3 -m unittest ace3/model/tests/test_official_model24_systematic_continuations.py' >> "$$log"; \
+	if cd "$(ROOT)" && "$(PYTHON)" -m py_compile \
+	    "$(OFFICIAL_MODEL24_SYSTEMATIC_EXECUTOR)" "$(OFFICIAL_MODEL24_SYSTEMATIC_TEST)" \
+	    >> "$$log" 2>&1 \
+	    && ACE3_OFFICIAL_MODEL24_CHECKPOINT="$(OFFICIAL_MODEL24_CHECKPOINT)" \
+	    ACE3_OFFICIAL_MODEL24_TOKENIZER_DIR="$(OFFICIAL_MODEL24_TOKENIZER_DIR)" \
+	    "$(PYTHON)" -m unittest \
+	    ace3/model/tests/test_official_model24_systematic_continuations.py \
+	    >> "$$log" 2>&1; then :; \
 	else status=$$?; cat "$$log"; exit $$status; fi; \
 	cat "$$log"
 
