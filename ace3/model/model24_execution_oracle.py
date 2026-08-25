@@ -340,6 +340,21 @@ def load_two_token_handoff(
     }
 
 
+def indexed_layer_input_handoff_binding(
+    layer_index: int,
+    handoff_binding: Mapping[str, Any],
+) -> dict[str, Any]:
+    indexed_layer_binding(layer_index)
+    require(layer_index > 0, "indexed decoder layer requires a predecessor handoff")
+    return {
+        **handoff_binding,
+        "source": f"authenticated decoder layer {layer_index - 1} raw final rows",
+        "source_layer_index": layer_index - 1,
+        "consumer_layer_index": layer_index,
+        "byte_preserved_as": "inputs.hex",
+    }
+
+
 def _layer_tensor_payloads(
     checkpoint_path: Path,
     tensor_map_path: Path,
@@ -452,10 +467,18 @@ def materialize_indexed_decoder_vectors(
     output_dir: Path,
     *,
     layer_index: int,
+    expected_handoff_sha256: str | None = None,
 ) -> dict[str, Any]:
+    indexed_layer_binding(layer_index)
+    if expected_handoff_sha256 is None:
+        require(
+            layer_index == 1,
+            "expected predecessor handoff SHA256 is required",
+        )
+        expected_handoff_sha256 = LAYER0_VL15_FINAL_ROWS_SHA256
     handoff, handoff_binding = load_two_token_handoff(
         handoff_path,
-        expected_sha256=LAYER0_VL15_FINAL_ROWS_SHA256,
+        expected_sha256=expected_handoff_sha256,
     )
     payloads, records, binding = _layer_tensor_payloads(
         checkpoint_path,
@@ -548,6 +571,7 @@ def materialize_indexed_decoder_vectors(
     manifest = {
         "schema_version": 1,
         "kind": "ace3_indexed_decoder_layer_two_token_trace",
+        "layer_index": layer_index,
         "model_binding": {
             "repository": MODEL_REPOSITORY,
             "revision": MODEL_REVISION,
@@ -555,11 +579,10 @@ def materialize_indexed_decoder_vectors(
             "tensor_map_sha256": TENSOR_MAP_SHA256,
         },
         "layer_binding": binding,
-        "input_handoff": {
-            **handoff_binding,
-            "source": "authenticated vl15 layer-0 raw final rows",
-            "byte_preserved_as": "inputs.hex",
-        },
+        "input_handoff": indexed_layer_input_handoff_binding(
+            layer_index,
+            handoff_binding,
+        ),
         "positions": [0, 1],
         "cache_slot": 0,
         "trace_records": len(all_trace),
