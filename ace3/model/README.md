@@ -21,3 +21,18 @@ scaled Q48 score and value accumulation, and the frozen Q0.24 softmax
 approximation. Its generator re-authenticates the accepted checkpoint samples;
 its validator recomputes all serialized stage results and enforces SHA-256
 bindings before simulation.
+
+`model24_execution_oracle.py` executes the complete 483-event, 24-layer
+software/oracle schedule with deterministic reduced geometry. It uses native
+asymmetric packed-INT4 AWQ G128 projections, FP16 activations and layer-owned KV
+state, residual handoffs, final RMSNorm, and a grouped lm_head tied to the
+embedding values. Generate and independently validate canonical evidence with:
+
+```sh
+python3 ace3/model/generate_model24_execution_vectors.py --output-dir build/model24_execution/vectors
+python3 ace3/model/validate_model24_execution_vectors.py --vector-dir build/model24_execution/vectors
+```
+
+The evidence is bounded to reduced-geometry software/oracle execution. It does
+not establish official-checkpoint logits or dialogue, decoder RTL acceptance,
+accelerator latency, synthesis, PPA, or FPGA behavior.

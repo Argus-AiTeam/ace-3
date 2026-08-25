@@ -35,21 +35,28 @@ def generate(repository_root: Path, output_dir: Path) -> dict[str, bytes]:
     bindings_path = contracts / "model24_execution_vector_bindings.json"
     tensor_path = contracts / "model24_tensor_map.json"
     control_path = contracts / "model24_control.json"
+    oracle_source_path = Path(__file__).with_name("model24_execution_oracle.py")
 
     require_provenance_commit(repository_root)
     contract_payload = contract_path.read_bytes()
     bindings_payload = bindings_path.read_bytes()
     tensor_payload = tensor_path.read_bytes()
     control_payload = control_path.read_bytes()
+    oracle_source_payload = oracle_source_path.read_bytes()
     contract = load_json_bytes(contract_payload, str(contract_path))
     bindings = load_json_bytes(bindings_payload, str(bindings_path))
     validate_execution_contract(contract, tensor_payload, control_payload)
-    validate_vector_bindings(bindings, sha256_bytes(contract_payload))
+    validate_vector_bindings(
+        bindings,
+        sha256_bytes(contract_payload),
+        oracle_source_payload,
+    )
 
     expected_names = set(bindings["artifact_set"])
     artifacts = build_vector_artifacts(
         sha256_bytes(contract_payload),
         sha256_bytes(bindings_payload),
+        oracle_source_payload,
     )
     require(set(artifacts) == expected_names, "generator artifact set mismatch")
     output_dir.mkdir(parents=True, exist_ok=True)
@@ -73,7 +80,7 @@ def main() -> None:
     print(
         "MODEL24_EXECUTION_GENERATION_PASS "
         f"artifacts={len(artifacts)} events=483 layers=24 "
-        f"manifest_sha256={sha256_bytes(artifacts['manifest.json'])}"
+        f"generated_tokens=2 manifest_sha256={sha256_bytes(artifacts['manifest.json'])}"
     )
 
 

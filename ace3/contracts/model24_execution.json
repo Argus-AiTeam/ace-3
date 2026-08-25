@@ -5,6 +5,16 @@
   "model_binding": {
     "repository": "Qwen/Qwen2.5-0.5B-Instruct-AWQ",
     "revision": "db09cd27ead7fee40cdee309693cf83601b9c899",
+    "config": {
+      "filename": "config.json",
+      "sha256": "bd20ae34a91eb38230b870d39f56677d1cda1e8b6688ad627e6efb6ca9f44090"
+    },
+    "checkpoint": {
+      "filename": "model.safetensors",
+      "lfs_sha256": "c50d807b7bed7ff314308972e0f4bcf4e5a70bc60ad88fc7df53940831ed0c1b",
+      "file_size": 730652248,
+      "header_sha256": "2aeb5b461191aee401c2c3ac0a5b393a8f3a630ffd5571ddbc8c57ca7a149362"
+    },
     "tensor_map": {
       "path": "ace3/contracts/model24_tensor_map.json",
       "sha256": "11a03bed8049cd815ac2c37384a7ba15d71d2f69ee397110d1cd443193474624"
@@ -201,16 +211,67 @@
     ],
     "reset": "return to embedding_lookup and invalidate all KV ownership"
   },
+  "software_oracle_execution": {
+    "algorithm": "model24-execution-v2",
+    "geometry": {
+      "layers": 24,
+      "cache_slots": 1,
+      "positions": 2,
+      "hidden_size": 256,
+      "intermediate_size": 256,
+      "query_heads": 4,
+      "kv_heads": 1,
+      "head_dim": 64,
+      "group_size": 128,
+      "vocab_size": 8
+    },
+    "input": {
+      "initial_token_id": 2,
+      "generated_token_count": 2,
+      "cache_slot": 0
+    },
+    "numeric_semantics": {
+      "rounding_boundary": "binary16 after every operator output",
+      "projection": "native asymmetric packed INT4 AWQ GEMM with G128 groups",
+      "qweight_nibble_order": [
+        0,
+        4,
+        1,
+        5,
+        2,
+        6,
+        3,
+        7
+      ],
+      "qzero_adjustment": "none",
+      "kv_storage": "FP16 values owned by cache slot, layer, and K/V kind",
+      "attention": "grouped-query causal scaled dot product with softmax",
+      "rope_theta": 1000000.0,
+      "lm_head": "G128 grouped dot products over values tied to model.embed_tokens.weight",
+      "argmax_tie_break": "lowest token_id"
+    },
+    "evidence": {
+      "control_events_per_token": 483,
+      "tensor_descriptors": 627,
+      "artifacts": [
+        "official_schedule.json",
+        "reduced_execution.json",
+        "fault_rejections.json"
+      ],
+      "serialization": "UTF-8 canonical JSON, sorted keys, compact separators, LF"
+    }
+  },
   "verification_boundary": {
     "established": [
       "24 namespace bindings and 483-event control trajectory",
       "per-layer FP16 KV ownership and residual lineage",
       "final RMSNorm, tied grouped lm_head, and deterministic argmax interfaces",
-      "fixed parent, reviewed map, and decoder snapshot hash compatibility"
+      "fixed parent, reviewed map, and decoder snapshot hash compatibility",
+      "deterministic reduced-geometry software/oracle numerical execution"
     ],
     "excluded": [
       "decoder RTL implementation or execution",
-      "official numerical model execution or dialogue",
+      "official-geometry checkpoint numerical execution or readable dialogue",
       "latency, throughput, synthesis, PPA, FPGA, or silicon",
       "decoder acceptance"
     ]

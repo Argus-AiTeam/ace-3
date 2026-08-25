@@ -1,23 +1,29 @@
 {
-  "schema_version": 1,
+  "schema_version": 2,
   "kind": "ace3_model24_execution_vector_bindings",
   "generator": {
-    "algorithm": "model24-execution-v1",
+    "algorithm": "model24-execution-v2",
     "seed": 240483,
     "serialization": "UTF-8 canonical JSON, sorted keys, compact separators, LF"
   },
   "inputs": {
     "parent_commit": "3cf65b762d928e02e2b64fbba4389e294e1aa2c5",
-    "execution_contract_sha256": "4f191a557b53b31bcf954fafd5ef60875d48bb4f1b0e0b084027c24e9d42b4d4",
+    "execution_contract_sha256": "9cd64fda566f347e8113348f8a414e8f6522bc3b89303b0e7163b71aa9118c80",
     "tensor_map_sha256": "11a03bed8049cd815ac2c37384a7ba15d71d2f69ee397110d1cd443193474624",
     "control_map_sha256": "3364dc4c2c585f4687d8ad7943792ca4c44265b85463b91ab2a1c6866690b611",
     "decoder_source_sha256": "595a2374dec03ee5b6ae85d65758e9e64648342c36b9c8af96c7d3ae70572bd2",
-    "decoder_interface_sha256": "6d3177c5a3fdff424037ace6ce3162085a6c5cb15f15b7771edbf2396198a467"
+    "decoder_interface_sha256": "6d3177c5a3fdff424037ace6ce3162085a6c5cb15f15b7771edbf2396198a467",
+    "config_sha256": "bd20ae34a91eb38230b870d39f56677d1cda1e8b6688ad627e6efb6ca9f44090",
+    "checkpoint_sha256": "c50d807b7bed7ff314308972e0f4bcf4e5a70bc60ad88fc7df53940831ed0c1b",
+    "checkpoint_size": 730652248,
+    "tied_weight_sha256": "d74257dc547b48be5ae7b93f1c9af072c0c42dbbb85503078e25c59cd09e68d0",
+    "oracle_source_sha256": "3e5f8db2877117fafe495e5cf7a6fce9ab9e36630a7f427d81374a25bcad4cdf"
   },
   "artifact_set": [
+    "fault_rejections.json",
     "manifest.json",
     "official_schedule.json",
-    "small_geometry.json"
+    "reduced_execution.json"
   ],
   "validation": {
     "exact_artifact_set": true,
