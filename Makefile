@@ -1732,10 +1732,12 @@ model24-first-voice-compile-all:
 model24-first-voice-hybrid-tests: model24-first-voice-savable-test
 	@cd "$(ROOT)" && PYTHONPYCACHEPREFIX="$(FIRST_VOICE_DIR)/pycache" \
 	    "$(PYTHON)" -m py_compile \
-	    "$(FIRST_VOICE_DRIVER)" "$(FIRST_VOICE_TEST)"
+	    "$(FIRST_VOICE_DRIVER)" "$(FIRST_VOICE_TEST)" \
+	    "$(ROOT)/ace3/model/tests/test_model24_first_voice_trusted_tip.py"
 	@cd "$(ROOT)" && PYTHONPYCACHEPREFIX="$(FIRST_VOICE_DIR)/pycache" \
 	    "$(PYTHON)" -m unittest \
-	    ace3/model/tests/test_model24_first_voice_hybrid.py
+	    ace3/model/tests/test_model24_first_voice_hybrid.py \
+	    ace3/model/tests/test_model24_first_voice_trusted_tip.py
 
 model24-first-voice-compact-builder-tests:
 	@cd "$(ROOT)" && PYTHONDONTWRITEBYTECODE=1 "$(PYTHON)" -m unittest \
