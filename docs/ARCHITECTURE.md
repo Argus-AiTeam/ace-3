@@ -196,3 +196,28 @@ boundary; the core does not claim an on-chip transcendental generator.
 position, KV head, and head dimension. Data arrays are not reset; reset and
 clear invalidate metadata and abort pending reads. This boundary excludes
 attention score generation, softmax, value composition, and decoder execution.
+
+## Attention boundary
+
+Three retained-handshake cores implement the standalone attention path:
+64-element scaled-QK score accumulation, causal row softmax, and cached-V value
+composition. The fixed Qwen2.5 geometry maps 14 query heads onto two K/V heads
+with `kv_head = floor(query_head / 7)`, and only keys at or before the query
+position are eligible.
+
+The arithmetic oracle decodes finite FP16 exactly to Q24. Score and value
+products accumulate exactly in Q48 before one final FP16 RNE conversion.
+Softmax uses Q24 max subtraction and a frozen 17-point Q0.24 base-2 table with
+linear interpolation, explicit RNE, and explicit underflow. Required cache
+misses, non-finite operands, causal metadata mismatches, or an empty causal row
+fail the complete result to positive zero rather than renormalizing partial
+data.
+
+`make attention` regenerates vectors from hash-authenticated fixed-checkpoint
+metadata and a layer-0 q-projection FP16 scale sample, recomputes all serialized
+results with the independent bit-level oracle, rejects tampering, and compares
+20 scores, 140 probabilities from 20 rows, and 20 value results under Icarus
+four-state and Verilator two-state simulation. The official-derived operands
+are deterministic scale-sample selections, not captured runtime Q/K/V
+activations. This boundary does not establish decoder or full-model execution,
+dialogue, formal proof, synthesis, timing, PPA, FPGA, silicon, or performance.

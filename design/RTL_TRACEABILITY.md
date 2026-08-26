@@ -1,24 +1,25 @@
-# ACE-3 FP16 adaptation and QKV/RoPE/KV-cache RTL traceability
+# ACE-3 FP16 adaptation, QKV/RoPE/KV-cache, and attention RTL traceability
 
 ## Authority and scope
 
 The frozen numerical and protocol authorities are
 `ace3/contracts/fp16_adaptation_operators.json` and
-`ace3/contracts/qkv_rope_kv_cache.json`. This note and
+`ace3/contracts/qkv_rope_kv_cache.json`, plus
+`ace3/contracts/attention_block.json`. This note and
 `design/RTL_MANIFEST.json` describe the implementation; they do not amend,
-relax, or replace either contract.
+relax, or replace those contracts.
 
 This trace covers the two shared helper modules in
 `ace3/rtl/ace3_fp16_fixed.sv` and the residual-add, RMSNorm, and SiLU/gate
 cores, plus the fixed Q/K/V projection cluster, one-pair Qwen2.5 RoPE core, and
-parameterized FP16 K/V cache. The pre-existing
+parameterized FP16 K/V cache, and the score, causal-softmax, and
+value-composition attention cores. The pre-existing
 `ace3_q47_48_to_f16_rne` converter and
 `ace3_awq_w4a16_projection_engine` remain accepted dependencies rather than
 new milestone modules. Claims remain limited to authenticated Icarus and
-Verilator RTL simulation. Attention scores, softmax, value composition,
-decoder-layer or full-model execution, correctly rounded transcendental SiLU,
-synthesis/timing/area/power, FPGA, silicon, dialogue, and model quality are
-outside this trace.
+Verilator RTL simulation. Decoder-layer or full-model execution, correctly
+rounded transcendental SiLU, synthesis/timing/area/power, FPGA, silicon,
+dialogue, and model quality are outside this trace.
 
 ## First-party source provenance
 
@@ -30,21 +31,25 @@ reference/test hashes for the adaptation baseline remain recorded under
 
 | Source | Module | SHA256 | ACE-2 relationship |
 | --- | --- | --- | --- |
-| `ace3/rtl/ace3_fp16_fixed.sv` | `ace3_fp16_to_q24` | `896c0e4c1405bf1cb80141a69259a94af905833ae45a8c7f1338664b4c0552d9` | Replaces INT8/Scale32 decode arithmetic with exact finite binary16-to-Q24 conversion. |
-| `ace3/rtl/ace3_fp16_fixed.sv` | `ace3_q24_to_fp16_rne` | `896c0e4c1405bf1cb80141a69259a94af905833ae45a8c7f1338664b4c0552d9` | Replaces requantization and INT8 saturation with the frozen binary16 RNE/saturation boundary. |
+| `ace3/rtl/ace3_fp16_fixed.sv` | `ace3_fp16_to_q24` | `e7f38a3434b60849896a0a5bab549bd6d4b6a4908280a2860a33fc8e839c86c8` | Replaces INT8/Scale32 decode arithmetic with exact finite binary16-to-Q24 conversion. |
+| `ace3/rtl/ace3_fp16_fixed.sv` | `ace3_q24_to_fp16_rne` | `e7f38a3434b60849896a0a5bab549bd6d4b6a4908280a2860a33fc8e839c86c8` | Replaces requantization and INT8 saturation with the frozen binary16 RNE/saturation boundary. |
 | `ace3/rtl/ace3_fp16_residual_add_core.sv` | `ace3_fp16_residual_add_core` | `335954e0bf6909f3aa27330c241cc002f777e6eb5ef483e0b1f684c2fe35ba89` | Re-expresses ready-valid, handshake-gated advancement, retained output, reset, and clear structure; replaces Scale32 and INT8 residual arithmetic. |
 | `ace3/rtl/ace3_fp16_rmsnorm_core.sv` | `ace3_fp16_rmsnorm_core` | `f302975fa91aefc20bb48f768fc08ffbddc088e83ca9cdb23b219c2f70d9fc2a` | Re-expresses two-pass scheduling and stream control; adapts sum/square-root dataflow to the frozen Q24/Q48 contract. |
 | `ace3/rtl/ace3_fp16_silu_gate_core.sv` | `ace3_fp16_silu_gate_core` | `528b931da1f201c941e7f713a6ba0418f950bd44b64fbf10d92cb5a80f386997` | Re-expresses stream scheduling and retained output; replaces LUT/clipping and fixed INT8-domain arithmetic with the frozen rational sigmoid and wide product. |
 | `ace3/rtl/ace3_qkv_projection_cluster.sv` | `ace3_qkv_projection_cluster` | `a02880cc69110b226f0121053b3bad72355e33c1e576f7c749f9daf034305de1` | First-party fixed-checkpoint wrapper around three unchanged accepted ACE-3 projection engines; no ACE-2 source is copied. |
 | `ace3/rtl/ace3_qwen2_rope_pair.sv` | `ace3_qwen2_rope_pair` | `d6da922485f1f9818a08e604b3559d56fe407ad42fc2f7605d3bfdded3ee36b8` | First-party half-split Qwen2.5 rotary arithmetic using accepted ACE-3 FP16 converters; no ACE-2 W4A8 path is used. |
 | `ace3/rtl/ace3_fp16_kv_cache.sv` | `ace3_fp16_kv_cache` | `fa2b30ca6f22fcc0e2f1fb7ac91761c1aa3d2440d3b9abed28bb76a0569ed179` | First-party SRAM-oriented indexed FP16 K/V storage; no ACE-2 source or cache format is copied. |
+| `ace3/rtl/ace3_attention_score_core.sv` | `ace3_attention_score_core` | `35db39940444c3f286c0110c94f46347e7192511b162a7ef4d10a6b299be5221` | First-party exact-Q24/Q48 scaled-QK reduction; no ACE-2 W4A8 arithmetic is copied. |
+| `ace3/rtl/ace3_attention_softmax_core.sv` | `ace3_attention_softmax_core` | `899220e73557cbbb46f4e409551b2396e59ad230b126b2f3fc4809fd8d9d11ca` | First-party frozen Q0.24 causal-softmax approximation; no ACE-2 source is copied. |
+| `ace3/rtl/ace3_attention_value_core.sv` | `ace3_attention_value_core` | `17beacde641684df7f87c03d62c8187e43f6b8a6a928734cd8a3916ce8d14201` | First-party exact-Q24/Q48 cached-V composition; no ACE-2 W4A8 arithmetic is copied. |
 
 The reviewed full-projection baseline is commit
 `d6f37f1c3bfcce0c9c71f7d28cd1cd5b97ef0ad6`
 (`feat(rtl): add native AWQ full projection`). The FP16 adaptation delta is
 accepted commit `241c977dda5ae4615681c583eb8301dfe9d3dd05`
-(`feat(rtl): add FP16 adaptation operators`). The QKV/RoPE/cache sources are
-the uncommitted review delta on that accepted commit.
+(`feat(rtl): add FP16 adaptation operators`). The standalone attention baseline
+is accepted commit `645760c1de73c83c44515b6174b03fdfa04ba9bb`
+(`feat(rtl): add standalone attention block`).
 
 ## Exact module interfaces
 
@@ -360,3 +365,43 @@ authenticates vectors, requires tamper rejection, runs Icarus four-state
 protocol probes, runs the legal two-state Verilator cross-check, elaborates the
 Q/K/V and FP16 parameter geometries, and retains the accepted primitive,
 projection, and FP16-adaptation regressions.
+
+## Attention requirement-to-verification mapping
+
+Attention contract references are JSON Pointers into
+`ace3/contracts/attention_block.json`.
+
+| Requirement | Contract authority | RTL implementation | Executable check |
+| --- | --- | --- | --- |
+| `ATTENTION-GEOMETRY-001` | `/geometry` | Score and value starts enforce 14-to-2 GQA with `kv_head=floor(query_head/7)`; score and softmax use 64-element heads and `key_position <= query_position`. | Authenticated cases span all 14 query heads and both K/V groups; invalid GQA starts are rejected in both simulators. |
+| `ATTENTION-SCORE-001` | `/numerical_policy/score` | `ace3_attention_score_core` exactly decodes Q/K to Q24, accumulates 64 Q48 products in 90 bits, scales by 1/8 with RNE, and converts once to FP16. | The bit-level oracle recomputes all 20 score cases, including causal masking, K misses, non-finite inputs, saturation, and cancellation. |
+| `ATTENTION-SOFTMAX-001` | `/numerical_policy/softmax` | `ace3_attention_softmax_core` buffers a row, performs Q24 max subtraction, uses the frozen 17-point Q0.24 interpolation, and normalizes with RNE. | Both simulators compare all 140 probabilities from 20 rows; directed rows cover future masks, ties, underflow, cache miss, invalid input, and no eligible key. |
+| `ATTENTION-VALUE-001` | `/numerical_policy/value_composition` | `ace3_attention_value_core` accumulates exact Q48 probability/V products in 90 bits and rounds once at the final FP16 boundary. | The oracle and both simulators compare 20 value cases with required-V miss, non-finite, saturation, cancellation, and upstream row-error coverage. |
+| `ATTENTION-PROTOCOL-001` | `/protocol_policy` | All three cores abort on reset/clear, retain output and metadata under backpressure, and suppress ready for illegal or unknown configuration/payload metadata. | Both simulators check retained stalls, reset, clear, and legal configuration; Icarus adds six bounded X/Z rejection checks. |
+| `ATTENTION-EVIDENCE-001` | `/verification_boundary/required` | Generation re-authenticates the fixed model identity, config, and official layer-0 q-projection FP16 scale sample before serializing vectors. | `make attention` regenerates, authenticates, rejects a tampered score stream, builds and runs Icarus, then builds and runs Verilator. |
+| `ATTENTION-BOUNDARY-001` | `/verification_boundary/excluded` | Only standalone score, causal-softmax, and value-composition cores are included. | Aggregate output does not claim decoder/full-model execution, dialogue, formal proof, synthesis, timing, PPA, FPGA, silicon, or performance. |
+
+## Attention verification surfaces and claim boundary
+
+| Surface | Path or target |
+| --- | --- |
+| Frozen contract | `ace3/contracts/attention_block.json` (`9c96b51f89c747b001debb69929940ccd252f39777f8d01a904f2b56aae418ac`) |
+| Serialized bindings | `ace3/contracts/attention_vector_bindings.json` (`bb3ea6f8561058c0c1857f41eaa6d32320a1351fc9ba10e1da4cd9a0fdf450d3`) |
+| Generated manifest | `build/attention_vectors/manifest.json` (`25cbb9327b4bdcc16fd326e8902ab57daedf15a59b9b1759a0ac14e0c8d05f25`, regenerated and ignored) |
+| Shared FP16 RTL | `ace3/rtl/ace3_fp16_fixed.sv` (`e7f38a3434b60849896a0a5bab549bd6d4b6a4908280a2860a33fc8e839c86c8`) |
+| Independent bit-level oracle | `ace3/model/attention_oracle.py` (`0d18f27c4c01e4c7f9397958ca52f63960308374a2baf35e96e730cce15a6acd`) |
+| Official-checkpoint vector generator | `ace3/model/generate_attention_vectors.py` (`5db02bdf108390e83841dee3d8f55fe28deafe9ec21f6cc20bdf62e8946db8eb`) |
+| Authenticated vector validator | `ace3/model/validate_attention_vectors.py` (`64400a6c10b4f1850f9b0623f457fb66aec1f57319f456577987175ec9aabc61`) |
+| Icarus four-state testbench | `ace3/tb/ace3_attention_block_tb.sv` (`40fe3d9332684415e01f1fcc5f404dfb26ad644118d014bd532f9854bd982036`) |
+| Verilator two-state top/harness | `ace3/tb/ace3_attention_verilator_top.sv` (`83c04b524db8363ac6c99a651dd2e57f9a96d13a0f5a6d488da7dce26af9512e`), `ace3/tb/ace3_attention_main.cpp` (`5f5fa0ecc7b27ccd5b75d663f7d605b51cdca3f98a44b9af38e72bed50cc0ae0`) |
+| Fresh aggregate regression | `make attention` |
+
+The generated operands use authenticated official source hashes
+`bd20ae34a91eb38230b870d39f56677d1cda1e8b6688ad627e6efb6ca9f44090`
+for `config.json`,
+`9a4a3beea2283031c91d0de501fcb1a8613f9b5f5d6039111eac421833d5a768`
+for `model-api.json`, and
+`687adc7d7bcd6e45a065f914dd27a1284b7e48260491bb0d26ae1e13b78ac321`
+for the layer-0 q-projection FP16 scale sample. These operands are deterministic
+official-derived selections, not captured runtime Q/K/V activations. The
+evidence establishes standalone attention-core correctness only.
