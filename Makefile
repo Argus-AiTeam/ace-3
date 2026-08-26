@@ -17,6 +17,7 @@ PYTHON ?= python3
 IVERILOG ?= iverilog
 VVP ?= vvp
 VERILATOR ?= verilator
+STRACE ?= strace
 OFFICIAL_TENSOR_DIR ?= /home/argustest/ace-2/build/ace2_chat_demo/qwen25-05b-instruct-awq-software-baseline-cf01/official
 
 RTL := $(ROOT)/ace3/rtl/ace3_awq_w4a16_g128_dot_lane.sv
@@ -102,21 +103,17 @@ ATTENTION_BINDINGS := $(ROOT)/ace3/contracts/attention_vector_bindings.json
 ATTENTION_TB := $(ROOT)/ace3/tb/ace3_attention_block_tb.sv
 ATTENTION_VERILATOR_TOP := $(ROOT)/ace3/tb/ace3_attention_verilator_top.sv
 ATTENTION_CPP_TB := $(ROOT)/ace3/tb/ace3_attention_main.cpp
-
-IVERILOG_BIN := $(IVERILOG_DIR)/ace3_awq_w4a16_g128_dot_lane.vvp
-PROTOCOL_BIN := $(IVERILOG_DIR)/ace3_awq_w4a16_g128_dot_lane_protocol.vvp
-PROJECTION_IVERILOG_BIN := $(IVERILOG_DIR)/ace3_awq_w4a16_projection_engine.vvp
-PROJECTION_4864_BIN := $(IVERILOG_DIR)/ace3_awq_w4a16_projection_4864_cycle.vvp
-VERILATOR_BIN := $(VERILATOR_OBJ_DIR)/Vace3_awq_w4a16_g128_dot_lane
-PROJECTION_VERILATOR_BIN := $(PROJECTION_VERILATOR_OBJ_DIR)/Vace3_awq_w4a16_projection_engine
-
 DECODER_VECTOR_DIR := $(BUILD_DIR)/decoder_layer0_vectors
 DECODER_TAMPER_DIR := $(BUILD_DIR)/tamper-decoder-layer0-vectors
 DECODER_IVERILOG_DIR := $(BUILD_DIR)/decoder_layer0_iverilog
 DECODER_IVERILOG_BIN := $(DECODER_IVERILOG_DIR)/ace3_decoder_layer0_token_engine.vvp
+DECODER_IVERILOG_RAW_DIR := $(DECODER_IVERILOG_DIR)/raw
+DECODER_IVERILOG_FAIL_RAW_DIR := $(DECODER_IVERILOG_DIR)/raw-injected-failure
 DECODER_VERILATOR_DIR := $(BUILD_DIR)/decoder_layer0_verilator
 DECODER_VERILATOR_OBJ_DIR := $(DECODER_VERILATOR_DIR)/obj_dir
 DECODER_VERILATOR_BIN := $(DECODER_VERILATOR_OBJ_DIR)/Vace3_decoder_layer0_token_engine
+DECODER_VERILATOR_RAW_DIR := $(DECODER_VERILATOR_DIR)/raw
+DECODER_VERILATOR_FAIL_RAW_DIR := $(DECODER_VERILATOR_DIR)/raw-injected-failure
 DECODER_WIDTH_DIR := $(BUILD_DIR)/decoder_width_boundary
 DECODER_WIDTH_IVERILOG_BIN := $(DECODER_WIDTH_DIR)/ace3_decoder_width_boundary.vvp
 DECODER_WIDTH_VERILATOR_OBJ_DIR := $(DECODER_WIDTH_DIR)/obj_dir
@@ -152,10 +149,34 @@ DECODER_PRELOAD_TB := $(ROOT)/ace3/tb/ace3_decoder_preload_tb.sv
 DECODER_PRELOAD_CPP_TB := $(ROOT)/ace3/tb/ace3_decoder_preload_main.cpp
 DECODER_SILU_TB := $(ROOT)/ace3/tb/ace3_decoder_silu_streaming_tb.sv
 DECODER_SILU_CPP_TB := $(ROOT)/ace3/tb/ace3_decoder_silu_streaming_main.cpp
+MODEL24_VECTOR_DIR := $(BUILD_DIR)/model24_execution_vectors
+MODEL24_GENERATOR := $(ROOT)/ace3/model/generate_model24_execution_vectors.py
+MODEL24_VALIDATOR := $(ROOT)/ace3/model/validate_model24_execution_vectors.py
+MODEL24_TEST := $(ROOT)/ace3/model/tests/test_model24_execution.py
 MODEL24_LAYER_HANDOFF_TEST := $(ROOT)/ace3/tb/test_model24_layer_indexed_handoff.py
 MODEL24_TENSOR_MAP := $(ROOT)/ace3/contracts/model24_tensor_map.json
 VL15_LAYER0_HANDOFF ?= $(BUILD_DIR)/model24-prep-worktree/build/freshlayer0execute37-vl15/raw-final.rows
+OFFICIAL_MODEL24_VECTOR_DIR := $(BUILD_DIR)/official_model24_next_token
+OFFICIAL_MODEL24_EXECUTOR := $(ROOT)/ace3/model/official_model24_next_token.py
+OFFICIAL_MODEL24_TEST := $(ROOT)/ace3/model/tests/test_official_model24_next_token.py
 OFFICIAL_MODEL24_CHECKPOINT ?= $(ROOT)/model24_execution_vectors/model.safetensors
+OFFICIAL_MODEL24_TOKENIZER_DIR ?= $(ROOT)/model24_execution_vectors/tokenizer
+OFFICIAL_MODEL24_DIALOGUE_VECTOR_DIR := $(BUILD_DIR)/official_model24_dialogue
+OFFICIAL_MODEL24_DIALOGUE_EXECUTOR := $(ROOT)/ace3/model/official_model24_dialogue.py
+OFFICIAL_MODEL24_DIALOGUE_TEST := $(ROOT)/ace3/model/tests/test_official_model24_dialogue.py
+OFFICIAL_MODEL24_SHOWCASE_VECTOR_DIR := $(BUILD_DIR)/official_model24_showcase
+OFFICIAL_MODEL24_SHOWCASE_EXECUTOR := $(ROOT)/ace3/model/official_model24_showcase.py
+OFFICIAL_MODEL24_SHOWCASE_TEST := $(ROOT)/ace3/model/tests/test_official_model24_showcase.py
+OFFICIAL_MODEL24_SYSTEMATIC_VECTOR_DIR := $(BUILD_DIR)/official_model24_systematic_continuations
+OFFICIAL_MODEL24_SYSTEMATIC_EXECUTOR := $(ROOT)/ace3/model/official_model24_systematic_continuations.py
+OFFICIAL_MODEL24_SYSTEMATIC_TEST := $(ROOT)/ace3/model/tests/test_official_model24_systematic_continuations.py
+
+IVERILOG_BIN := $(IVERILOG_DIR)/ace3_awq_w4a16_g128_dot_lane.vvp
+PROTOCOL_BIN := $(IVERILOG_DIR)/ace3_awq_w4a16_g128_dot_lane_protocol.vvp
+PROJECTION_IVERILOG_BIN := $(IVERILOG_DIR)/ace3_awq_w4a16_projection_engine.vvp
+PROJECTION_4864_BIN := $(IVERILOG_DIR)/ace3_awq_w4a16_projection_4864_cycle.vvp
+VERILATOR_BIN := $(VERILATOR_OBJ_DIR)/Vace3_awq_w4a16_g128_dot_lane
+PROJECTION_VERILATOR_BIN := $(PROJECTION_VERILATOR_OBJ_DIR)/Vace3_awq_w4a16_projection_engine
 
 export PYTHONDONTWRITEBYTECODE := 1
 
@@ -181,7 +202,27 @@ export PYTHONDONTWRITEBYTECODE := 1
 	attention attention-oracle attention-vectors \
 	attention-json-validation attention-tamper-rejection \
 	attention-iverilog-compile attention-iverilog-simulation \
-	attention-verilator-compile attention-verilator-simulation clean
+	attention-verilator-compile attention-verilator-simulation \
+	decoder-layer0 decoder-layer0-vectors decoder-layer0-json-validation \
+	decoder-layer0-tamper-rejection decoder-layer0-width-boundary \
+	decoder-preload-micro decoder-preload-micro-iverilog decoder-preload-micro-verilator \
+	decoder-qzeros-boundary decoder-qzeros-boundary-iverilog decoder-qzeros-boundary-verilator \
+	decoder-layer0-width-iverilog \
+	decoder-layer0-iverilog-compile decoder-layer0-iverilog-simulation \
+	decoder-layer0-verilator-compile decoder-layer0-verilator-simulation \
+	model24-execution model24-execution-vectors \
+	model24-execution-validation model24-execution-tests \
+	model24-layer-indexed-handoff \
+	official-model24-next-token official-model24-next-token-vectors \
+	official-model24-next-token-validation official-model24-next-token-tests \
+	official-model24-dialogue official-model24-dialogue-vectors \
+	official-model24-dialogue-validation official-model24-dialogue-tests \
+	official-model24-showcase official-model24-showcase-vectors \
+	official-model24-showcase-validation official-model24-showcase-tests \
+	official-model24-systematic-continuations \
+	official-model24-systematic-continuations-vectors \
+	official-model24-systematic-continuations-validation \
+	official-model24-systematic-continuations-tests clean
 
 test:
 	@mkdir -p "$(LOG_DIR)"
@@ -205,6 +246,8 @@ test:
 	  git -C "$(ROOT)" check-ignore -q build/projection_vectors/manifest.json; \
 	  git -C "$(ROOT)" check-ignore -q build/qkv_rope_cache_vectors/manifest.json; \
 	  git -C "$(ROOT)" check-ignore -q build/attention_vectors/manifest.json; \
+	  git -C "$(ROOT)" check-ignore -q build/decoder_layer0_vectors/boundary_manifest.json; \
+	  git -C "$(ROOT)" check-ignore -q build/model24_execution_vectors/manifest.json; \
 	  test ! -e "$(ROOT)/ace3/generated"; \
 	  printf '%s\n' 'REPOSITORY_HYGIENE_PASS status_unchanged=yes build_ignored=yes legacy_generated_absent=yes diff_check=pass'; \
 	} > "$$log" 2>&1 || { status=$$?; cat "$$log"; exit $$status; }; \
@@ -828,22 +871,9 @@ attention-verilator-simulation: attention-verilator-compile
 	else status=$$?; cat "$$log"; exit $$status; fi; \
 	cat "$$log"
 
-clean:
-	rm -rf "$(BUILD_DIR)"
-
-.PHONY: projection-bias projection-bias-vectors projection-bias-json-validation projection-bias-tamper-rejection projection-bias-iverilog projection-bias-verilator decoder-layer0 decoder-layer0-vectors decoder-layer0-json-validation decoder-layer0-tamper-rejection decoder-layer0-width-boundary decoder-layer0-width-iverilog decoder-layer0-iverilog-compile decoder-layer0-iverilog-simulation decoder-layer0-verilator-compile decoder-layer0-verilator-simulation decoder-preload-micro decoder-preload-micro-iverilog decoder-preload-micro-verilator decoder-silu-streaming decoder-silu-streaming-iverilog decoder-silu-streaming-verilator decoder-qzeros-boundary decoder-qzeros-boundary-iverilog decoder-qzeros-boundary-verilator model24-layer-indexed-handoff
-
-
-model24-layer-indexed-handoff:
-	@cd "$(ROOT)" && "$(PYTHON)" "$(MODEL24_LAYER_HANDOFF_TEST)" \
-	    --repository-root "$(ROOT)" \
-	    --checkpoint "$(OFFICIAL_MODEL24_CHECKPOINT)" \
-	    --tensor-map "$(MODEL24_TENSOR_MAP)" \
-	    --handoff "$(VL15_LAYER0_HANDOFF)"
-
 decoder-layer0: decoder-layer0-tamper-rejection decoder-layer0-width-boundary \
 	decoder-layer0-iverilog-simulation decoder-layer0-verilator-simulation
-	@printf '%s\n' 'DECODER_LAYER0_PASS scope=two_authenticated_tokens trace=46676 final=1792 cache_reuse=pass reset=pass clear=pass fault_injection=pass iverilog=pass verilator=pass'
+	@printf '%s\n' 'DECODER_LAYER0_PASS scope=two_authenticated_tokens trace=46676 final=1792 cache_reuse=pass reset=pass clear=pass fault_injection=pass natural_terminal_gate=pass independent_oracle_compare=pass injected_failure_gate=pass iverilog=pass verilator=pass'
 
 decoder-silu-streaming: decoder-silu-streaming-iverilog decoder-silu-streaming-verilator
 	@printf '%s\n' 'DECODER_SILU_STREAMING_DUAL_PASS simulators=iverilog,verilator projection_kind=5 phase=32 inputs=4864 outputs=4864 successor_phase=4 full_layer=not_run'
@@ -1031,13 +1061,36 @@ decoder-layer0-iverilog-compile: decoder-layer0-json-validation
 	cat "$$log"
 
 decoder-layer0-iverilog-simulation: decoder-layer0-iverilog-compile
-	@mkdir -p "$(LOG_DIR)"
+	@rm -rf "$(DECODER_IVERILOG_RAW_DIR)" "$(DECODER_IVERILOG_FAIL_RAW_DIR)"
+	@mkdir -p "$(LOG_DIR)" "$(DECODER_IVERILOG_RAW_DIR)" "$(DECODER_IVERILOG_FAIL_RAW_DIR)"
 	@set -eu; log="$(LOG_DIR)/decoder-layer0-iverilog-simulation.log"; \
+	compare="$(LOG_DIR)/decoder-layer0-iverilog-comparison.log"; \
+	fail_log="$(LOG_DIR)/decoder-layer0-iverilog-injected-failure.log"; \
+	opens="$(LOG_DIR)/decoder-layer0-iverilog-injected-failure.opens"; \
 	printf '%s\n' '$ vvp build/decoder_layer0_iverilog/ace3_decoder_layer0_token_engine.vvp +VECTOR_DIR=build/decoder_layer0_vectors' > "$$log"; \
 	if cd "$(ROOT)" && "$(VVP)" "$(DECODER_IVERILOG_BIN)" \
-	    +VECTOR_DIR="$(DECODER_VECTOR_DIR)" +PROGRESS_INTERVAL=1000000 >> "$$log" 2>&1; then :; \
+	    +VECTOR_DIR="$(DECODER_VECTOR_DIR)" +RAW_DIR="$(DECODER_IVERILOG_RAW_DIR)" \
+	    +PROGRESS_INTERVAL=1000000 >> "$$log" 2>&1; then :; \
 	else status=$$?; cat "$$log"; exit $$status; fi; \
-	cat "$$log"
+	expected='schema=ace3_decoder_layer0_raw_v1 natural_terminal=1 exit_code=0 trace_count=46676 final_count=1792 done_count=2'; \
+	test "$$(cat "$(DECODER_IVERILOG_RAW_DIR)/terminal.txt")" = "$$expected"; \
+	test "$$(wc -l < "$(DECODER_IVERILOG_RAW_DIR)/trace.hex")" -eq 46676; \
+	test "$$(wc -l < "$(DECODER_IVERILOG_RAW_DIR)/final.hex")" -eq 1792; \
+	cmp "$(DECODER_IVERILOG_RAW_DIR)/trace.hex" "$(DECODER_VECTOR_DIR)/trace.hex"; \
+	cmp "$(DECODER_IVERILOG_RAW_DIR)/final.hex" "$(DECODER_VECTOR_DIR)/final.hex"; \
+	printf '%s\n' 'DECODER_LAYER0_IVERILOG_COMPARISON_PASS natural_terminal=1 trace=46676 final=1792 oracle=independent' > "$$compare"; \
+	if cd "$(ROOT)" && "$(STRACE)" -qq -f -e trace=openat -o "$$opens" \
+	    "$(VVP)" "$(DECODER_IVERILOG_BIN)" +VECTOR_DIR="$(DECODER_VECTOR_DIR)" \
+	    +RAW_DIR="$(DECODER_IVERILOG_FAIL_RAW_DIR)" +FAIL_AFTER_RAW > "$$fail_log" 2>&1; then \
+	  cat "$$fail_log"; exit 1; \
+	fi; \
+	fail_expected='schema=ace3_decoder_layer0_raw_v1 natural_terminal=0 exit_code=1 trace_count=1 final_count=0 done_count=0'; \
+	test "$$(cat "$(DECODER_IVERILOG_FAIL_RAW_DIR)/terminal.txt")" = "$$fail_expected"; \
+	test "$$(wc -l < "$(DECODER_IVERILOG_FAIL_RAW_DIR)/trace.hex")" -eq 1; \
+	test ! -e "$(DECODER_IVERILOG_FAIL_RAW_DIR)/comparison.txt"; \
+	if grep -E '/decoder_layer0_vectors/(trace|final)\.hex' "$$opens"; then exit 1; fi; \
+	printf '%s\n' 'DECODER_LAYER0_IVERILOG_FAILURE_GATE_PASS natural_terminal=0 raw_rows=1 oracle_opened=0 comparison_created=0' >> "$$fail_log"; \
+	cat "$$log"; cat "$$compare"; tail -n 2 "$$fail_log"
 
 decoder-layer0-verilator-compile: decoder-layer0-json-validation
 	@rm -rf "$(DECODER_VERILATOR_OBJ_DIR)"
@@ -1052,11 +1105,248 @@ decoder-layer0-verilator-compile: decoder-layer0-json-validation
 	test -x "$(DECODER_VERILATOR_BIN)"; cat "$$log"
 
 decoder-layer0-verilator-simulation: decoder-layer0-verilator-compile
-	@mkdir -p "$(LOG_DIR)"
+	@rm -rf "$(DECODER_VERILATOR_RAW_DIR)" "$(DECODER_VERILATOR_FAIL_RAW_DIR)"
+	@mkdir -p "$(LOG_DIR)" "$(DECODER_VERILATOR_RAW_DIR)" "$(DECODER_VERILATOR_FAIL_RAW_DIR)"
 	@set -eu; log="$(LOG_DIR)/decoder-layer0-verilator-simulation.log"; \
+	compare="$(LOG_DIR)/decoder-layer0-verilator-comparison.log"; \
+	fail_log="$(LOG_DIR)/decoder-layer0-verilator-injected-failure.log"; \
+	opens="$(LOG_DIR)/decoder-layer0-verilator-injected-failure.opens"; \
 	printf '%s\n' '$ build/decoder_layer0_verilator/obj_dir/Vace3_decoder_layer0_token_engine --vector-dir build/decoder_layer0_vectors' > "$$log"; \
 	if cd "$(ROOT)" && "$(DECODER_VERILATOR_BIN)" \
-	    --vector-dir "$(DECODER_VECTOR_DIR)" >> "$$log" 2>&1; then :; \
+	    --vector-dir "$(DECODER_VECTOR_DIR)" --raw-dir "$(DECODER_VERILATOR_RAW_DIR)" \
+	    >> "$$log" 2>&1; then :; \
+	else status=$$?; cat "$$log"; exit $$status; fi; \
+	expected='schema=ace3_decoder_layer0_raw_v1 natural_terminal=1 exit_code=0 trace_count=46676 final_count=1792 done_count=2'; \
+	test "$$(cat "$(DECODER_VERILATOR_RAW_DIR)/terminal.txt")" = "$$expected"; \
+	test "$$(wc -l < "$(DECODER_VERILATOR_RAW_DIR)/trace.hex")" -eq 46676; \
+	test "$$(wc -l < "$(DECODER_VERILATOR_RAW_DIR)/final.hex")" -eq 1792; \
+	cmp "$(DECODER_VERILATOR_RAW_DIR)/trace.hex" "$(DECODER_VECTOR_DIR)/trace.hex"; \
+	cmp "$(DECODER_VERILATOR_RAW_DIR)/final.hex" "$(DECODER_VECTOR_DIR)/final.hex"; \
+	printf '%s\n' 'DECODER_LAYER0_VERILATOR_COMPARISON_PASS natural_terminal=1 trace=46676 final=1792 oracle=independent' > "$$compare"; \
+	if cd "$(ROOT)" && "$(STRACE)" -qq -f -e trace=openat -o "$$opens" \
+	    "$(DECODER_VERILATOR_BIN)" --vector-dir "$(DECODER_VECTOR_DIR)" \
+	    --raw-dir "$(DECODER_VERILATOR_FAIL_RAW_DIR)" --fail-after-raw > "$$fail_log" 2>&1; then \
+	  cat "$$fail_log"; exit 1; \
+	fi; \
+	fail_expected='schema=ace3_decoder_layer0_raw_v1 natural_terminal=0 exit_code=2 trace_count=1 final_count=0 done_count=0'; \
+	test "$$(cat "$(DECODER_VERILATOR_FAIL_RAW_DIR)/terminal.txt")" = "$$fail_expected"; \
+	test "$$(wc -l < "$(DECODER_VERILATOR_FAIL_RAW_DIR)/trace.hex")" -eq 1; \
+	test ! -e "$(DECODER_VERILATOR_FAIL_RAW_DIR)/comparison.txt"; \
+	if grep -E '/decoder_layer0_vectors/(trace|final)\.hex' "$$opens"; then exit 1; fi; \
+	printf '%s\n' 'DECODER_LAYER0_VERILATOR_FAILURE_GATE_PASS natural_terminal=0 raw_rows=1 oracle_opened=0 comparison_created=0' >> "$$fail_log"; \
+	cat "$$log"; cat "$$compare"; tail -n 2 "$$fail_log"
+
+model24-execution: model24-execution-validation model24-execution-tests
+	@printf '%s\n' 'MODEL24_EXECUTION_PASS structural_schedule=483 layer0_rtl_binding=authenticated layer0_iverilog=separate_boundary layers_1_through_23_rtl=deferred full_model_numerics=deferred dialogue=deferred'
+
+model24-execution-vectors:
+	@rm -rf "$(MODEL24_VECTOR_DIR)"
+	@mkdir -p "$(MODEL24_VECTOR_DIR)" "$(LOG_DIR)"
+	@set -eu; log="$(LOG_DIR)/model24-execution-vector-generation.log"; \
+	printf '%s\n' '$ python3 ace3/model/generate_model24_execution_vectors.py --output-dir build/model24_execution_vectors' > "$$log"; \
+	if cd "$(ROOT)" && "$(PYTHON)" "$(MODEL24_GENERATOR)" \
+	    --output-dir "$(MODEL24_VECTOR_DIR)" \
+	    --official-tokenizer-dir "$(OFFICIAL_MODEL24_TOKENIZER_DIR)" >> "$$log" 2>&1; then :; \
 	else status=$$?; cat "$$log"; exit $$status; fi; \
 	cat "$$log"
 
+model24-execution-validation: model24-execution-vectors
+	@mkdir -p "$(LOG_DIR)"
+	@set -eu; log="$(LOG_DIR)/model24-execution-vector-validation.log"; \
+	printf '%s\n' '$ python3 ace3/model/validate_model24_execution_vectors.py --vector-dir build/model24_execution_vectors' > "$$log"; \
+	if cd "$(ROOT)" && "$(PYTHON)" "$(MODEL24_VALIDATOR)" \
+	    --vector-dir "$(MODEL24_VECTOR_DIR)" \
+	    --official-tokenizer-dir "$(OFFICIAL_MODEL24_TOKENIZER_DIR)" >> "$$log" 2>&1; then :; \
+	else status=$$?; cat "$$log"; exit $$status; fi; \
+	cat "$$log"
+
+model24-execution-tests:
+	@mkdir -p "$(LOG_DIR)"
+	@set -eu; log="$(LOG_DIR)/model24-execution-tests.log"; \
+	export ACE3_OFFICIAL_CHECKPOINT="$(OFFICIAL_MODEL24_CHECKPOINT)" \
+	    ACE3_OFFICIAL_TOKENIZER_DIR="$(OFFICIAL_MODEL24_TOKENIZER_DIR)"; \
+	printf '%s\n' '$ python3 -m unittest ace3/model/tests/test_model24_execution.py' > "$$log"; \
+	if cd "$(ROOT)" && "$(PYTHON)" -m unittest \
+	    ace3/model/tests/test_model24_execution.py >> "$$log" 2>&1; then :; \
+	else status=$$?; cat "$$log"; exit $$status; fi; \
+	cat "$$log"
+
+model24-layer-indexed-handoff:
+	@cd "$(ROOT)" && "$(PYTHON)" "$(MODEL24_LAYER_HANDOFF_TEST)" \
+	    --repository-root "$(ROOT)" \
+	    --checkpoint "$(OFFICIAL_MODEL24_CHECKPOINT)" \
+	    --tensor-map "$(MODEL24_TENSOR_MAP)" \
+	    --handoff "$(VL15_LAYER0_HANDOFF)"
+
+official-model24-next-token: official-model24-next-token-validation \
+	official-model24-next-token-tests
+	@printf '%s\n' 'OFFICIAL_MODEL24_NEXT_TOKEN_PASS layers=24 layer_tensors=624 intermediate_hashes=480 terminal_reference=pytorch logits_reference=pytorch argmax=matched dialogue=not_demonstrated rtl=not_demonstrated synthesis=not_run ppa=not_measured fpga=not_run latency=not_measured throughput=not_measured'
+
+official-model24-next-token-vectors:
+	@rm -rf "$(OFFICIAL_MODEL24_VECTOR_DIR)"
+	@mkdir -p "$(OFFICIAL_MODEL24_VECTOR_DIR)" "$(LOG_DIR)"
+	@set -eu; log="$(LOG_DIR)/official-model24-next-token-generation.log"; \
+	printf '%s\n' '$ python3 ace3/model/official_model24_next_token.py generate --output-dir build/official_model24_next_token --official-checkpoint model24_execution_vectors/model.safetensors' > "$$log"; \
+	if cd "$(ROOT)" && "$(PYTHON)" "$(OFFICIAL_MODEL24_EXECUTOR)" generate \
+	    --output-dir "$(OFFICIAL_MODEL24_VECTOR_DIR)" \
+	    --official-checkpoint "$(OFFICIAL_MODEL24_CHECKPOINT)" \
+	    --official-tokenizer-dir "$(OFFICIAL_MODEL24_TOKENIZER_DIR)" >> "$$log" 2>&1; then :; \
+	else status=$$?; cat "$$log"; exit $$status; fi; \
+	cat "$$log"
+
+official-model24-next-token-validation: official-model24-next-token-vectors
+	@mkdir -p "$(LOG_DIR)"
+	@set -eu; log="$(LOG_DIR)/official-model24-next-token-validation.log"; \
+	printf '%s\n' '$ python3 ace3/model/official_model24_next_token.py validate --vector-dir build/official_model24_next_token --official-checkpoint model24_execution_vectors/model.safetensors' > "$$log"; \
+	if cd "$(ROOT)" && "$(PYTHON)" "$(OFFICIAL_MODEL24_EXECUTOR)" validate \
+	    --vector-dir "$(OFFICIAL_MODEL24_VECTOR_DIR)" \
+	    --official-checkpoint "$(OFFICIAL_MODEL24_CHECKPOINT)" \
+	    --official-tokenizer-dir "$(OFFICIAL_MODEL24_TOKENIZER_DIR)" >> "$$log" 2>&1; then :; \
+	else status=$$?; cat "$$log"; exit $$status; fi; \
+	cat "$$log"
+
+official-model24-next-token-tests: official-model24-next-token-vectors
+	@mkdir -p "$(LOG_DIR)"
+	@set -eu; log="$(LOG_DIR)/official-model24-next-token-tests.log"; \
+	export ACE3_OFFICIAL_CHECKPOINT="$(OFFICIAL_MODEL24_CHECKPOINT)" \
+	    ACE3_OFFICIAL_TOKENIZER_DIR="$(OFFICIAL_MODEL24_TOKENIZER_DIR)"; \
+	printf '%s\n' '$ python3 -m py_compile ace3/model/official_model24_next_token.py ace3/model/tests/test_official_model24_next_token.py' > "$$log"; \
+	printf '%s\n' '$ python3 -m unittest ace3/model/tests/test_official_model24_next_token.py' >> "$$log"; \
+	if cd "$(ROOT)" && "$(PYTHON)" -m py_compile \
+	    "$(OFFICIAL_MODEL24_EXECUTOR)" "$(OFFICIAL_MODEL24_TEST)" >> "$$log" 2>&1 \
+	    && "$(PYTHON)" -m unittest \
+	    ace3/model/tests/test_official_model24_next_token.py >> "$$log" 2>&1; then :; \
+	else status=$$?; cat "$$log"; exit $$status; fi; \
+	cat "$$log"
+
+official-model24-dialogue: official-model24-dialogue-validation \
+	official-model24-dialogue-tests
+	@cd "$(ROOT)" && "$(PYTHON)" -c 'import json; from pathlib import Path; g=json.loads(Path("build/official_model24_dialogue/official_model24_dialogue.json").read_text())["generation"]; print(f"OFFICIAL_MODEL24_DIALOGUE_PASS layers=24 generated_tokens={len(g['\''generated_token_ids'\''])} decoded_text={g['\''decoded_text'\'']!r} stop={g['\''stop_reason'\'']} cache_lineage=extended pytorch_argmax=matched rtl=not_demonstrated synthesis=not_run ppa=not_measured fpga=not_run latency=not_measured throughput=not_measured broader_quality=fixed_prompt_only")'
+
+official-model24-dialogue-vectors:
+	@rm -rf "$(OFFICIAL_MODEL24_DIALOGUE_VECTOR_DIR)"
+	@mkdir -p "$(OFFICIAL_MODEL24_DIALOGUE_VECTOR_DIR)" "$(LOG_DIR)"
+	@set -eu; log="$(LOG_DIR)/official-model24-dialogue-generation.log"; \
+	printf '%s\n' '$ python3 ace3/model/official_model24_dialogue.py generate --output-dir build/official_model24_dialogue --official-checkpoint model24_execution_vectors/model.safetensors' > "$$log"; \
+	if cd "$(ROOT)" && "$(PYTHON)" "$(OFFICIAL_MODEL24_DIALOGUE_EXECUTOR)" generate \
+	    --output-dir "$(OFFICIAL_MODEL24_DIALOGUE_VECTOR_DIR)" \
+	    --official-checkpoint "$(OFFICIAL_MODEL24_CHECKPOINT)" \
+	    --official-tokenizer-dir "$(OFFICIAL_MODEL24_TOKENIZER_DIR)" >> "$$log" 2>&1; then :; \
+	else status=$$?; cat "$$log"; exit $$status; fi; \
+	cat "$$log"
+
+official-model24-dialogue-validation: official-model24-dialogue-vectors
+	@mkdir -p "$(LOG_DIR)"
+	@set -eu; log="$(LOG_DIR)/official-model24-dialogue-validation.log"; \
+	printf '%s\n' '$ python3 ace3/model/official_model24_dialogue.py validate --vector-dir build/official_model24_dialogue --official-checkpoint model24_execution_vectors/model.safetensors' > "$$log"; \
+	if cd "$(ROOT)" && "$(PYTHON)" "$(OFFICIAL_MODEL24_DIALOGUE_EXECUTOR)" validate \
+	    --vector-dir "$(OFFICIAL_MODEL24_DIALOGUE_VECTOR_DIR)" \
+	    --official-checkpoint "$(OFFICIAL_MODEL24_CHECKPOINT)" \
+	    --official-tokenizer-dir "$(OFFICIAL_MODEL24_TOKENIZER_DIR)" >> "$$log" 2>&1; then :; \
+	else status=$$?; cat "$$log"; exit $$status; fi; \
+	cat "$$log"
+
+official-model24-dialogue-tests: official-model24-dialogue-vectors
+	@mkdir -p "$(LOG_DIR)"
+	@set -eu; log="$(LOG_DIR)/official-model24-dialogue-tests.log"; \
+	export ACE3_OFFICIAL_CHECKPOINT="$(OFFICIAL_MODEL24_CHECKPOINT)" \
+	    ACE3_OFFICIAL_TOKENIZER_DIR="$(OFFICIAL_MODEL24_TOKENIZER_DIR)"; \
+	printf '%s\n' '$ python3 -m py_compile ace3/model/official_model24_dialogue.py ace3/model/tests/test_official_model24_dialogue.py' > "$$log"; \
+	printf '%s\n' '$ python3 -m unittest ace3/model/tests/test_official_model24_dialogue.py' >> "$$log"; \
+	if cd "$(ROOT)" && "$(PYTHON)" -m py_compile \
+	    "$(OFFICIAL_MODEL24_DIALOGUE_EXECUTOR)" "$(OFFICIAL_MODEL24_DIALOGUE_TEST)" >> "$$log" 2>&1 \
+	    && "$(PYTHON)" -m unittest \
+	    ace3/model/tests/test_official_model24_dialogue.py >> "$$log" 2>&1; then :; \
+	else status=$$?; cat "$$log"; exit $$status; fi; \
+	cat "$$log"
+
+official-model24-showcase: official-model24-showcase-validation \
+	official-model24-showcase-tests
+	@cd "$(ROOT)" && "$(PYTHON)" -c 'import json; from pathlib import Path; d=json.loads(Path("build/official_model24_showcase/official_model24_showcase.json").read_text()); print(f"OFFICIAL_MODEL24_SHOWCASE_PASS prompts={len(d['\''rows'\''])} failures={len(d['\''failures'\''])} outputs=preserved primary_pytorch=per_token rtl=not_demonstrated synthesis=not_run ppa=not_measured fpga=not_run latency=not_measured throughput=not_measured")'
+
+official-model24-showcase-vectors:
+	@rm -rf "$(OFFICIAL_MODEL24_SHOWCASE_VECTOR_DIR)"
+	@mkdir -p "$(OFFICIAL_MODEL24_SHOWCASE_VECTOR_DIR)" "$(LOG_DIR)"
+	@set -eu; log="$(LOG_DIR)/official-model24-showcase-generation.log"; \
+	printf '%s\n' '$ python3 ace3/model/official_model24_showcase.py generate --output-dir build/official_model24_showcase --official-checkpoint model24_execution_vectors/model.safetensors' > "$$log"; \
+	if cd "$(ROOT)" && "$(PYTHON)" "$(OFFICIAL_MODEL24_SHOWCASE_EXECUTOR)" generate \
+	    --output-dir "$(OFFICIAL_MODEL24_SHOWCASE_VECTOR_DIR)" \
+	    --official-checkpoint "$(OFFICIAL_MODEL24_CHECKPOINT)" \
+	    --official-tokenizer-dir "$(OFFICIAL_MODEL24_TOKENIZER_DIR)" >> "$$log" 2>&1; then :; \
+	else status=$$?; cat "$$log"; exit $$status; fi; \
+	cat "$$log"
+
+official-model24-showcase-validation: official-model24-showcase-vectors
+	@mkdir -p "$(LOG_DIR)"
+	@set -eu; log="$(LOG_DIR)/official-model24-showcase-validation.log"; \
+	printf '%s\n' '$ python3 ace3/model/official_model24_showcase.py validate --vector-dir build/official_model24_showcase --official-checkpoint model24_execution_vectors/model.safetensors' > "$$log"; \
+	if cd "$(ROOT)" && "$(PYTHON)" "$(OFFICIAL_MODEL24_SHOWCASE_EXECUTOR)" validate \
+	    --vector-dir "$(OFFICIAL_MODEL24_SHOWCASE_VECTOR_DIR)" \
+	    --official-checkpoint "$(OFFICIAL_MODEL24_CHECKPOINT)" \
+	    --official-tokenizer-dir "$(OFFICIAL_MODEL24_TOKENIZER_DIR)" >> "$$log" 2>&1; then :; \
+	else status=$$?; cat "$$log"; exit $$status; fi; \
+	cat "$$log"
+
+official-model24-showcase-tests: official-model24-showcase-vectors
+	@mkdir -p "$(LOG_DIR)"
+	@set -eu; log="$(LOG_DIR)/official-model24-showcase-tests.log"; \
+	export ACE3_OFFICIAL_CHECKPOINT="$(OFFICIAL_MODEL24_CHECKPOINT)" \
+	    ACE3_OFFICIAL_TOKENIZER_DIR="$(OFFICIAL_MODEL24_TOKENIZER_DIR)"; \
+	printf '%s\n' '$ python3 -m py_compile ace3/model/official_model24_dialogue.py ace3/model/official_model24_showcase.py ace3/model/tests/test_official_model24_showcase.py' > "$$log"; \
+	printf '%s\n' '$ python3 -m unittest ace3/model/tests/test_official_model24_showcase.py' >> "$$log"; \
+	if cd "$(ROOT)" && "$(PYTHON)" -m py_compile \
+	    "$(OFFICIAL_MODEL24_DIALOGUE_EXECUTOR)" "$(OFFICIAL_MODEL24_SHOWCASE_EXECUTOR)" \
+	    "$(OFFICIAL_MODEL24_SHOWCASE_TEST)" >> "$$log" 2>&1 \
+	    && "$(PYTHON)" -m unittest \
+	    ace3/model/tests/test_official_model24_showcase.py >> "$$log" 2>&1; then :; \
+	else status=$$?; cat "$$log"; exit $$status; fi; \
+	cat "$$log"
+
+official-model24-systematic-continuations: \
+	official-model24-systematic-continuations-validation \
+	official-model24-systematic-continuations-tests
+	@cd "$(ROOT)" && "$(PYTHON)" -c 'import json; from pathlib import Path; s=json.loads(Path("build/official_model24_systematic_continuations/summary.json").read_text()); r=s["results"]; print(f"OFFICIAL_MODEL24_SYSTEMATIC_CONTINUATIONS_PASS cases={r['\''cases'\'']} completed={r['\''completed_cases'\'']} steps={r['\''steps'\'']} mismatches={r['\''mismatches'\'']} execution_failures={r['\''execution_failures'\'']} baseline=showcasecontinuations15c unreviewed_486e5d848245=excluded_claim_evidence rtl=not_demonstrated synthesis=not_run ppa=not_measured fpga=not_run latency=diagnostic_only throughput=not_measured broader_quality=bounded_suite_only")'
+
+official-model24-systematic-continuations-vectors:
+	@rm -rf "$(OFFICIAL_MODEL24_SYSTEMATIC_VECTOR_DIR)"
+	@mkdir -p "$(OFFICIAL_MODEL24_SYSTEMATIC_VECTOR_DIR)" "$(LOG_DIR)"
+	@set -eu; log="$(LOG_DIR)/official-model24-systematic-continuations-generation.log"; \
+	printf '%s\n' '$ python3 ace3/model/official_model24_systematic_continuations.py generate --output-dir build/official_model24_systematic_continuations --official-checkpoint model24_execution_vectors/model.safetensors' > "$$log"; \
+	if cd "$(ROOT)" && "$(PYTHON)" "$(OFFICIAL_MODEL24_SYSTEMATIC_EXECUTOR)" generate \
+	    --output-dir "$(OFFICIAL_MODEL24_SYSTEMATIC_VECTOR_DIR)" \
+	    --official-checkpoint "$(OFFICIAL_MODEL24_CHECKPOINT)" \
+	    --official-tokenizer-dir "$(OFFICIAL_MODEL24_TOKENIZER_DIR)" >> "$$log" 2>&1; then :; \
+	else status=$$?; cat "$$log"; exit $$status; fi; \
+	cat "$$log"
+
+official-model24-systematic-continuations-validation: \
+	official-model24-systematic-continuations-vectors
+	@mkdir -p "$(LOG_DIR)"
+	@set -eu; log="$(LOG_DIR)/official-model24-systematic-continuations-validation.log"; \
+	printf '%s\n' '$ python3 ace3/model/official_model24_systematic_continuations.py validate --vector-dir build/official_model24_systematic_continuations --official-checkpoint model24_execution_vectors/model.safetensors' > "$$log"; \
+	if cd "$(ROOT)" && "$(PYTHON)" "$(OFFICIAL_MODEL24_SYSTEMATIC_EXECUTOR)" validate \
+	    --vector-dir "$(OFFICIAL_MODEL24_SYSTEMATIC_VECTOR_DIR)" \
+	    --official-checkpoint "$(OFFICIAL_MODEL24_CHECKPOINT)" \
+	    --official-tokenizer-dir "$(OFFICIAL_MODEL24_TOKENIZER_DIR)" >> "$$log" 2>&1; then :; \
+	else status=$$?; cat "$$log"; exit $$status; fi; \
+	cat "$$log"
+
+official-model24-systematic-continuations-tests: \
+	official-model24-systematic-continuations-vectors
+	@mkdir -p "$(LOG_DIR)"
+	@set -eu; log="$(LOG_DIR)/official-model24-systematic-continuations-tests.log"; \
+	export ACE3_OFFICIAL_CHECKPOINT="$(OFFICIAL_MODEL24_CHECKPOINT)" \
+	    ACE3_OFFICIAL_TOKENIZER_DIR="$(OFFICIAL_MODEL24_TOKENIZER_DIR)"; \
+	printf '%s\n' '$ python3 -m py_compile ace3/model/official_model24_systematic_continuations.py ace3/model/tests/test_official_model24_systematic_continuations.py' > "$$log"; \
+	printf '%s\n' '$ python3 -m unittest ace3/model/tests/test_official_model24_systematic_continuations.py' >> "$$log"; \
+	if cd "$(ROOT)" && "$(PYTHON)" -m py_compile \
+	    "$(OFFICIAL_MODEL24_SYSTEMATIC_EXECUTOR)" "$(OFFICIAL_MODEL24_SYSTEMATIC_TEST)" \
+	    >> "$$log" 2>&1 \
+	    && "$(PYTHON)" -m unittest \
+	    ace3/model/tests/test_official_model24_systematic_continuations.py \
+	    >> "$$log" 2>&1; then :; \
+	else status=$$?; cat "$$log"; exit $$status; fi; \
+	cat "$$log"
+
+clean:
+	rm -rf "$(BUILD_DIR)"

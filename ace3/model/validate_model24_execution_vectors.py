@@ -8,11 +8,14 @@ from pathlib import Path
 
 from model24_execution_oracle import (
     ContractError,
+    DEFAULT_OFFICIAL_CHECKPOINT,
+    DEFAULT_OFFICIAL_TOKENIZER_DIR,
     build_vector_artifacts,
     load_json_bytes,
     require,
     require_provenance_commit,
     sha256_bytes,
+    validate_decoder_snapshot,
     validate_execution_contract,
     validate_vector_bindings,
 )
@@ -26,10 +29,25 @@ def parse_args() -> argparse.Namespace:
         type=Path,
         default=repository_root / "build" / "model24_execution_prep_cf11" / "vectors",
     )
+    parser.add_argument(
+        "--official-tokenizer-dir",
+        type=Path,
+        default=DEFAULT_OFFICIAL_TOKENIZER_DIR,
+    )
+    parser.add_argument(
+        "--official-checkpoint",
+        type=Path,
+        default=DEFAULT_OFFICIAL_CHECKPOINT,
+    )
     return parser.parse_args()
 
 
-def validate_vector_directory(repository_root: Path, vector_dir: Path) -> dict[str, int]:
+def validate_vector_directory(
+    repository_root: Path,
+    vector_dir: Path,
+    tokenizer_dir: Path = DEFAULT_OFFICIAL_TOKENIZER_DIR,
+    checkpoint_path: Path = DEFAULT_OFFICIAL_CHECKPOINT,
+) -> dict[str, int]:
     contracts = repository_root / "ace3" / "contracts"
     contract_path = contracts / "model24_execution.json"
     bindings_path = contracts / "model24_execution_vector_bindings.json"
@@ -39,6 +57,7 @@ def validate_vector_directory(repository_root: Path, vector_dir: Path) -> dict[s
     control_payload = (contracts / "model24_control.json").read_bytes()
 
     require_provenance_commit(repository_root)
+    validate_decoder_snapshot(repository_root)
     contract = load_json_bytes(contract_payload, str(contract_path))
     bindings = load_json_bytes(bindings_payload, str(bindings_path))
     validate_execution_contract(contract, tensor_payload, control_payload)
@@ -67,6 +86,8 @@ def validate_vector_directory(repository_root: Path, vector_dir: Path) -> dict[s
     expected_payloads = build_vector_artifacts(
         sha256_bytes(contract_payload),
         sha256_bytes(bindings_payload),
+        tokenizer_dir,
+        checkpoint_path,
     )
     for name in sorted(expected_names):
         require(
@@ -88,7 +109,12 @@ def main() -> None:
     args = parse_args()
     repository_root = Path(__file__).resolve().parents[2]
     try:
-        summary = validate_vector_directory(repository_root, args.vector_dir.resolve())
+        summary = validate_vector_directory(
+            repository_root,
+            args.vector_dir.resolve(),
+            args.official_tokenizer_dir.resolve(),
+            args.official_checkpoint.resolve(),
+        )
     except (ContractError, OSError) as error:
         raise SystemExit(f"MODEL24_EXECUTION_VALIDATION_FAIL {error}") from error
     print(
@@ -96,7 +122,13 @@ def main() -> None:
         f"layers={summary['official_layers']} "
         f"events={summary['official_events']} "
         f"tensors={summary['official_tensor_count']} "
-        f"small_geometries={summary['small_geometry_cases']}"
+        f"small_geometries={summary['small_geometry_cases']} "
+        f"host_tokens={summary['host_total_structural_token_steps']} "
+        f"layer0_tokens={summary['official_layer0_tokens']} "
+        f"layer0_stages={summary['official_layer0_stages']} "
+        f"projection_bit_checks={summary['official_layer0_projection_bit_checks']} "
+        f"official_logits={summary['official_logits']} "
+        f"argmax_token_id={summary['official_argmax_token_id']}"
     )
 
 

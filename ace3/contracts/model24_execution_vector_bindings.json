@@ -2,20 +2,30 @@
   "schema_version": 1,
   "kind": "ace3_model24_execution_vector_bindings",
   "generator": {
-    "algorithm": "model24-execution-v1",
+    "algorithm": "model24-execution-v3",
     "seed": 240483,
     "serialization": "UTF-8 canonical JSON, sorted keys, compact separators, LF"
   },
   "inputs": {
     "parent_commit": "3cf65b762d928e02e2b64fbba4389e294e1aa2c5",
-    "execution_contract_sha256": "4f191a557b53b31bcf954fafd5ef60875d48bb4f1b0e0b084027c24e9d42b4d4",
+    "execution_contract_sha256": "084c28f413a219b095b06e41cdc9bf3c1138a583cc5d0a2d00b94133cf9ba9e6",
     "tensor_map_sha256": "11a03bed8049cd815ac2c37384a7ba15d71d2f69ee397110d1cd443193474624",
     "control_map_sha256": "3364dc4c2c585f4687d8ad7943792ca4c44265b85463b91ab2a1c6866690b611",
-    "decoder_source_sha256": "595a2374dec03ee5b6ae85d65758e9e64648342c36b9c8af96c7d3ae70572bd2",
-    "decoder_interface_sha256": "6d3177c5a3fdff424037ace6ce3162085a6c5cb15f15b7771edbf2396198a467"
+    "decoder_source_sha256": "ea1ed72cec4f0b15b852265de55f886201eda15d8413b706d23896fc0712a0d6",
+    "decoder_interface_sha256": "93445f03e9bb72c5fff5b18388703c8e734a5ab3a75e6e8c85992c183e39c2ab",
+    "tokenizer_sha256": "c0382117ea329cdf097041132f6d735924b697924d6f6fc3945713e96ce87539",
+    "tokenizer_config_sha256": "5b5d4f65d0acd3b2d56a35b56d374a36cbc1c8fa5cf3b3febbbfabf22f359583",
+    "checkpoint_sha256": "c50d807b7bed7ff314308972e0f4bcf4e5a70bc60ad88fc7df53940831ed0c1b",
+    "lm_head_sha256": "d74257dc547b48be5ae7b93f1c9af072c0c42dbbb85503078e25c59cd09e68d0",
+    "embed_tokens_sha256": "d74257dc547b48be5ae7b93f1c9af072c0c42dbbb85503078e25c59cd09e68d0",
+    "final_norm_sha256": "1dd25d7720c68bc10838374200238c26626a624119cac0b45bff44bc43c354fe",
+    "terminal_hidden_state_sha256": "fbbfb9fbf379ac045a31f5d9c0e1e0e5080f67c1bf764eff3466ef0f9a404fef"
   },
   "artifact_set": [
+    "host_generation.json",
     "manifest.json",
+    "official_layer0_slice.json",
+    "official_token_decision.json",
     "official_schedule.json",
     "small_geometry.json"
   ],

@@ -5,6 +5,11 @@
   "model_binding": {
     "repository": "Qwen/Qwen2.5-0.5B-Instruct-AWQ",
     "revision": "db09cd27ead7fee40cdee309693cf83601b9c899",
+    "checkpoint": {
+      "filename": "model.safetensors",
+      "sha256": "c50d807b7bed7ff314308972e0f4bcf4e5a70bc60ad88fc7df53940831ed0c1b",
+      "bytes": 730652248
+    },
     "tensor_map": {
       "path": "ace3/contracts/model24_tensor_map.json",
       "sha256": "11a03bed8049cd815ac2c37384a7ba15d71d2f69ee397110d1cd443193474624"
@@ -14,17 +19,53 @@
       "sha256": "3364dc4c2c585f4687d8ad7943792ca4c44265b85463b91ab2a1c6866690b611"
     }
   },
+  "tokenizer_host": {
+    "tokenizer": {
+      "artifact": "tokenizer.json",
+      "sha256": "c0382117ea329cdf097041132f6d735924b697924d6f6fc3945713e96ce87539",
+      "config_artifact": "tokenizer_config.json",
+      "config_sha256": "5b5d4f65d0acd3b2d56a35b56d374a36cbc1c8fa5cf3b3febbbfabf22f359583",
+      "chat_template_profile": "fixed system/user messages without tools"
+    },
+    "prompt": {
+      "messages": [
+        {"role": "system", "content": "You are a concise assistant."},
+        {"role": "user", "content": "Say hello in two words."}
+      ],
+      "serialization": "<|im_start|>system\nYou are a concise assistant.<|im_end|>\n<|im_start|>user\nSay hello in two words.<|im_end|>\n<|im_start|>assistant\n",
+      "token_ids": [151644, 8948, 198, 2610, 525, 264, 63594, 17847, 13, 151645, 198, 151644, 872, 198, 45764, 23811, 304, 1378, 4244, 13, 151645, 198, 151644, 77091, 198]
+    },
+    "reduced_execution_vocabulary": {
+      "token_ids": [13, 198, 264, 304, 525, 872, 1378, 1879, 2610, 4244, 8948, 9707, 17847, 23811, 45764, 63594, 77091, 151644, 151645],
+      "generated_candidates": [9707, 1879, 151645],
+      "outside_policy": "reject and label as outside_reduced_execution_vocabulary",
+      "boundary": "fixed structural token-flow profile only; token membership does not authenticate embedding rows or official logits"
+    },
+    "generation": {
+      "selection": "argmax over labeled reduced-logit fixture",
+      "fixture_is_official_logits": false,
+      "response_token_ids": [9707, 1879],
+      "eos_token_id": 151645,
+      "decoded_response": "Hello world",
+      "default_max_new_tokens": 3
+    },
+    "cache_slot_reuse": {
+      "slot": 0,
+      "position_rule": "advance once per prompt or generated token",
+      "boundary": "host token-position lineage only; numerical FP16 KV contents are not produced by this structural execution"
+    }
+  },
   "decoder_snapshot_compatibility": {
     "source": {
       "path": "ace3/rtl/ace3_decoder_layer0_token_engine.sv",
-      "sha256": "595a2374dec03ee5b6ae85d65758e9e64648342c36b9c8af96c7d3ae70572bd2"
+      "sha256": "ea1ed72cec4f0b15b852265de55f886201eda15d8413b706d23896fc0712a0d6"
     },
     "interface": {
       "path": "ace3/tb/ace3_decoder_width_boundary_tb.sv",
-      "sha256": "6d3177c5a3fdff424037ace6ce3162085a6c5cb15f15b7771edbf2396198a467"
+      "sha256": "93445f03e9bb72c5fff5b18388703c8e734a5ab3a75e6e8c85992c183e39c2ab"
     },
-    "review_provenance": "decoder_wall_repair_review_cf03",
-    "status": "hash compatibility only; not decoder acceptance"
+    "review_provenance": "layer0_decoder_token_boundary",
+    "status": "authenticated layer-0 RTL and Icarus width-boundary simulation; not 24-layer execution"
   },
   "numeric_profile": {
     "projection": "native asymmetric packed INT4 AWQ W4A16 G128 GEMM",
@@ -42,6 +83,80 @@
     "scales": "FP16",
     "activations": "FP16",
     "kv": "FP16"
+  },
+  "official_single_decoder_layer": {
+    "artifact": "official_layer0_slice.json",
+    "prompt": {
+      "utf8": "Hello world",
+      "token_ids": [9707, 1879],
+      "positions": [0, 1]
+    },
+    "geometry": {
+      "hidden_size": 896,
+      "intermediate_size": 4864,
+      "query_heads": 14,
+      "key_value_heads": 2,
+      "head_dim": 64,
+      "group_size": 128
+    },
+    "embedding_tensor_sha256": "d74257dc547b48be5ae7b93f1c9af072c0c42dbbb85503078e25c59cd09e68d0",
+    "embedding_row_sha256": {
+      "9707": "150deee94cfa96d5e9342ca4e5041b2b662ab649e7174e4280a0a1b062d10d06",
+      "1879": "e53571236e61d5517340953dbd4ac3cb0cc2acb144ff42c8017d02f33bb308a8"
+    },
+    "consumed_layer_tensor_count": 26,
+    "consumed_tensor_binding_location": "official_layer0_slice.json.model_binding.consumed_tensors",
+    "intermediate_stages": [
+      "embedding",
+      "input_rmsnorm",
+      "q_proj",
+      "k_proj",
+      "v_proj",
+      "q_rope",
+      "k_rope",
+      "kv_cache_k",
+      "kv_cache_v",
+      "attention_scores",
+      "attention_probabilities",
+      "attention_value",
+      "o_proj",
+      "attention_residual",
+      "post_attention_rmsnorm",
+      "gate_proj",
+      "up_proj",
+      "silu",
+      "down_proj",
+      "post_layer_hidden"
+    ],
+    "independent_reference": {
+      "implementation": "PyTorch CPU float64",
+      "absolute_tolerances": {
+        "input_rmsnorm": 0.02,
+        "q_proj": 0.1,
+        "k_proj": 0.1,
+        "v_proj": 0.1,
+        "q_rope": 0.15,
+        "k_rope": 0.15,
+        "attention_scores": 0.2,
+        "attention_probabilities": 0.08,
+        "attention_value": 0.15,
+        "o_proj": 0.2,
+        "attention_residual": 0.2,
+        "post_attention_rmsnorm": 0.2,
+        "gate_proj": 0.3,
+        "up_proj": 0.3,
+        "silu": 0.55,
+        "down_proj": 0.5,
+        "post_layer_hidden": 0.5
+      },
+      "sampled_projection_bit_oracle_outputs": 42
+    },
+    "handoff": {
+      "shape": [896],
+      "dtype": "F16",
+      "compatible_interface": "model.norm.weight -> tied lm_head.weight",
+      "requires_layers_before_final_head": [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23]
+    }
   },
   "layers": {
     "count": 24,
@@ -178,8 +293,8 @@
       "output_logits": 151936,
       "execution_group_size": 128,
       "execution_groups_per_logit": 7,
-      "execution_stream": "grouped native asymmetric AWQ W4A16 G128 interface",
-      "storage_boundary": "grouped execution interface only; no AWQ-packed lm_head checkpoint-storage claim"
+      "execution_stream": "FP16 tied linear projection",
+      "storage_boundary": "official F16 checkpoint storage; no AWQ-packed lm_head claim"
     },
     "argmax": {
       "input_order": "token_id ascending from 0 through 151935",
@@ -187,6 +302,41 @@
       "tie_break": "lowest token_id",
       "completion": "exactly 151936 logits accepted",
       "invalid": "fault; no token result"
+    },
+    "official_token_decision": {
+      "consumed_checkpoint_tensors": [
+        {
+          "name": "lm_head.weight",
+          "sha256": "d74257dc547b48be5ae7b93f1c9af072c0c42dbbb85503078e25c59cd09e68d0",
+          "purpose": "full-vocabulary FP16 linear projection"
+        },
+        {
+          "name": "model.embed_tokens.weight",
+          "sha256": "d74257dc547b48be5ae7b93f1c9af072c0c42dbbb85503078e25c59cd09e68d0",
+          "purpose": "byte-for-byte tied-head provenance"
+        },
+        {
+          "name": "model.norm.weight",
+          "sha256": "1dd25d7720c68bc10838374200238c26626a624119cac0b45bff44bc43c354fe",
+          "purpose": "final RMSNorm"
+        }
+      ],
+      "terminal_hidden_state": {
+        "source": "deterministic structural fixture",
+        "features": 896,
+        "dtype": "F16",
+        "algorithm": "q24_to_f16((((index * 73) % 513) - 256) << 14)",
+        "sha256": "fbbfb9fbf379ac045a31f5d9c0e1e0e5080f67c1bf764eff3466ef0f9a404fef",
+        "engine_produced": false
+      },
+      "arithmetic": {
+        "rmsnorm": "integer-only Q24/Q48 oracle with epsilon 1e-6 and binary16 RNE",
+        "lm_head": "exact FP16 products accumulated in signed Q47.48; round once to binary16 RNE"
+      },
+      "vocab_size": 151936,
+      "top_k": 10,
+      "tie_break": "lowest token_id",
+      "host_boundary": "authenticated tokenizer decodes the selected official full-vocabulary token"
     }
   },
   "reset_and_error": {
@@ -206,13 +356,23 @@
       "24 namespace bindings and 483-event control trajectory",
       "per-layer FP16 KV ownership and residual lineage",
       "final RMSNorm, tied grouped lm_head, and deterministic argmax interfaces",
-      "fixed parent, reviewed map, and decoder snapshot hash compatibility"
+      "fixed parent, reviewed map, and authenticated layer-0 RTL/TB hashes",
+      "Icarus layer-0 width, reset, clear, and fail-closed boundary",
+      "authenticated tokenizer prompt serialization and deterministic decoding",
+      "multi-token structural host stepping and cache-slot position lineage",
+      "official checkpoint final RMSNorm and tied lm_head over a fixed structural hidden-state fixture",
+      "deterministic 151936-logit top-k and argmax token decision with authenticated host decoding",
+      "official layer-0 two-token numerical execution with authenticated embeddings, norms, native-AWQ projections, RoPE, FP16 KV cache, causal attention, residuals, and MLP",
+      "independent PyTorch stage comparisons within explicit absolute tolerances and 42 sampled exact projection bit-oracle checks"
     ],
     "excluded": [
-      "decoder RTL implementation or execution",
-      "official numerical model execution or dialogue",
+      "layers 1 through 23 RTL execution",
+      "layers 1 through 23 numerical execution",
+      "full 24-layer numerical execution or dialogue",
+      "official numerical layer-23 terminal hidden state",
+      "readable multi-token official-checkpoint dialogue",
       "latency, throughput, synthesis, PPA, FPGA, or silicon",
-      "decoder acceptance"
+      "full-model or dialogue acceptance"
     ]
   }
 }

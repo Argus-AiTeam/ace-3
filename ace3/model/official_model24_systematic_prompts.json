@@ -1,0 +1,308 @@
+{
+  "schema_version": 1,
+  "kind": "ace3_official_model24_systematic_prompt_suite",
+  "reviewed_baseline": "showcasecontinuations15c",
+  "cases": [
+    {
+      "id": "en_continuation_water_freezes",
+      "category": "continuation",
+      "language": "en",
+      "mode": "continuation",
+      "input_text": "Water freezes at",
+      "messages": null
+    },
+    {
+      "id": "en_continuation_opposite_hot",
+      "category": "continuation",
+      "language": "en",
+      "mode": "continuation",
+      "input_text": "The opposite of hot is",
+      "messages": null
+    },
+    {
+      "id": "en_continuation_triangle",
+      "category": "continuation",
+      "language": "en",
+      "mode": "continuation",
+      "input_text": "A triangle has",
+      "messages": null
+    },
+    {
+      "id": "zh_continuation_year_months",
+      "category": "continuation",
+      "language": "zh",
+      "mode": "continuation",
+      "input_text": "\u4e00\u5e74\u6709",
+      "messages": null
+    },
+    {
+      "id": "zh_continuation_sun_rises",
+      "category": "continuation",
+      "language": "zh",
+      "mode": "continuation",
+      "input_text": "\u592a\u9633\u4ece",
+      "messages": null
+    },
+    {
+      "id": "zh_continuation_one_plus_one",
+      "category": "continuation",
+      "language": "zh",
+      "mode": "continuation",
+      "input_text": "\u4e00\u52a0\u4e00\u7b49\u4e8e",
+      "messages": null
+    },
+    {
+      "id": "en_chat_greeting",
+      "category": "chat",
+      "language": "en",
+      "mode": "chat",
+      "input_text": "Greet me in one short sentence.",
+      "messages": [
+        {"role": "system", "content": "You are a concise assistant."},
+        {"role": "user", "content": "Greet me in one short sentence."}
+      ]
+    },
+    {
+      "id": "en_chat_blue",
+      "category": "chat",
+      "language": "en",
+      "mode": "chat",
+      "input_text": "Name one thing that is often blue.",
+      "messages": [
+        {"role": "system", "content": "You are a concise assistant."},
+        {"role": "user", "content": "Name one thing that is often blue."}
+      ]
+    },
+    {
+      "id": "en_chat_thanks",
+      "category": "chat",
+      "language": "en",
+      "mode": "chat",
+      "input_text": "Reply politely to: Thank you.",
+      "messages": [
+        {"role": "system", "content": "You are a concise assistant."},
+        {"role": "user", "content": "Reply politely to: Thank you."}
+      ]
+    },
+    {
+      "id": "zh_chat_greeting",
+      "category": "chat",
+      "language": "zh",
+      "mode": "chat",
+      "input_text": "\u8bf7\u7528\u4e00\u53e5\u7b80\u77ed\u7684\u4e2d\u6587\u95ee\u5019\u6211\u3002",
+      "messages": [
+        {"role": "system", "content": "You are a concise assistant."},
+        {"role": "user", "content": "\u8bf7\u7528\u4e00\u53e5\u7b80\u77ed\u7684\u4e2d\u6587\u95ee\u5019\u6211\u3002"}
+      ]
+    },
+    {
+      "id": "zh_chat_red_object",
+      "category": "chat",
+      "language": "zh",
+      "mode": "chat",
+      "input_text": "\u8bf4\u51fa\u4e00\u79cd\u5e38\u89c1\u7684\u7ea2\u8272\u7269\u54c1\u3002",
+      "messages": [
+        {"role": "system", "content": "You are a concise assistant."},
+        {"role": "user", "content": "\u8bf4\u51fa\u4e00\u79cd\u5e38\u89c1\u7684\u7ea2\u8272\u7269\u54c1\u3002"}
+      ]
+    },
+    {
+      "id": "zh_chat_good_night",
+      "category": "chat",
+      "language": "zh",
+      "mode": "chat",
+      "input_text": "\u7b80\u77ed\u56de\u590d\uff1a\u665a\u5b89\u3002",
+      "messages": [
+        {"role": "system", "content": "You are a concise assistant."},
+        {"role": "user", "content": "\u7b80\u77ed\u56de\u590d\uff1a\u665a\u5b89\u3002"}
+      ]
+    },
+    {
+      "id": "en_factual_largest_ocean",
+      "category": "factual",
+      "language": "en",
+      "mode": "continuation",
+      "input_text": "The largest ocean on Earth is the",
+      "messages": null
+    },
+    {
+      "id": "en_factual_red_planet",
+      "category": "factual",
+      "language": "en",
+      "mode": "continuation",
+      "input_text": "The planet known as the Red Planet is",
+      "messages": null
+    },
+    {
+      "id": "en_factual_week_days",
+      "category": "factual",
+      "language": "en",
+      "mode": "continuation",
+      "input_text": "There are seven days in a",
+      "messages": null
+    },
+    {
+      "id": "zh_factual_china_capital",
+      "category": "factual",
+      "language": "zh",
+      "mode": "continuation",
+      "input_text": "\u4e2d\u56fd\u7684\u9996\u90fd\u662f",
+      "messages": null
+    },
+    {
+      "id": "zh_factual_water_formula",
+      "category": "factual",
+      "language": "zh",
+      "mode": "continuation",
+      "input_text": "\u6c34\u7684\u5316\u5b66\u5f0f\u662f",
+      "messages": null
+    },
+    {
+      "id": "zh_factual_four_seasons",
+      "category": "factual",
+      "language": "zh",
+      "mode": "continuation",
+      "input_text": "\u4e00\u5e74\u901a\u5e38\u6709\u56db\u4e2a",
+      "messages": null
+    },
+    {
+      "id": "en_commonsense_rain",
+      "category": "commonsense",
+      "language": "en",
+      "mode": "chat",
+      "input_text": "If it is raining, what should you carry?",
+      "messages": [
+        {"role": "system", "content": "You are a concise assistant."},
+        {"role": "user", "content": "If it is raining, what should you carry?"}
+      ]
+    },
+    {
+      "id": "en_commonsense_dark_room",
+      "category": "commonsense",
+      "language": "en",
+      "mode": "chat",
+      "input_text": "What do you turn on in a dark room?",
+      "messages": [
+        {"role": "system", "content": "You are a concise assistant."},
+        {"role": "user", "content": "What do you turn on in a dark room?"}
+      ]
+    },
+    {
+      "id": "en_commonsense_thirsty",
+      "category": "commonsense",
+      "language": "en",
+      "mode": "chat",
+      "input_text": "What should a thirsty person drink?",
+      "messages": [
+        {"role": "system", "content": "You are a concise assistant."},
+        {"role": "user", "content": "What should a thirsty person drink?"}
+      ]
+    },
+    {
+      "id": "zh_commonsense_cold",
+      "category": "commonsense",
+      "language": "zh",
+      "mode": "chat",
+      "input_text": "\u5929\u6c14\u5f88\u51b7\u65f6\u5e94\u8be5\u591a\u7a7f\u4ec0\u4e48\uff1f",
+      "messages": [
+        {"role": "system", "content": "You are a concise assistant."},
+        {"role": "user", "content": "\u5929\u6c14\u5f88\u51b7\u65f6\u5e94\u8be5\u591a\u7a7f\u4ec0\u4e48\uff1f"}
+      ]
+    },
+    {
+      "id": "zh_commonsense_cross_road",
+      "category": "commonsense",
+      "language": "zh",
+      "mode": "chat",
+      "input_text": "\u8fc7\u9a6c\u8def\u524d\u5e94\u8be5\u5148\u770b\u4ec0\u4e48\uff1f",
+      "messages": [
+        {"role": "system", "content": "You are a concise assistant."},
+        {"role": "user", "content": "\u8fc7\u9a6c\u8def\u524d\u5e94\u8be5\u5148\u770b\u4ec0\u4e48\uff1f"}
+      ]
+    },
+    {
+      "id": "en_code_python_square",
+      "category": "code",
+      "language": "en",
+      "mode": "continuation",
+      "input_text": "def square(x):\n    return",
+      "messages": null
+    },
+    {
+      "id": "en_code_javascript_add",
+      "category": "code",
+      "language": "en",
+      "mode": "continuation",
+      "input_text": "function add(a, b) {\n  return",
+      "messages": null
+    },
+    {
+      "id": "en_code_sql_select",
+      "category": "code",
+      "language": "en",
+      "mode": "continuation",
+      "input_text": "SELECT name FROM users WHERE",
+      "messages": null
+    },
+    {
+      "id": "zh_code_python_sum",
+      "category": "code",
+      "language": "zh",
+      "mode": "continuation",
+      "input_text": "# \u8fd4\u56de\u4e24\u4e2a\u6570\u7684\u548c\ndef add(a, b):\n    return",
+      "messages": null
+    },
+    {
+      "id": "zh_code_python_even",
+      "category": "code",
+      "language": "zh",
+      "mode": "continuation",
+      "input_text": "# \u5224\u65ad n \u662f\u5426\u4e3a\u5076\u6570\ndef is_even(n):\n    return",
+      "messages": null
+    },
+    {
+      "id": "en_reasoning_apples",
+      "category": "reasoning",
+      "language": "en",
+      "mode": "chat",
+      "input_text": "Answer with only the number: 3 apples plus 2 apples.",
+      "messages": [
+        {"role": "system", "content": "You are a concise assistant."},
+        {"role": "user", "content": "Answer with only the number: 3 apples plus 2 apples."}
+      ]
+    },
+    {
+      "id": "zh_reasoning_subtract",
+      "category": "reasoning",
+      "language": "zh",
+      "mode": "chat",
+      "input_text": "\u53ea\u56de\u7b54\u6570\u5b57\uff1a9 \u51cf 4 \u7b49\u4e8e\u591a\u5c11\uff1f",
+      "messages": [
+        {"role": "system", "content": "You are a concise assistant."},
+        {"role": "user", "content": "\u53ea\u56de\u7b54\u6570\u5b57\uff1a9 \u51cf 4 \u7b49\u4e8e\u591a\u5c11\uff1f"}
+      ]
+    },
+    {
+      "id": "zh_reasoning_sequence",
+      "category": "reasoning",
+      "language": "zh",
+      "mode": "chat",
+      "input_text": "\u53ea\u56de\u7b54\u4e0b\u4e00\u4e2a\u6570\uff1a2, 4, 6, 8,",
+      "messages": [
+        {"role": "system", "content": "You are a concise assistant."},
+        {"role": "user", "content": "\u53ea\u56de\u7b54\u4e0b\u4e00\u4e2a\u6570\uff1a2, 4, 6, 8,"}
+      ]
+    },
+    {
+      "id": "zh_reasoning_boxes",
+      "category": "reasoning",
+      "language": "zh",
+      "mode": "chat",
+      "input_text": "\u53ea\u56de\u7b54\u6570\u5b57\uff1a\u4e24\u4e2a\u76d2\u5b50\u5404\u6709 3 \u4e2a\u7403\uff0c\u5171\u6709\u51e0\u4e2a\uff1f",
+      "messages": [
+        {"role": "system", "content": "You are a concise assistant."},
+        {"role": "user", "content": "\u53ea\u56de\u7b54\u6570\u5b57\uff1a\u4e24\u4e2a\u76d2\u5b50\u5404\u6709 3 \u4e2a\u7403\uff0c\u5171\u6709\u51e0\u4e2a\uff1f"}
+      ]
+    }
+  ]
+}
