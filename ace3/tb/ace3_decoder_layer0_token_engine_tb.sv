@@ -1,7 +1,9 @@
 `timescale 1ns/1ps
 `default_nettype none
 
-module ace3_decoder_layer0_token_engine_tb;
+module ace3_decoder_layer0_token_engine_tb #(
+    parameter integer LAYER_INDEX = 0
+);
     localparam integer HIDDEN=896, INTERMEDIATE=4864, TRACE_RECORDS=46676, FINAL_RECORDS=1792;
     reg clk, rst_n, clear, load_valid, start_valid;
     reg [1:0] load_kind, start_slot;
@@ -28,9 +30,9 @@ module ace3_decoder_layer0_token_engine_tb;
     wire [1:0] done_slot;
     wire [31:0] done_cycles, done_stalls;
     wire [5:0] phase;
+    wire [4:0] layer_index;
 
-    reg [39:0] inputs [0:1791], finals [0:FINAL_RECORDS-1];
-    reg [63:0] trace_expected [0:TRACE_RECORDS-1];
+    reg [39:0] inputs [0:1791];
     reg [47:0] rope_mem [0:63];
     reg [15:0] norm1 [0:HIDDEN-1], norm2 [0:HIDDEN-1];
     reg [31:0] q_qweight [0:100351], q_qzeros [0:783], o_qweight [0:100351], o_qzeros [0:783];
@@ -47,9 +49,10 @@ module ace3_decoder_layer0_token_engine_tb;
     integer phase_cycles [0:36];
     integer token_start_cycle [0:1], token_done_cycle [0:1], active_token;
     reg checking, xz_payload_mode, data_loaded;
-    integer i, linear, qwords;
-    string vector_dir, path;
+    integer i, linear, qwords, trace_fd, final_fd, terminal_fd;
+    string vector_dir, raw_dir, path;
     reg trace_hold, final_hold, done_hold;
+    reg fail_after_raw;
     reg [4:0] trace_stage_hold;
     reg [12:0] trace_index_hold, final_index_hold;
     reg [15:0] trace_f16_hold, final_f16_hold;
@@ -60,6 +63,36 @@ module ace3_decoder_layer0_token_engine_tb;
     wire qzeros_address_valid;
     wire [15:0] qzeros_address;
 
+    task automatic decoder_fatal;
+        input string message;
+        integer abnormal_terminal_fd;
+        begin
+            if (trace_fd) $fflush(trace_fd);
+            if (final_fd) $fflush(final_fd);
+            abnormal_terminal_fd=terminal_fd;
+            if (!abnormal_terminal_fd && raw_dir!="") begin
+                path={raw_dir,"/terminal.txt"};
+                abnormal_terminal_fd=$fopen(path,"w");
+            end
+            if (abnormal_terminal_fd) begin
+                if (LAYER_INDEX == 0)
+                    $fdisplay(abnormal_terminal_fd,
+                        "schema=ace3_decoder_layer0_raw_v1 natural_terminal=0 exit_code=1 trace_count=%0d final_count=%0d done_count=%0d",
+                        trace_count,final_count,done_count);
+                else
+                    $fdisplay(abnormal_terminal_fd,
+                        "schema=ace3_decoder_layer_raw_v1 layer_index=%0d natural_terminal=0 exit_code=1 trace_count=%0d final_count=%0d done_count=%0d",
+                        LAYER_INDEX,trace_count,final_count,done_count);
+                $fflush(abnormal_terminal_fd);
+            end
+            if (trace_fd) begin $fclose(trace_fd); trace_fd=0; end
+            if (final_fd) begin $fclose(final_fd); final_fd=0; end
+            if (abnormal_terminal_fd) $fclose(abnormal_terminal_fd);
+            terminal_fd=0;
+            $fatal(1,"%s",message);
+        end
+    endtask
+
     ace3_decoder_qzeros_address qzeros_address_check (
         .meta_live_i(projection_meta_valid && projection_meta_ready),
         .projection_kind_i(projection_kind),
@@ -69,7 +102,7 @@ module ace3_decoder_layer0_token_engine_tb;
         .address_o(qzeros_address)
     );
 
-    ace3_decoder_layer0_token_engine dut (
+    ace3_decoder_layer0_token_engine #(.LAYER_INDEX(LAYER_INDEX)) dut (
         .clk_i(clk),.rst_ni(rst_n),.clear_i(clear),
         .load_valid_i(load_valid),.load_ready_o(load_ready),.load_kind_i(load_kind),
         .load_index_i(load_index),.load_f16_i(load_f16),
@@ -93,7 +126,7 @@ module ace3_decoder_layer0_token_engine_tb;
         .final_index_o(final_index),.final_f16_o(final_f16),.final_last_o(final_last),
         .done_valid_o(done_valid),.done_ready_i(done_ready),.done_cache_slot_o(done_slot),
         .done_position_o(done_position),.done_cycles_o(done_cycles),.done_stall_cycles_o(done_stalls),
-        .busy_o(busy),.phase_o(phase)
+        .busy_o(busy),.phase_o(phase),.layer_index_o(layer_index)
     );
     reg [14:0] start_position;
     always #5 clk=~clk;
@@ -106,8 +139,7 @@ module ace3_decoder_layer0_token_engine_tb;
              projection_meta_output or projection_pair_input or projection_pair_word or
              projection_bias_output or rope_position or rope_pair or cycles or
              projection_meta_ready or projection_pair_ready or projection_bias_ready or
-             rope_ready or qzeros_address_valid or qzeros_address or
-             xz_payload_mode or data_loaded) begin
+             rope_ready or xz_payload_mode or data_loaded) begin
         projection_meta_valid = (cycles % 23) != 0;
         projection_pair_valid = (cycles % 71) != 0;
         projection_bias_valid = (cycles % 37) != 0;
@@ -118,76 +150,101 @@ module ace3_decoder_layer0_token_engine_tb;
         projection_qzeros=0; projection_scale=0; projection_qweight=0; projection_bias=0;
         rope_cos=0; rope_sin=0;
         if (projection_meta_valid && projection_meta_ready) begin
-            if (!qzeros_address_valid)
-                $fatal(1,"DECODER_LIVE_QZEROS_ADDRESS_FAIL kind=%0d group=%0d word=%0d",
-                       projection_kind,projection_meta_group,projection_meta_word);
             case (projection_kind)
-              0: begin projection_qzeros=q_qzeros[qzeros_address];
-                       if (projection_meta_output>=896) $fatal(1,"DECODER_Q_SCALE_ADDRESS_FAIL");
+              0: begin
+                       if (projection_meta_group>=7 || projection_meta_word>=112)
+                           decoder_fatal("DECODER_Q_QZEROS_ADDRESS_FAIL");
+                       linear=projection_meta_group*112+projection_meta_word;
+                       projection_qzeros=q_qzeros[linear];
+                       if (projection_meta_output>=896) decoder_fatal("DECODER_Q_SCALE_ADDRESS_FAIL");
                        projection_scale=q_scales[projection_meta_group*896+projection_meta_output]; end
-              1: begin projection_qzeros=k_qzeros[qzeros_address];
-                       if (projection_meta_output>=128) $fatal(1,"DECODER_K_SCALE_ADDRESS_FAIL");
+              1: begin
+                       if (projection_meta_group>=7 || projection_meta_word>=16)
+                           decoder_fatal("DECODER_K_QZEROS_ADDRESS_FAIL");
+                       linear=projection_meta_group*16+projection_meta_word;
+                       projection_qzeros=k_qzeros[linear];
+                       if (projection_meta_output>=128) decoder_fatal("DECODER_K_SCALE_ADDRESS_FAIL");
                        projection_scale=k_scales[projection_meta_group*128+projection_meta_output]; end
-              2: begin projection_qzeros=v_qzeros[qzeros_address];
-                       if (projection_meta_output>=128) $fatal(1,"DECODER_V_SCALE_ADDRESS_FAIL");
+              2: begin
+                       if (projection_meta_group>=7 || projection_meta_word>=16)
+                           decoder_fatal("DECODER_V_QZEROS_ADDRESS_FAIL");
+                       linear=projection_meta_group*16+projection_meta_word;
+                       projection_qzeros=v_qzeros[linear];
+                       if (projection_meta_output>=128) decoder_fatal("DECODER_V_SCALE_ADDRESS_FAIL");
                        projection_scale=v_scales[projection_meta_group*128+projection_meta_output]; end
-              3: begin projection_qzeros=o_qzeros[qzeros_address];
-                       if (projection_meta_output>=896) $fatal(1,"DECODER_O_SCALE_ADDRESS_FAIL");
+              3: begin
+                       if (projection_meta_group>=7 || projection_meta_word>=112)
+                           decoder_fatal("DECODER_O_QZEROS_ADDRESS_FAIL");
+                       linear=projection_meta_group*112+projection_meta_word;
+                       projection_qzeros=o_qzeros[linear];
+                       if (projection_meta_output>=896) decoder_fatal("DECODER_O_SCALE_ADDRESS_FAIL");
                        projection_scale=o_scales[projection_meta_group*896+projection_meta_output]; end
-              4: begin projection_qzeros=gate_qzeros[qzeros_address];
-                       if (projection_meta_output>=4864) $fatal(1,"DECODER_GATE_SCALE_ADDRESS_FAIL");
+              4: begin
+                       if (projection_meta_group>=7 || projection_meta_word>=608)
+                           decoder_fatal("DECODER_GATE_QZEROS_ADDRESS_FAIL");
+                       linear=projection_meta_group*608+projection_meta_word;
+                       projection_qzeros=gate_qzeros[linear];
+                       if (projection_meta_output>=4864) decoder_fatal("DECODER_GATE_SCALE_ADDRESS_FAIL");
                        projection_scale=gate_scales[projection_meta_group*4864+projection_meta_output]; end
-              5: begin projection_qzeros=up_qzeros[qzeros_address];
-                       if (projection_meta_output>=4864) $fatal(1,"DECODER_UP_SCALE_ADDRESS_FAIL");
+              5: begin
+                       if (projection_meta_group>=7 || projection_meta_word>=608)
+                           decoder_fatal("DECODER_UP_QZEROS_ADDRESS_FAIL");
+                       linear=projection_meta_group*608+projection_meta_word;
+                       projection_qzeros=up_qzeros[linear];
+                       if (projection_meta_output>=4864) decoder_fatal("DECODER_UP_SCALE_ADDRESS_FAIL");
                        projection_scale=up_scales[projection_meta_group*4864+projection_meta_output]; end
-              6: begin projection_qzeros=down_qzeros[qzeros_address];
-                       if (projection_meta_output>=896) $fatal(1,"DECODER_DOWN_SCALE_ADDRESS_FAIL");
+              6: begin
+                       if (projection_meta_group>=38 || projection_meta_word>=112)
+                           decoder_fatal("DECODER_DOWN_QZEROS_ADDRESS_FAIL");
+                       linear=projection_meta_group*112+projection_meta_word;
+                       projection_qzeros=down_qzeros[linear];
+                       if (projection_meta_output>=896) decoder_fatal("DECODER_DOWN_SCALE_ADDRESS_FAIL");
                        projection_scale=down_scales[projection_meta_group*896+projection_meta_output]; end
-              default: $fatal(1,"DECODER_META_KIND_FAIL kind=%0d",projection_kind);
+              default: decoder_fatal($sformatf("DECODER_META_KIND_FAIL kind=%0d",projection_kind));
             endcase
         end
         if (projection_pair_valid && projection_pair_ready) begin
             case (projection_kind)
               0,3: begin
                   if (projection_pair_input>=896 || projection_pair_word>=112)
-                      $fatal(1,"DECODER_QO_QWEIGHT_ADDRESS_FAIL");
+                      decoder_fatal("DECODER_QO_QWEIGHT_ADDRESS_FAIL");
                   if (projection_kind==0) projection_qweight=q_qweight[projection_pair_input*112+projection_pair_word];
                   else projection_qweight=o_qweight[projection_pair_input*112+projection_pair_word];
               end
               1,2: begin
                   if (projection_pair_input>=896 || projection_pair_word>=16)
-                      $fatal(1,"DECODER_KV_QWEIGHT_ADDRESS_FAIL");
+                      decoder_fatal("DECODER_KV_QWEIGHT_ADDRESS_FAIL");
                   if (projection_kind==1) projection_qweight=k_qweight[projection_pair_input*16+projection_pair_word];
                   else projection_qweight=v_qweight[projection_pair_input*16+projection_pair_word];
               end
               4,5: begin
                   if (projection_pair_input>=896 || projection_pair_word>=608)
-                      $fatal(1,"DECODER_FFN_QWEIGHT_ADDRESS_FAIL");
+                      decoder_fatal("DECODER_FFN_QWEIGHT_ADDRESS_FAIL");
                   if (projection_kind==4) projection_qweight=gate_qweight[projection_pair_input*608+projection_pair_word];
                   else projection_qweight=up_qweight[projection_pair_input*608+projection_pair_word];
               end
               6: begin
                   if (projection_pair_input>=4864 || projection_pair_word>=112)
-                      $fatal(1,"DECODER_DOWN_QWEIGHT_ADDRESS_FAIL");
+                      decoder_fatal("DECODER_DOWN_QWEIGHT_ADDRESS_FAIL");
                   projection_qweight=down_qweight[projection_pair_input*112+projection_pair_word];
               end
-              default: $fatal(1,"DECODER_PAIR_KIND_FAIL kind=%0d",projection_kind);
+              default: decoder_fatal($sformatf("DECODER_PAIR_KIND_FAIL kind=%0d",projection_kind));
             endcase
         end
         if (projection_bias_valid && projection_bias_ready) begin
             case (projection_kind)
-              0: begin if (projection_bias_output>=896) $fatal(1,"DECODER_Q_BIAS_ADDRESS_FAIL");
+              0: begin if (projection_bias_output>=896) decoder_fatal("DECODER_Q_BIAS_ADDRESS_FAIL");
                        projection_bias=q_bias[projection_bias_output]; end
-              1: begin if (projection_bias_output>=128) $fatal(1,"DECODER_K_BIAS_ADDRESS_FAIL");
+              1: begin if (projection_bias_output>=128) decoder_fatal("DECODER_K_BIAS_ADDRESS_FAIL");
                        projection_bias=k_bias[projection_bias_output]; end
-              2: begin if (projection_bias_output>=128) $fatal(1,"DECODER_V_BIAS_ADDRESS_FAIL");
+              2: begin if (projection_bias_output>=128) decoder_fatal("DECODER_V_BIAS_ADDRESS_FAIL");
                        projection_bias=v_bias[projection_bias_output]; end
-              default: $fatal(1,"DECODER_BIAS_KIND_FAIL kind=%0d",projection_kind);
+              default: decoder_fatal($sformatf("DECODER_BIAS_KIND_FAIL kind=%0d",projection_kind));
             endcase
         end
         if (rope_valid && rope_ready) begin
             linear=rope_position*32+rope_pair;
-            if (linear>=64) $fatal(1,"DECODER_ROPE_ADDRESS_FAIL address=%0d",linear);
+            if (linear>=64) decoder_fatal($sformatf("DECODER_ROPE_ADDRESS_FAIL address=%0d",linear));
             rope_cos=rope_mem[linear][31:16];
             rope_sin=rope_mem[linear][15:0];
         end
@@ -201,6 +258,39 @@ module ace3_decoder_layer0_token_engine_tb;
     end
 
     always @(posedge clk) begin
+        if (dut.fault_detect_w)
+            decoder_fatal($sformatf(
+                "DECODER_CONTROLLER_FAULT state=%0d kind=%0d child_busy=%b projection_result=%b vector_result=%b rope_result=%b cache_result=%b attention_result=%b disabled_bias=%b b_busy=%b o_busy=%b f_busy=%b d_busy=%b av_valid=%b av_value=%h av_qh=%0d/%0d av_vh=%0d/%0d av_pos=%0d/%0d av_dim=%0d/%0d av_flags=%b%b%b%b av_busy=%b sm_state=%0d sm_row_invalid=%b sm_eligible=%b sm_cache_miss=%b score0=%h score0_flags=%b%b%b",
+                phase,projection_kind,dut.child_busy_fault_w,
+                dut.projection_result_fault_w,dut.vector_result_fault_w,
+                dut.rope_result_fault_w,dut.cache_result_fault_w,
+                dut.attention_result_fault_w,dut.disabled_bias_contract_ok_w,
+                dut.b_busy_w,dut.o_busy_w,dut.f_busy_w,dut.d_busy_w,
+                dut.av_out_valid_w,dut.av_out_w,dut.av_query_head_w,dut.head_q,
+                dut.av_value_head_w,dut.mapped_kv_head_w,
+                dut.av_query_position_w,dut.token_position_q,
+                dut.av_dimension_w,dut.dim_q,dut.av_row_error_w,
+                dut.av_cache_miss_w,dut.av_invalid_w,dut.av_saturation_w,
+                dut.av_busy_w,dut.softmax.state_q,dut.softmax.row_invalid_q,
+                dut.softmax.eligible_seen_q,dut.softmax.row_cache_miss_q,
+                dut.score_mem[0],dut.score_causal_mem[0],
+                dut.score_cache_miss_mem[0],dut.score_invalid_mem[0]));
+        if (projection_meta_valid && projection_meta_ready) begin
+            if (!qzeros_address_valid)
+                decoder_fatal($sformatf("DECODER_LIVE_QZEROS_ADDRESS_FAIL kind=%0d group=%0d word=%0d",
+                       projection_kind,projection_meta_group,projection_meta_word));
+            case (projection_kind)
+              0,3: if (qzeros_address !== projection_meta_group*112+projection_meta_word)
+                  decoder_fatal("DECODER_QO_QZEROS_MAPPING_FAIL");
+              1,2: if (qzeros_address !== projection_meta_group*16+projection_meta_word)
+                  decoder_fatal("DECODER_KV_QZEROS_MAPPING_FAIL");
+              4,5: if (qzeros_address !== projection_meta_group*608+projection_meta_word)
+                  decoder_fatal("DECODER_FFN_QZEROS_MAPPING_FAIL");
+              6: if (qzeros_address !== projection_meta_group*112+projection_meta_word)
+                  decoder_fatal("DECODER_DOWN_QZEROS_MAPPING_FAIL");
+              default: decoder_fatal($sformatf("DECODER_META_KIND_FAIL kind=%0d",projection_kind));
+            endcase
+        end
         cycles<=cycles+1;
         if (progress_interval>0 && cycles>0 && (cycles%progress_interval)==0)
             $display("DECODER_PROGRESS cycles=%0d phase=%0d projection_kind=%0d load_ready=%b attempted_load_kind=%0d attempted_load_index=%0d accepted_load_kind=%0d accepted_load_index=%0d load_accepts=%0d,%0d,%0d start_attempts=%0d start_accepts=%0d trace=%0d final=%0d done=%0d",
@@ -214,20 +304,18 @@ module ace3_decoder_layer0_token_engine_tb;
             (done_valid&&!done_ready)) external_stalls<=external_stalls+1;
         if (checking && trace_valid && trace_ready &&
             (!final_valid || final_ready)) begin
-            if (trace_count>=TRACE_RECORDS ||
-                trace_expected[trace_count] !== {active_token[7:0],1'b0,trace_position,
-                                                  3'b0,trace_stage,3'b0,trace_index,trace_f16}) begin
-                $display("DECODER_TRACE_MISMATCH count=%0d token=%0d pos=%0d stage=%0d index=%0d f16=%04x",
-                    trace_count,active_token,trace_position,trace_stage,trace_index,trace_f16); failures<=failures+1;
-            end
+            $fdisplay(trace_fd,"%02x%04x%02x%04x%04x",
+                      active_token[7:0],trace_position,trace_stage,trace_index,trace_f16);
             trace_count<=trace_count+1;
+            if (fail_after_raw && trace_count==0) begin
+                $fflush(trace_fd);
+                trace_count=1;
+                decoder_fatal("DECODER_INJECTED_FAILURE_AFTER_RAW");
+            end
         end
         if (checking && final_valid && final_ready && trace_ready) begin
-            if (final_count>=FINAL_RECORDS ||
-                finals[final_count] !== {8'(active_token),3'b0,final_index,final_f16}) begin
-                $display("DECODER_FINAL_MISMATCH count=%0d token=%0d index=%0d f16=%04x",
-                    final_count,active_token,final_index,final_f16); failures<=failures+1;
-            end
+            $fdisplay(final_fd,"%02x%04x%04x",
+                      active_token[7:0],final_index,final_f16);
             if (final_last !== (final_index==895)) begin $display("DECODER_FINAL_LAST_FAIL"); failures<=failures+1; end
             final_count<=final_count+1;
         end
@@ -278,10 +366,10 @@ module ace3_decoder_layer0_token_engine_tb;
                 load_valid=1; #1; preload_wait_cycles=0;
                 while(load_ready!==1) begin
                     if (load_ready!==0)
-                        $fatal(1,"DECODER_PRELOAD_READY_XZ kind=%0d index=%0d ready=%b phase=%0d",kind,i,load_ready,phase);
+                        decoder_fatal($sformatf("DECODER_PRELOAD_READY_XZ kind=%0d index=%0d ready=%b phase=%0d",kind,i,load_ready,phase));
                     if (preload_wait_cycles>=32)
-                        $fatal(1,"DECODER_PRELOAD_TIMEOUT kind=%0d index=%0d ready=%b phase=%0d accepts=%0d,%0d,%0d",
-                            kind,i,load_ready,phase,preload_accepts[0],preload_accepts[1],preload_accepts[2]);
+                        decoder_fatal($sformatf("DECODER_PRELOAD_TIMEOUT kind=%0d index=%0d ready=%b phase=%0d accepts=%0d,%0d,%0d",
+                            kind,i,load_ready,phase,preload_accepts[0],preload_accepts[1],preload_accepts[2]));
                     preload_wait_cycles=preload_wait_cycles+1; @(negedge clk); #1;
                 end
                 @(posedge clk); load_count=load_count+1; preload_accepts[kind]=preload_accepts[kind]+1;
@@ -299,11 +387,11 @@ module ace3_decoder_layer0_token_engine_tb;
             @(negedge clk); start_slot=slot; start_position=pos; start_valid=1;
             #1;
             if (start_ready!==1)
-                $fatal(1,"DECODER_START_REJECTED slot=%0d pos=%0d phase=%0d load_accepts=%0d,%0d,%0d",
-                    slot,pos,phase,preload_accepts[0],preload_accepts[1],preload_accepts[2]);
-            @(posedge clk); token_start_cycle[token]=cycles; active_token=token; start_accepts=start_accepts+1;
+                decoder_fatal($sformatf("DECODER_START_REJECTED slot=%0d pos=%0d phase=%0d load_accepts=%0d,%0d,%0d",
+                    slot,pos,phase,preload_accepts[0],preload_accepts[1],preload_accepts[2]));
+            @(posedge clk); if(checking) token_start_cycle[token]=cycles; active_token=token; start_accepts=start_accepts+1;
             #1;
-            if (!busy || phase==0) $fatal(1,"DECODER_VACUOUS_START phase=%0d busy=%b",phase,busy);
+            if (!busy || phase==0) decoder_fatal($sformatf("DECODER_VACUOUS_START phase=%0d busy=%b",phase,busy));
             @(negedge clk); start_valid=0;
         end
     endtask
@@ -312,8 +400,8 @@ module ace3_decoder_layer0_token_engine_tb;
             start_progress_deadline=cycles+100000;
             while (!(busy && (projection_meta_ready||projection_pair_ready||rope_ready))) begin
                 if (cycles>=start_progress_deadline)
-                    $fatal(1,"DECODER_START_PROGRESS_TIMEOUT phase=%0d start_accepts=%0d trace=%0d final=%0d done=%0d",
-                        phase,start_accepts,trace_count,final_count,done_count);
+                    decoder_fatal($sformatf("DECODER_START_PROGRESS_TIMEOUT phase=%0d start_accepts=%0d trace=%0d final=%0d done=%0d",
+                        phase,start_accepts,trace_count,final_count,done_count));
                 @(negedge clk);
             end
             clear=1; @(posedge clk); @(negedge clk); clear=0;
@@ -329,41 +417,55 @@ module ace3_decoder_layer0_token_engine_tb;
         attempted_load_kind=0; attempted_load_index=0; accepted_load_kind=0; accepted_load_index=0;
         preload_wait_cycles=0; progress_interval=0; start_attempts=0; start_accepts=0;
         trace_hold=0; final_hold=0; done_hold=0; active_token=0; checking=0; xz_payload_mode=0; data_loaded=0; clk=0; rst_n=1; drive_idle;
+        fail_after_raw=$test$plusargs("FAIL_AFTER_RAW");
         for(i=0;i<=36;i=i+1) phase_cycles[i]=0;
         if (!$value$plusargs("PROGRESS_INTERVAL=%d",progress_interval)) progress_interval=1000000;
         if (!$value$plusargs("VECTOR_DIR=%s",vector_dir)) vector_dir="build/decoder_layer0_vectors";
+        if (!$value$plusargs("RAW_DIR=%s",raw_dir)) begin
+            $display("DECODER_RAW_DIR_REQUIRED");
+            $finish(1);
+        end
+        path={raw_dir,"/trace.hex"}; trace_fd=$fopen(path,"w");
+        path={raw_dir,"/final.hex"}; final_fd=$fopen(path,"w");
+        path={raw_dir,"/terminal.txt"}; terminal_fd=$fopen(path,"w");
+        if (!trace_fd || !final_fd || !terminal_fd)
+            decoder_fatal("DECODER_RAW_OPEN_FAIL");
+        if ($test$plusargs("FAIL_AFTER_OPEN"))
+            decoder_fatal("DECODER_INJECTED_FAILURE_AFTER_OPEN");
         path={vector_dir,"/inputs.hex"}; $readmemh(path,inputs);
-        path={vector_dir,"/trace.hex"}; $readmemh(path,trace_expected);
-        path={vector_dir,"/final.hex"}; $readmemh(path,finals);
         path={vector_dir,"/rope_coefficients.hex"}; $readmemh(path,rope_mem);
-        path={vector_dir,"/tensors/layer0_input_layernorm_weight.fp16le.bin.hex"}; $readmemh(path,norm1);
-        path={vector_dir,"/tensors/layer0_post_attention_layernorm_weight.fp16le.bin.hex"}; $readmemh(path,norm2);
-        path={vector_dir,"/tensors/layer0_self_attn_q_proj_qweight.i32le.bin.hex"}; $readmemh(path,q_qweight);
-        path={vector_dir,"/tensors/layer0_self_attn_q_proj_qzeros.i32le.bin.hex"}; $readmemh(path,q_qzeros);
-        path={vector_dir,"/tensors/layer0_self_attn_q_proj_scales.fp16le.bin.hex"}; $readmemh(path,q_scales);
-        path={vector_dir,"/tensors/layer0_self_attn_q_proj_bias.fp16le.bin.hex"}; $readmemh(path,q_bias);
-        path={vector_dir,"/tensors/layer0_self_attn_k_proj_qweight.i32le.bin.hex"}; $readmemh(path,k_qweight);
-        path={vector_dir,"/tensors/layer0_self_attn_k_proj_qzeros.i32le.bin.hex"}; $readmemh(path,k_qzeros);
-        path={vector_dir,"/tensors/layer0_self_attn_k_proj_scales.fp16le.bin.hex"}; $readmemh(path,k_scales);
-        path={vector_dir,"/tensors/layer0_self_attn_k_proj_bias.fp16le.bin.hex"}; $readmemh(path,k_bias);
-        path={vector_dir,"/tensors/layer0_self_attn_v_proj_qweight.i32le.bin.hex"}; $readmemh(path,v_qweight);
-        path={vector_dir,"/tensors/layer0_self_attn_v_proj_qzeros.i32le.bin.hex"}; $readmemh(path,v_qzeros);
-        path={vector_dir,"/tensors/layer0_self_attn_v_proj_scales.fp16le.bin.hex"}; $readmemh(path,v_scales);
-        path={vector_dir,"/tensors/layer0_self_attn_v_proj_bias.fp16le.bin.hex"}; $readmemh(path,v_bias);
-        path={vector_dir,"/tensors/layer0_self_attn_o_proj_qweight.i32le.bin.hex"}; $readmemh(path,o_qweight);
-        path={vector_dir,"/tensors/layer0_self_attn_o_proj_qzeros.i32le.bin.hex"}; $readmemh(path,o_qzeros);
-        path={vector_dir,"/tensors/layer0_self_attn_o_proj_scales.fp16le.bin.hex"}; $readmemh(path,o_scales);
-        path={vector_dir,"/tensors/layer0_mlp_gate_proj_qweight.i32le.bin.hex"}; $readmemh(path,gate_qweight);
-        path={vector_dir,"/tensors/layer0_mlp_gate_proj_qzeros.i32le.bin.hex"}; $readmemh(path,gate_qzeros);
-        path={vector_dir,"/tensors/layer0_mlp_gate_proj_scales.fp16le.bin.hex"}; $readmemh(path,gate_scales);
-        path={vector_dir,"/tensors/layer0_mlp_up_proj_qweight.i32le.bin.hex"}; $readmemh(path,up_qweight);
-        path={vector_dir,"/tensors/layer0_mlp_up_proj_qzeros.i32le.bin.hex"}; $readmemh(path,up_qzeros);
-        path={vector_dir,"/tensors/layer0_mlp_up_proj_scales.fp16le.bin.hex"}; $readmemh(path,up_scales);
-        path={vector_dir,"/tensors/layer0_mlp_down_proj_qweight.i32le.bin.hex"}; $readmemh(path,down_qweight);
-        path={vector_dir,"/tensors/layer0_mlp_down_proj_qzeros.i32le.bin.hex"}; $readmemh(path,down_qzeros);
-        path={vector_dir,"/tensors/layer0_mlp_down_proj_scales.fp16le.bin.hex"}; $readmemh(path,down_scales);
+        path=$sformatf("%s/tensors/layer%0d_input_layernorm_weight.fp16le.bin.hex",vector_dir,LAYER_INDEX); $readmemh(path,norm1);
+        path=$sformatf("%s/tensors/layer%0d_post_attention_layernorm_weight.fp16le.bin.hex",vector_dir,LAYER_INDEX); $readmemh(path,norm2);
+        path=$sformatf("%s/tensors/layer%0d_self_attn_q_proj_qweight.i32le.bin.hex",vector_dir,LAYER_INDEX); $readmemh(path,q_qweight);
+        path=$sformatf("%s/tensors/layer%0d_self_attn_q_proj_qzeros.i32le.bin.hex",vector_dir,LAYER_INDEX); $readmemh(path,q_qzeros);
+        path=$sformatf("%s/tensors/layer%0d_self_attn_q_proj_scales.fp16le.bin.hex",vector_dir,LAYER_INDEX); $readmemh(path,q_scales);
+        path=$sformatf("%s/tensors/layer%0d_self_attn_q_proj_bias.fp16le.bin.hex",vector_dir,LAYER_INDEX); $readmemh(path,q_bias);
+        path=$sformatf("%s/tensors/layer%0d_self_attn_k_proj_qweight.i32le.bin.hex",vector_dir,LAYER_INDEX); $readmemh(path,k_qweight);
+        path=$sformatf("%s/tensors/layer%0d_self_attn_k_proj_qzeros.i32le.bin.hex",vector_dir,LAYER_INDEX); $readmemh(path,k_qzeros);
+        path=$sformatf("%s/tensors/layer%0d_self_attn_k_proj_scales.fp16le.bin.hex",vector_dir,LAYER_INDEX); $readmemh(path,k_scales);
+        path=$sformatf("%s/tensors/layer%0d_self_attn_k_proj_bias.fp16le.bin.hex",vector_dir,LAYER_INDEX); $readmemh(path,k_bias);
+        path=$sformatf("%s/tensors/layer%0d_self_attn_v_proj_qweight.i32le.bin.hex",vector_dir,LAYER_INDEX); $readmemh(path,v_qweight);
+        path=$sformatf("%s/tensors/layer%0d_self_attn_v_proj_qzeros.i32le.bin.hex",vector_dir,LAYER_INDEX); $readmemh(path,v_qzeros);
+        path=$sformatf("%s/tensors/layer%0d_self_attn_v_proj_scales.fp16le.bin.hex",vector_dir,LAYER_INDEX); $readmemh(path,v_scales);
+        path=$sformatf("%s/tensors/layer%0d_self_attn_v_proj_bias.fp16le.bin.hex",vector_dir,LAYER_INDEX); $readmemh(path,v_bias);
+        path=$sformatf("%s/tensors/layer%0d_self_attn_o_proj_qweight.i32le.bin.hex",vector_dir,LAYER_INDEX); $readmemh(path,o_qweight);
+        path=$sformatf("%s/tensors/layer%0d_self_attn_o_proj_qzeros.i32le.bin.hex",vector_dir,LAYER_INDEX); $readmemh(path,o_qzeros);
+        path=$sformatf("%s/tensors/layer%0d_self_attn_o_proj_scales.fp16le.bin.hex",vector_dir,LAYER_INDEX); $readmemh(path,o_scales);
+        path=$sformatf("%s/tensors/layer%0d_mlp_gate_proj_qweight.i32le.bin.hex",vector_dir,LAYER_INDEX); $readmemh(path,gate_qweight);
+        path=$sformatf("%s/tensors/layer%0d_mlp_gate_proj_qzeros.i32le.bin.hex",vector_dir,LAYER_INDEX); $readmemh(path,gate_qzeros);
+        path=$sformatf("%s/tensors/layer%0d_mlp_gate_proj_scales.fp16le.bin.hex",vector_dir,LAYER_INDEX); $readmemh(path,gate_scales);
+        path=$sformatf("%s/tensors/layer%0d_mlp_up_proj_qweight.i32le.bin.hex",vector_dir,LAYER_INDEX); $readmemh(path,up_qweight);
+        path=$sformatf("%s/tensors/layer%0d_mlp_up_proj_qzeros.i32le.bin.hex",vector_dir,LAYER_INDEX); $readmemh(path,up_qzeros);
+        path=$sformatf("%s/tensors/layer%0d_mlp_up_proj_scales.fp16le.bin.hex",vector_dir,LAYER_INDEX); $readmemh(path,up_scales);
+        path=$sformatf("%s/tensors/layer%0d_mlp_down_proj_qweight.i32le.bin.hex",vector_dir,LAYER_INDEX); $readmemh(path,down_qweight);
+        path=$sformatf("%s/tensors/layer%0d_mlp_down_proj_qzeros.i32le.bin.hex",vector_dir,LAYER_INDEX); $readmemh(path,down_qzeros);
+        path=$sformatf("%s/tensors/layer%0d_mlp_down_proj_scales.fp16le.bin.hex",vector_dir,LAYER_INDEX); $readmemh(path,down_scales);
         data_loaded=1;
         reset_dut;
+        if (layer_index!==LAYER_INDEX[4:0])
+            decoder_fatal("DECODER_LAYER_INDEX_MISMATCH");
+        if ($test$plusargs("FAIL_AFTER_RESET"))
+            decoder_fatal("DECODER_INJECTED_FAILURE_AFTER_RESET");
         @(negedge clk); start_valid=1; #1; if(start_ready!==0) begin $display("DECODER_INCOMPLETE_LOAD_ACCEPTED"); failures=failures+1; end start_valid=0;
 `ifndef VERILATOR
         @(negedge clk); load_valid=1'bx; load_kind=2'bx; load_index=13'hx; load_f16=16'hx;
@@ -384,24 +486,25 @@ module ace3_decoder_layer0_token_engine_tb;
         xz_payload_mode=1; @(posedge clk); @(negedge clk); xz_payload_mode=0;
 `endif
         wait_real_work_then_clear;
-        /*
-         * Populate slot zero, then prove a position-zero transaction in slot one
-         * is independently accepted.  Clear aborts that slot-one transaction, so
-         * the authenticated comparison below begins from a clean cache.
-         */
-        load_vector(1,0); load_vector(2,0); load_vector(0,0); start_token(0,0,0);
-        while(busy) begin @(negedge clk); if(cycles>100000000) $fatal(1,"DECODER_TIMEOUT isolation-token0"); end
-        load_vector(0,1); start_token(1,0,1); wait_real_work_then_clear;
-        /* A full clean reload is required after the cache-isolation abort. */
+        /* The prior clear leaves a clean cache for authenticated comparison. */
         load_vector(1,0); load_vector(2,0); load_vector(0,0); checking=1; start_token(0,0,0);
-        while(done_count<1) begin @(negedge clk); if(cycles>100000000) $fatal(1,"DECODER_TIMEOUT token0"); end
+        while(done_count<1) begin @(negedge clk); if(cycles>100000000) decoder_fatal("DECODER_TIMEOUT token0"); end
         load_vector(0,1); start_token(0,1,1);
-        while(done_count<2) begin @(negedge clk); if(cycles>100000000) $fatal(1,"DECODER_TIMEOUT token1"); end
+        while(done_count<2) begin @(negedge clk); if(cycles>100000000) decoder_fatal("DECODER_TIMEOUT token1"); end
+        /*
+         * With slot zero populated through position one, prove slot one accepts
+         * its independent position-zero transaction, then abort it with clear.
+         */
+        checking=0; load_vector(0,0); start_token(1,0,0); wait_real_work_then_clear;
         if (trace_count!=TRACE_RECORDS || final_count!=FINAL_RECORDS || done_count!=2 ||
             token_done_cycle[0]<=token_start_cycle[0] || token_done_cycle[1]<=token_start_cycle[1]) begin
             $display("DECODER_COUNT_OR_CYCLE_FAIL trace=%0d final=%0d done=%0d",trace_count,final_count,done_count); failures=failures+1;
         end
         if (failures==0) begin
+            $fclose(trace_fd); $fclose(final_fd);
+            $fdisplay(terminal_fd,
+                "schema=ace3_decoder_layer0_raw_v1 natural_terminal=1 exit_code=0 trace_count=46676 final_count=1792 done_count=2");
+            $fclose(terminal_fd);
             $display("DECODER_PHASE_CYCLES_0_12 %0d %0d %0d %0d %0d %0d %0d %0d %0d %0d %0d %0d %0d",
                 phase_cycles[0],phase_cycles[1],phase_cycles[2],phase_cycles[3],phase_cycles[4],
                 phase_cycles[5],phase_cycles[6],phase_cycles[7],phase_cycles[8],phase_cycles[9],
@@ -418,7 +521,7 @@ module ace3_decoder_layer0_token_engine_tb;
                 cycles,external_stalls,token_done_cycle[0]-token_start_cycle[0],token_done_cycle[1]-token_start_cycle[1],phase_cycles[5],phase_cycles[36]);
             $finish;
         end
-        $fatal(1,"DECODER_LAYER0_TOKEN_ENGINE_FAIL failures=%0d",failures);
+        decoder_fatal($sformatf("DECODER_LAYER0_TOKEN_ENGINE_FAIL failures=%0d",failures));
     end
 endmodule
 

@@ -143,6 +143,24 @@ DECODER_CONTRACT := $(ROOT)/ace3/contracts/decoder_layer0_token_engine.json
 DECODER_BINDINGS := $(ROOT)/ace3/contracts/decoder_layer0_vector_bindings.json
 DECODER_TB := $(ROOT)/ace3/tb/ace3_decoder_layer0_token_engine_tb.sv
 DECODER_CPP_TB := $(ROOT)/ace3/tb/ace3_decoder_layer0_token_engine_main.cpp
+DECODER_LAYER1_VECTOR_DIR := $(BUILD_DIR)/decoder_layer1_vectors
+DECODER_LAYER1_TAMPER_DIR := $(BUILD_DIR)/tamper-decoder-layer1-handoff
+DECODER_LAYER1_GENERATOR := $(ROOT)/ace3/model/generate_decoder_layer1_vectors.py
+DECODER_LAYER1_IVERILOG_DIR := $(BUILD_DIR)/decoder_layer1_iverilog
+DECODER_LAYER1_IVERILOG_BIN := $(DECODER_LAYER1_IVERILOG_DIR)/ace3_decoder_layer1_boundary.vvp
+DECODER_LAYER1_VERILATOR_DIR := $(BUILD_DIR)/decoder_layer1_verilator
+DECODER_LAYER1_VERILATOR_OBJ_DIR := $(DECODER_LAYER1_VERILATOR_DIR)/obj_dir
+DECODER_LAYER1_VERILATOR_BIN := $(DECODER_LAYER1_VERILATOR_OBJ_DIR)/Vace3_decoder_layer0_token_engine
+DECODER_LAYER01_CASCADE_DIR := $(BUILD_DIR)/decoder_layer01_cascade
+DECODER_LAYER2_VECTOR_DIR := $(BUILD_DIR)/decoder_layer2_vectors
+DECODER_LAYER2_TAMPER_DIR := $(BUILD_DIR)/tamper-decoder-layer2-handoff
+DECODER_LAYER2_GENERATOR := $(ROOT)/ace3/model/generate_decoder_layer2_vectors.py
+DECODER_LAYER2_IVERILOG_DIR := $(BUILD_DIR)/decoder_layer2_iverilog
+DECODER_LAYER2_IVERILOG_BIN := $(DECODER_LAYER2_IVERILOG_DIR)/ace3_decoder_layer2_boundary.vvp
+DECODER_LAYER2_VERILATOR_DIR := $(BUILD_DIR)/decoder_layer2_verilator
+DECODER_LAYER2_VERILATOR_OBJ_DIR := $(DECODER_LAYER2_VERILATOR_DIR)/obj_dir
+DECODER_LAYER2_VERILATOR_BIN := $(DECODER_LAYER2_VERILATOR_OBJ_DIR)/Vace3_decoder_layer0_token_engine
+DECODER_LAYER012_CASCADE_DIR := $(BUILD_DIR)/decoder_layer012_cascade
 DECODER_WIDTH_TB := $(ROOT)/ace3/tb/ace3_decoder_width_boundary_tb.sv
 DECODER_WIDTH_CPP_TB := $(ROOT)/ace3/tb/ace3_decoder_width_boundary_main.cpp
 DECODER_PRELOAD_TB := $(ROOT)/ace3/tb/ace3_decoder_preload_tb.sv
@@ -208,8 +226,16 @@ export PYTHONDONTWRITEBYTECODE := 1
 	decoder-preload-micro decoder-preload-micro-iverilog decoder-preload-micro-verilator \
 	decoder-qzeros-boundary decoder-qzeros-boundary-iverilog decoder-qzeros-boundary-verilator \
 	decoder-layer0-width-iverilog \
-	decoder-layer0-iverilog-compile decoder-layer0-iverilog-simulation \
+	decoder-layer0-path-alias-regression \
+	decoder-layer0-iverilog-path-safety decoder-layer0-verilator-path-safety \
+	decoder-layer0-iverilog-compile decoder-layer0-iverilog-fatal-terminal \
+	decoder-layer0-iverilog-documented-limit \
+	decoder-layer0-iverilog-simulation \
 	decoder-layer0-verilator-compile decoder-layer0-verilator-simulation \
+	decoder-layer1-vectors decoder-layer1-iverilog-boundary \
+	decoder-layer1-verilator-compile decoder-layer01-verilator-cascade \
+	decoder-layer2-vectors decoder-layer2-iverilog-boundary \
+	decoder-layer2-verilator-compile decoder-layer012-verilator-cascade \
 	model24-execution model24-execution-vectors \
 	model24-execution-validation model24-execution-tests \
 	model24-layer-indexed-handoff \
@@ -872,8 +898,11 @@ attention-verilator-simulation: attention-verilator-compile
 	cat "$$log"
 
 decoder-layer0: decoder-layer0-tamper-rejection decoder-layer0-width-boundary \
-	decoder-layer0-iverilog-simulation decoder-layer0-verilator-simulation
-	@printf '%s\n' 'DECODER_LAYER0_PASS scope=two_authenticated_tokens trace=46676 final=1792 cache_reuse=pass reset=pass clear=pass fault_injection=pass natural_terminal_gate=pass independent_oracle_compare=pass injected_failure_gate=pass iverilog=pass verilator=pass'
+	decoder-qzeros-boundary-iverilog decoder-layer0-iverilog-fatal-terminal \
+	decoder-layer0-iverilog-documented-limit \
+	decoder-layer0-path-alias-regression \
+	decoder-layer0-verilator-simulation
+	@printf '%s\n' 'DECODER_LAYER0_PASS scope=two_authenticated_tokens trace=46676 final=1792 cache_reuse=pass reset=pass clear=pass fault_injection=pass natural_terminal_gate=pass independent_oracle_compare=pass injected_failure_gate=pass raw_vector_alias_rejection=pass iverilog_abnormal_terminal=pass iverilog_focused=pass iverilog_full=runtime_limited verilator=pass'
 
 decoder-silu-streaming: decoder-silu-streaming-iverilog decoder-silu-streaming-verilator
 	@printf '%s\n' 'DECODER_SILU_STREAMING_DUAL_PASS simulators=iverilog,verilator projection_kind=5 phase=32 inputs=4864 outputs=4864 successor_phase=4 full_layer=not_run'
@@ -1060,7 +1089,73 @@ decoder-layer0-iverilog-compile: decoder-layer0-json-validation
 	else status=$$?; cat "$$log"; exit $$status; fi; \
 	cat "$$log"
 
-decoder-layer0-iverilog-simulation: decoder-layer0-iverilog-compile
+decoder-layer0-iverilog-documented-limit: decoder-layer0-iverilog-compile
+	@printf '%s\n' 'DECODER_LAYER0_IVERILOG_LIMIT full_trace=not_run focused_compile=pass width_reset_clear_fault=pass qzeros_address=pass reason=documented_5400s_runtime_limit full_target=decoder-layer0-iverilog-simulation'
+
+decoder-layer0-iverilog-fatal-terminal: decoder-layer0-iverilog-path-safety decoder-layer0-iverilog-compile
+	@rm -rf "$(DECODER_IVERILOG_FAIL_RAW_DIR)"
+	@mkdir -p "$(DECODER_IVERILOG_FAIL_RAW_DIR)" "$(LOG_DIR)"
+	@set -eu; log="$(LOG_DIR)/decoder-layer0-iverilog-fatal-terminal.log"; \
+	if cd "$(ROOT)" && "$(VVP)" "$(DECODER_IVERILOG_BIN)" \
+	    +VECTOR_DIR="$(DECODER_VECTOR_DIR)" +RAW_DIR="$(DECODER_IVERILOG_FAIL_RAW_DIR)" \
+	    +FAIL_AFTER_OPEN > "$$log" 2>&1; then cat "$$log"; exit 1; fi; \
+	expected='schema=ace3_decoder_layer0_raw_v1 natural_terminal=0 exit_code=1 trace_count=0 final_count=0 done_count=0'; \
+	test "$$(cat "$(DECODER_IVERILOG_FAIL_RAW_DIR)/terminal.txt")" = "$$expected"; \
+	test ! -s "$(DECODER_IVERILOG_FAIL_RAW_DIR)/trace.hex"; \
+	test ! -s "$(DECODER_IVERILOG_FAIL_RAW_DIR)/final.hex"; \
+	printf '%s\n' 'DECODER_LAYER0_IVERILOG_FATAL_TERMINAL_PASS natural_terminal=0 raw_files_closed=1 trace=0 final=0' >> "$$log"; \
+	tail -n 2 "$$log"
+
+decoder-layer0-iverilog-path-safety:
+	@set -eu; vector="$$(realpath -m "$(DECODER_VECTOR_DIR)")"; \
+	for raw_path in "$(DECODER_IVERILOG_RAW_DIR)" "$(DECODER_IVERILOG_FAIL_RAW_DIR)"; do \
+	  raw="$$(realpath -m "$$raw_path")"; \
+	  if test "$$vector" = "$$raw"; then \
+	    printf '%s\n' "DECODER_LAYER0_PATH_ALIAS_REJECT simulator=iverilog vector=$$vector raw=$$raw" >&2; \
+	    exit 2; \
+	  fi; \
+	done
+
+decoder-layer0-verilator-path-safety:
+	@set -eu; vector="$$(realpath -m "$(DECODER_VECTOR_DIR)")"; \
+	for raw_path in "$(DECODER_VERILATOR_RAW_DIR)" "$(DECODER_VERILATOR_FAIL_RAW_DIR)"; do \
+	  raw="$$(realpath -m "$$raw_path")"; \
+	  if test "$$vector" = "$$raw"; then \
+	    printf '%s\n' "DECODER_LAYER0_PATH_ALIAS_REJECT simulator=verilator vector=$$vector raw=$$raw" >&2; \
+	    exit 2; \
+	  fi; \
+	done
+
+decoder-layer0-path-alias-regression: decoder-layer0-json-validation
+	@mkdir -p "$(BUILD_DIR)/decoder_layer0_path_alias"
+	@set -eu; alias_dir="$(BUILD_DIR)/decoder_layer0_path_alias/vector-link"; \
+	rm -f "$$alias_dir"; ln -s "$(DECODER_VECTOR_DIR)" "$$alias_dir"; \
+	before="$$(sha256sum "$(DECODER_VECTOR_DIR)/trace.hex" "$(DECODER_VECTOR_DIR)/final.hex")"; \
+	if "$(MAKE)" --no-print-directory decoder-layer0-iverilog-simulation \
+	    DECODER_IVERILOG_RAW_DIR="$(DECODER_VECTOR_DIR)" \
+	    > "$(BUILD_DIR)/decoder_layer0_path_alias/iverilog-direct.log" 2>&1; then exit 1; fi; \
+	grep -q 'DECODER_LAYER0_PATH_ALIAS_REJECT simulator=iverilog' \
+	    "$(BUILD_DIR)/decoder_layer0_path_alias/iverilog-direct.log"; \
+	if "$(MAKE)" --no-print-directory decoder-layer0-verilator-simulation \
+	    DECODER_VERILATOR_RAW_DIR="$(DECODER_VECTOR_DIR)" \
+	    > "$(BUILD_DIR)/decoder_layer0_path_alias/verilator-direct.log" 2>&1; then exit 1; fi; \
+	grep -q 'DECODER_LAYER0_PATH_ALIAS_REJECT simulator=verilator' \
+	    "$(BUILD_DIR)/decoder_layer0_path_alias/verilator-direct.log"; \
+	if "$(MAKE)" --no-print-directory decoder-layer0-iverilog-simulation \
+	    DECODER_IVERILOG_RAW_DIR="$$alias_dir" \
+	    > "$(BUILD_DIR)/decoder_layer0_path_alias/iverilog-symlink.log" 2>&1; then exit 1; fi; \
+	grep -q 'DECODER_LAYER0_PATH_ALIAS_REJECT simulator=iverilog' \
+	    "$(BUILD_DIR)/decoder_layer0_path_alias/iverilog-symlink.log"; \
+	if "$(MAKE)" --no-print-directory decoder-layer0-verilator-simulation \
+	    DECODER_VERILATOR_RAW_DIR="$$alias_dir" \
+	    > "$(BUILD_DIR)/decoder_layer0_path_alias/verilator-symlink.log" 2>&1; then exit 1; fi; \
+	grep -q 'DECODER_LAYER0_PATH_ALIAS_REJECT simulator=verilator' \
+	    "$(BUILD_DIR)/decoder_layer0_path_alias/verilator-symlink.log"; \
+	after="$$(sha256sum "$(DECODER_VECTOR_DIR)/trace.hex" "$(DECODER_VECTOR_DIR)/final.hex")"; \
+	test "$$before" = "$$after"; \
+	printf '%s\n' "DECODER_LAYER0_PATH_ALIAS_REGRESSION_PASS direct=iverilog,verilator symlink=iverilog,verilator oracle_hashes=unchanged"
+
+decoder-layer0-iverilog-simulation: decoder-layer0-iverilog-path-safety decoder-layer0-iverilog-compile
 	@rm -rf "$(DECODER_IVERILOG_RAW_DIR)" "$(DECODER_IVERILOG_FAIL_RAW_DIR)"
 	@mkdir -p "$(LOG_DIR)" "$(DECODER_IVERILOG_RAW_DIR)" "$(DECODER_IVERILOG_FAIL_RAW_DIR)"
 	@set -eu; log="$(LOG_DIR)/decoder-layer0-iverilog-simulation.log"; \
@@ -1104,7 +1199,7 @@ decoder-layer0-verilator-compile: decoder-layer0-json-validation
 	else status=$$?; cat "$$log"; exit $$status; fi; \
 	test -x "$(DECODER_VERILATOR_BIN)"; cat "$$log"
 
-decoder-layer0-verilator-simulation: decoder-layer0-verilator-compile
+decoder-layer0-verilator-simulation: decoder-layer0-verilator-path-safety decoder-layer0-verilator-compile
 	@rm -rf "$(DECODER_VERILATOR_RAW_DIR)" "$(DECODER_VERILATOR_FAIL_RAW_DIR)"
 	@mkdir -p "$(LOG_DIR)" "$(DECODER_VERILATOR_RAW_DIR)" "$(DECODER_VERILATOR_FAIL_RAW_DIR)"
 	@set -eu; log="$(LOG_DIR)/decoder-layer0-verilator-simulation.log"; \
@@ -1135,6 +1230,222 @@ decoder-layer0-verilator-simulation: decoder-layer0-verilator-compile
 	if grep -E '/decoder_layer0_vectors/(trace|final)\.hex' "$$opens"; then exit 1; fi; \
 	printf '%s\n' 'DECODER_LAYER0_VERILATOR_FAILURE_GATE_PASS natural_terminal=0 raw_rows=1 oracle_opened=0 comparison_created=0' >> "$$fail_log"; \
 	cat "$$log"; cat "$$compare"; tail -n 2 "$$fail_log"
+
+decoder-layer1-vectors: decoder-layer0-vectors
+	@rm -rf "$(DECODER_LAYER1_VECTOR_DIR)"
+	@mkdir -p "$(LOG_DIR)"
+	@set -eu; log="$(LOG_DIR)/decoder-layer1-vector-generation.log"; \
+	printf '%s\n' '$ python3 ace3/model/generate_decoder_layer1_vectors.py --checkpoint model24_execution_vectors/model.safetensors --tensor-map ace3/contracts/model24_tensor_map.json --layer0-handoff build/decoder_layer0_vectors/final.hex --output-dir build/decoder_layer1_vectors' > "$$log"; \
+	if cd "$(ROOT)" && "$(PYTHON)" "$(DECODER_LAYER1_GENERATOR)" \
+	    --checkpoint "$(OFFICIAL_MODEL24_CHECKPOINT)" \
+	    --tensor-map "$(MODEL24_TENSOR_MAP)" \
+	    --layer0-handoff "$(DECODER_VECTOR_DIR)/final.hex" \
+	    --output-dir "$(DECODER_LAYER1_VECTOR_DIR)" >> "$$log" 2>&1; then :; \
+	else status=$$?; cat "$$log"; exit $$status; fi; \
+	test "$$(wc -l < "$(DECODER_LAYER1_VECTOR_DIR)/trace.hex")" -eq 46676; \
+	test "$$(wc -l < "$(DECODER_LAYER1_VECTOR_DIR)/final.hex")" -eq 1792; \
+	test "$$(sha256sum "$(DECODER_LAYER1_VECTOR_DIR)/inputs.hex" | cut -d' ' -f1)" = \
+	    22768ac6b337f920faac7de59b4eb43a203e1db45cdf688820fcbb35cdfe3446; \
+	test "$$(sha256sum "$(DECODER_LAYER1_VECTOR_DIR)/final.hex" | cut -d' ' -f1)" = \
+	    2324470c304f23a372378af6f9f65cc7a646fbaa614882c4ced44110b99dca85; \
+	cat "$$log"
+
+decoder-layer1-iverilog-boundary: decoder-layer1-vectors
+	@rm -rf "$(DECODER_LAYER1_IVERILOG_DIR)"
+	@mkdir -p "$(DECODER_LAYER1_IVERILOG_DIR)/raw" "$(LOG_DIR)"
+	@set -eu; log="$(LOG_DIR)/decoder-layer1-iverilog-boundary.log"; \
+	printf '%s\n' '$ iverilog -g2012 -Wall -P ace3_decoder_layer0_token_engine_tb.LAYER_INDEX=1 ...' > "$$log"; \
+	if "$(IVERILOG)" -g2012 -Wall \
+	    -P ace3_decoder_layer0_token_engine_tb.LAYER_INDEX=1 \
+	    -s ace3_decoder_layer0_token_engine_tb \
+	    -o "$(DECODER_LAYER1_IVERILOG_BIN)" $(DECODER_RTL) "$(DECODER_TB)" \
+	    >> "$$log" 2>&1; then :; else status=$$?; cat "$$log"; exit $$status; fi; \
+	if cd "$(ROOT)" && "$(VVP)" "$(DECODER_LAYER1_IVERILOG_BIN)" \
+	    +VECTOR_DIR="$(DECODER_LAYER1_VECTOR_DIR)" \
+	    +RAW_DIR="$(DECODER_LAYER1_IVERILOG_DIR)/raw" +FAIL_AFTER_RESET \
+	    >> "$$log" 2>&1; then cat "$$log"; exit 1; fi; \
+	expected='schema=ace3_decoder_layer_raw_v1 layer_index=1 natural_terminal=0 exit_code=1 trace_count=0 final_count=0 done_count=0'; \
+	test "$$(cat "$(DECODER_LAYER1_IVERILOG_DIR)/raw/terminal.txt")" = "$$expected"; \
+	test "$$(wc -l < "$(DECODER_LAYER1_IVERILOG_DIR)/raw/trace.hex")" -eq 0; \
+	test "$$(wc -l < "$(DECODER_LAYER1_IVERILOG_DIR)/raw/final.hex")" -eq 0; \
+	printf '%s\n' 'DECODER_LAYER1_IVERILOG_BOUNDARY_PASS parameter=1 vectors=loaded reset=pass abnormal_terminal=pass full_numerical_run=not_run' >> "$$log"; \
+	tail -n 2 "$$log"
+
+decoder-layer1-verilator-compile: decoder-layer1-vectors
+	@rm -rf "$(DECODER_LAYER1_VERILATOR_OBJ_DIR)"
+	@mkdir -p "$(DECODER_LAYER1_VERILATOR_DIR)" "$(LOG_DIR)"
+	@set -eu; log="$(LOG_DIR)/decoder-layer1-verilator-compile.log"; \
+	printf '%s\n' '$ verilator --cc --exe --build -GLAYER_INDEX=1 --top-module ace3_decoder_layer0_token_engine ...' > "$$log"; \
+	if cd "$(ROOT)" && "$(VERILATOR)" --cc --exe --build --Wall -Wno-fatal \
+	    -GLAYER_INDEX=1 --top-module ace3_decoder_layer0_token_engine \
+	    --Mdir "$(DECODER_LAYER1_VERILATOR_OBJ_DIR)" $(DECODER_RTL) \
+	    "$(DECODER_CPP_TB)" >> "$$log" 2>&1; then :; \
+	else status=$$?; cat "$$log"; exit $$status; fi; \
+	test -x "$(DECODER_LAYER1_VERILATOR_BIN)"; cat "$$log"
+
+decoder-layer01-verilator-cascade: decoder-layer0-verilator-compile decoder-layer1-verilator-compile
+	@rm -rf "$(DECODER_LAYER01_CASCADE_DIR)" "$(DECODER_LAYER1_VECTOR_DIR)" \
+	    "$(DECODER_LAYER1_TAMPER_DIR)"
+	@mkdir -p "$(DECODER_LAYER01_CASCADE_DIR)/layer0" \
+	    "$(DECODER_LAYER01_CASCADE_DIR)/layer1" \
+	    "$(DECODER_LAYER01_CASCADE_DIR)/layer1-fault" "$(LOG_DIR)"
+	@set -eu; log="$(LOG_DIR)/decoder-layer01-verilator-cascade.log"; \
+	compare="$(LOG_DIR)/decoder-layer01-verilator-comparison.log"; \
+	fault="$(LOG_DIR)/decoder-layer1-verilator-injected-failure.log"; \
+	opens="$(LOG_DIR)/decoder-layer1-verilator-injected-failure.opens"; \
+	printf '%s\n' '$ layer0 RTL -> natural terminal -> authenticated layer1 materialization -> layer1 RTL -> post-layer1 oracle' > "$$log"; \
+	cd "$(ROOT)" && "$(DECODER_VERILATOR_BIN)" --layer-index 0 \
+	    --vector-dir "$(DECODER_VECTOR_DIR)" \
+	    --raw-dir "$(DECODER_LAYER01_CASCADE_DIR)/layer0" >> "$$log" 2>&1; \
+	expected0='schema=ace3_decoder_layer0_raw_v1 natural_terminal=1 exit_code=0 trace_count=46676 final_count=1792 done_count=2'; \
+	test "$$(cat "$(DECODER_LAYER01_CASCADE_DIR)/layer0/terminal.txt")" = "$$expected0"; \
+	cmp "$(DECODER_LAYER01_CASCADE_DIR)/layer0/trace.hex" "$(DECODER_VECTOR_DIR)/trace.hex"; \
+	cmp "$(DECODER_LAYER01_CASCADE_DIR)/layer0/final.hex" "$(DECODER_VECTOR_DIR)/final.hex"; \
+	mkdir -p "$(DECODER_LAYER1_TAMPER_DIR)"; \
+	cp "$(DECODER_LAYER01_CASCADE_DIR)/layer0/final.hex" "$(DECODER_LAYER1_TAMPER_DIR)/final.hex"; \
+	printf '0000000000\n' >> "$(DECODER_LAYER1_TAMPER_DIR)/final.hex"; \
+	if cd "$(ROOT)" && "$(PYTHON)" "$(DECODER_LAYER1_GENERATOR)" \
+	    --checkpoint "$(OFFICIAL_MODEL24_CHECKPOINT)" --tensor-map "$(MODEL24_TENSOR_MAP)" \
+	    --layer0-handoff "$(DECODER_LAYER1_TAMPER_DIR)/final.hex" \
+	    --output-dir "$(DECODER_LAYER1_TAMPER_DIR)/vectors" > "$(DECODER_LAYER1_TAMPER_DIR)/rejection.log" 2>&1; then \
+	  cat "$(DECODER_LAYER1_TAMPER_DIR)/rejection.log"; exit 1; \
+	fi; \
+	test ! -e "$(DECODER_LAYER1_TAMPER_DIR)/vectors"; \
+	cd "$(ROOT)" && "$(PYTHON)" "$(DECODER_LAYER1_GENERATOR)" \
+	    --checkpoint "$(OFFICIAL_MODEL24_CHECKPOINT)" --tensor-map "$(MODEL24_TENSOR_MAP)" \
+	    --layer0-handoff "$(DECODER_LAYER01_CASCADE_DIR)/layer0/final.hex" \
+	    --output-dir "$(DECODER_LAYER1_VECTOR_DIR)" >> "$$log" 2>&1; \
+	test "$$(sha256sum "$(DECODER_LAYER1_VECTOR_DIR)/inputs.hex" | cut -d' ' -f1)" = \
+	    22768ac6b337f920faac7de59b4eb43a203e1db45cdf688820fcbb35cdfe3446; \
+	cd "$(ROOT)" && "$(DECODER_LAYER1_VERILATOR_BIN)" --layer-index 1 \
+	    --vector-dir "$(DECODER_LAYER1_VECTOR_DIR)" \
+	    --raw-dir "$(DECODER_LAYER01_CASCADE_DIR)/layer1" >> "$$log" 2>&1; \
+	expected1='schema=ace3_decoder_layer_raw_v1 layer_index=1 natural_terminal=1 exit_code=0 trace_count=46676 final_count=1792 done_count=2'; \
+	test "$$(cat "$(DECODER_LAYER01_CASCADE_DIR)/layer1/terminal.txt")" = "$$expected1"; \
+	cmp "$(DECODER_LAYER01_CASCADE_DIR)/layer1/trace.hex" "$(DECODER_LAYER1_VECTOR_DIR)/trace.hex"; \
+	cmp "$(DECODER_LAYER01_CASCADE_DIR)/layer1/final.hex" "$(DECODER_LAYER1_VECTOR_DIR)/final.hex"; \
+	test "$$(sha256sum "$(DECODER_LAYER01_CASCADE_DIR)/layer1/final.hex" | cut -d' ' -f1)" = \
+	    2324470c304f23a372378af6f9f65cc7a646fbaa614882c4ced44110b99dca85; \
+	printf '%s\n' 'DECODER_LAYER01_VERILATOR_COMPARISON_PASS layer0_trace=46676 layer1_trace=46676 post_layer1_final=1792 oracle=independent' > "$$compare"; \
+	if cd "$(ROOT)" && "$(STRACE)" -qq -f -e trace=openat -o "$$opens" \
+	    "$(DECODER_LAYER1_VERILATOR_BIN)" --layer-index 1 \
+	    --vector-dir "$(DECODER_LAYER1_VECTOR_DIR)" \
+	    --raw-dir "$(DECODER_LAYER01_CASCADE_DIR)/layer1-fault" \
+	    --fail-after-raw > "$$fault" 2>&1; then cat "$$fault"; exit 1; fi; \
+	fail_expected='schema=ace3_decoder_layer_raw_v1 layer_index=1 natural_terminal=0 exit_code=2 trace_count=1 final_count=0 done_count=0'; \
+	test "$$(cat "$(DECODER_LAYER01_CASCADE_DIR)/layer1-fault/terminal.txt")" = "$$fail_expected"; \
+	test "$$(wc -l < "$(DECODER_LAYER01_CASCADE_DIR)/layer1-fault/trace.hex")" -eq 1; \
+	test ! -e "$(DECODER_LAYER01_CASCADE_DIR)/layer1-fault/comparison.txt"; \
+	if grep -E '/decoder_layer1_vectors/(trace|final)\.hex' "$$opens"; then exit 1; fi; \
+	printf '%s\n' 'DECODER_LAYER1_FAILURE_GATE_PASS natural_terminal=0 raw_rows=1 oracle_opened=0 comparison_created=0' >> "$$fault"; \
+	cat "$$log"; cat "$$compare"; tail -n 2 "$$fault"; \
+	printf '%s\n' 'DECODER_LAYER01_SCOPE_PASS layers=0,1 tokens=2 full24=excluded model=excluded dialogue=excluded synthesis=excluded ppa=excluded fpga=excluded performance=excluded'
+
+decoder-layer2-vectors: decoder-layer1-vectors
+	@rm -rf "$(DECODER_LAYER2_VECTOR_DIR)"
+	@mkdir -p "$(LOG_DIR)"
+	@set -eu; log="$(LOG_DIR)/decoder-layer2-vector-generation.log"; \
+	printf '%s\n' '$ python3 ace3/model/generate_decoder_layer2_vectors.py --checkpoint model24_execution_vectors/model.safetensors --tensor-map ace3/contracts/model24_tensor_map.json --layer1-handoff build/decoder_layer1_vectors/final.hex --output-dir build/decoder_layer2_vectors' > "$$log"; \
+	if cd "$(ROOT)" && "$(PYTHON)" "$(DECODER_LAYER2_GENERATOR)" \
+	    --checkpoint "$(OFFICIAL_MODEL24_CHECKPOINT)" \
+	    --tensor-map "$(MODEL24_TENSOR_MAP)" \
+	    --layer1-handoff "$(DECODER_LAYER1_VECTOR_DIR)/final.hex" \
+	    --output-dir "$(DECODER_LAYER2_VECTOR_DIR)" >> "$$log" 2>&1; then :; \
+	else status=$$?; cat "$$log"; exit $$status; fi; \
+	test "$$(wc -l < "$(DECODER_LAYER2_VECTOR_DIR)/trace.hex")" -eq 46676; \
+	test "$$(wc -l < "$(DECODER_LAYER2_VECTOR_DIR)/final.hex")" -eq 1792; \
+	test "$$(sha256sum "$(DECODER_LAYER2_VECTOR_DIR)/inputs.hex" | cut -d' ' -f1)" = \
+	    2324470c304f23a372378af6f9f65cc7a646fbaa614882c4ced44110b99dca85; \
+	test "$$(sha256sum "$(DECODER_LAYER2_VECTOR_DIR)/final.hex" | cut -d' ' -f1)" = \
+	    244c9d1d52923ecfff743c165da563468746f47557284865a4b22910a967c511; \
+	cat "$$log"
+
+decoder-layer2-iverilog-boundary: decoder-layer2-vectors
+	@rm -rf "$(DECODER_LAYER2_IVERILOG_DIR)"
+	@mkdir -p "$(DECODER_LAYER2_IVERILOG_DIR)/raw" "$(LOG_DIR)"
+	@set -eu; log="$(LOG_DIR)/decoder-layer2-iverilog-boundary.log"; \
+	printf '%s\n' '$ iverilog -g2012 -Wall -P ace3_decoder_layer0_token_engine_tb.LAYER_INDEX=2 ...' > "$$log"; \
+	if "$(IVERILOG)" -g2012 -Wall \
+	    -P ace3_decoder_layer0_token_engine_tb.LAYER_INDEX=2 \
+	    -s ace3_decoder_layer0_token_engine_tb \
+	    -o "$(DECODER_LAYER2_IVERILOG_BIN)" $(DECODER_RTL) "$(DECODER_TB)" \
+	    >> "$$log" 2>&1; then :; else status=$$?; cat "$$log"; exit $$status; fi; \
+	if cd "$(ROOT)" && "$(VVP)" "$(DECODER_LAYER2_IVERILOG_BIN)" \
+	    +VECTOR_DIR="$(DECODER_LAYER2_VECTOR_DIR)" \
+	    +RAW_DIR="$(DECODER_LAYER2_IVERILOG_DIR)/raw" +FAIL_AFTER_RESET \
+	    >> "$$log" 2>&1; then cat "$$log"; exit 1; fi; \
+	expected='schema=ace3_decoder_layer_raw_v1 layer_index=2 natural_terminal=0 exit_code=1 trace_count=0 final_count=0 done_count=0'; \
+	test "$$(cat "$(DECODER_LAYER2_IVERILOG_DIR)/raw/terminal.txt")" = "$$expected"; \
+	test "$$(wc -l < "$(DECODER_LAYER2_IVERILOG_DIR)/raw/trace.hex")" -eq 0; \
+	test "$$(wc -l < "$(DECODER_LAYER2_IVERILOG_DIR)/raw/final.hex")" -eq 0; \
+	printf '%s\n' 'DECODER_LAYER2_IVERILOG_BOUNDARY_PASS parameter=2 vectors=loaded reset=pass abnormal_terminal=pass full_numerical_run=not_run' >> "$$log"; \
+	tail -n 2 "$$log"
+
+decoder-layer2-verilator-compile: decoder-layer2-vectors
+	@rm -rf "$(DECODER_LAYER2_VERILATOR_OBJ_DIR)"
+	@mkdir -p "$(DECODER_LAYER2_VERILATOR_DIR)" "$(LOG_DIR)"
+	@set -eu; log="$(LOG_DIR)/decoder-layer2-verilator-compile.log"; \
+	printf '%s\n' '$ verilator --cc --exe --build -GLAYER_INDEX=2 --top-module ace3_decoder_layer0_token_engine ...' > "$$log"; \
+	if cd "$(ROOT)" && "$(VERILATOR)" --cc --exe --build --Wall -Wno-fatal \
+	    -GLAYER_INDEX=2 --top-module ace3_decoder_layer0_token_engine \
+	    --Mdir "$(DECODER_LAYER2_VERILATOR_OBJ_DIR)" $(DECODER_RTL) \
+	    "$(DECODER_CPP_TB)" >> "$$log" 2>&1; then :; \
+	else status=$$?; cat "$$log"; exit $$status; fi; \
+	test -x "$(DECODER_LAYER2_VERILATOR_BIN)"; cat "$$log"
+
+decoder-layer012-verilator-cascade: decoder-layer01-verilator-cascade decoder-layer2-verilator-compile
+	@rm -rf "$(DECODER_LAYER012_CASCADE_DIR)" "$(DECODER_LAYER2_VECTOR_DIR)" \
+	    "$(DECODER_LAYER2_TAMPER_DIR)"
+	@mkdir -p "$(DECODER_LAYER012_CASCADE_DIR)/layer2" \
+	    "$(DECODER_LAYER012_CASCADE_DIR)/layer2-fault" "$(LOG_DIR)"
+	@set -eu; log="$(LOG_DIR)/decoder-layer012-verilator-cascade.log"; \
+	compare="$(LOG_DIR)/decoder-layer012-verilator-comparison.log"; \
+	fault="$(LOG_DIR)/decoder-layer2-verilator-injected-failure.log"; \
+	opens="$(LOG_DIR)/decoder-layer2-verilator-injected-failure.opens"; \
+	printf '%s\n' '$ accepted layer0-to-layer1 cascade -> authenticated layer2 materialization -> layer2 RTL -> post-layer2 oracle' > "$$log"; \
+	expected1='schema=ace3_decoder_layer_raw_v1 layer_index=1 natural_terminal=1 exit_code=0 trace_count=46676 final_count=1792 done_count=2'; \
+	test "$$(cat "$(DECODER_LAYER01_CASCADE_DIR)/layer1/terminal.txt")" = "$$expected1"; \
+	cmp "$(DECODER_LAYER01_CASCADE_DIR)/layer1/trace.hex" "$(DECODER_LAYER1_VECTOR_DIR)/trace.hex"; \
+	cmp "$(DECODER_LAYER01_CASCADE_DIR)/layer1/final.hex" "$(DECODER_LAYER1_VECTOR_DIR)/final.hex"; \
+	mkdir -p "$(DECODER_LAYER2_TAMPER_DIR)"; \
+	cp "$(DECODER_LAYER01_CASCADE_DIR)/layer1/final.hex" "$(DECODER_LAYER2_TAMPER_DIR)/final.hex"; \
+	printf '0000000000\n' >> "$(DECODER_LAYER2_TAMPER_DIR)/final.hex"; \
+	if cd "$(ROOT)" && "$(PYTHON)" "$(DECODER_LAYER2_GENERATOR)" \
+	    --checkpoint "$(OFFICIAL_MODEL24_CHECKPOINT)" --tensor-map "$(MODEL24_TENSOR_MAP)" \
+	    --layer1-handoff "$(DECODER_LAYER2_TAMPER_DIR)/final.hex" \
+	    --output-dir "$(DECODER_LAYER2_TAMPER_DIR)/vectors" > "$(DECODER_LAYER2_TAMPER_DIR)/rejection.log" 2>&1; then \
+	  cat "$(DECODER_LAYER2_TAMPER_DIR)/rejection.log"; exit 1; \
+	fi; \
+	test ! -e "$(DECODER_LAYER2_TAMPER_DIR)/vectors"; \
+	cd "$(ROOT)" && "$(PYTHON)" "$(DECODER_LAYER2_GENERATOR)" \
+	    --checkpoint "$(OFFICIAL_MODEL24_CHECKPOINT)" --tensor-map "$(MODEL24_TENSOR_MAP)" \
+	    --layer1-handoff "$(DECODER_LAYER01_CASCADE_DIR)/layer1/final.hex" \
+	    --output-dir "$(DECODER_LAYER2_VECTOR_DIR)" >> "$$log" 2>&1; \
+	test "$$(sha256sum "$(DECODER_LAYER2_VECTOR_DIR)/inputs.hex" | cut -d' ' -f1)" = \
+	    2324470c304f23a372378af6f9f65cc7a646fbaa614882c4ced44110b99dca85; \
+	cd "$(ROOT)" && "$(DECODER_LAYER2_VERILATOR_BIN)" --layer-index 2 \
+	    --vector-dir "$(DECODER_LAYER2_VECTOR_DIR)" \
+	    --raw-dir "$(DECODER_LAYER012_CASCADE_DIR)/layer2" >> "$$log" 2>&1; \
+	expected2='schema=ace3_decoder_layer_raw_v1 layer_index=2 natural_terminal=1 exit_code=0 trace_count=46676 final_count=1792 done_count=2'; \
+	test "$$(cat "$(DECODER_LAYER012_CASCADE_DIR)/layer2/terminal.txt")" = "$$expected2"; \
+	cmp "$(DECODER_LAYER012_CASCADE_DIR)/layer2/trace.hex" "$(DECODER_LAYER2_VECTOR_DIR)/trace.hex"; \
+	cmp "$(DECODER_LAYER012_CASCADE_DIR)/layer2/final.hex" "$(DECODER_LAYER2_VECTOR_DIR)/final.hex"; \
+	test "$$(sha256sum "$(DECODER_LAYER012_CASCADE_DIR)/layer2/final.hex" | cut -d' ' -f1)" = \
+	    244c9d1d52923ecfff743c165da563468746f47557284865a4b22910a967c511; \
+	printf '%s\n' 'DECODER_LAYER012_VERILATOR_COMPARISON_PASS layer0_trace=46676 layer1_trace=46676 layer2_trace=46676 post_layer2_final=1792 oracle=independent' > "$$compare"; \
+	if cd "$(ROOT)" && "$(STRACE)" -qq -f -e trace=openat -o "$$opens" \
+	    "$(DECODER_LAYER2_VERILATOR_BIN)" --layer-index 2 \
+	    --vector-dir "$(DECODER_LAYER2_VECTOR_DIR)" \
+	    --raw-dir "$(DECODER_LAYER012_CASCADE_DIR)/layer2-fault" \
+	    --fail-after-raw > "$$fault" 2>&1; then cat "$$fault"; exit 1; fi; \
+	fail_expected='schema=ace3_decoder_layer_raw_v1 layer_index=2 natural_terminal=0 exit_code=2 trace_count=1 final_count=0 done_count=0'; \
+	test "$$(cat "$(DECODER_LAYER012_CASCADE_DIR)/layer2-fault/terminal.txt")" = "$$fail_expected"; \
+	test "$$(wc -l < "$(DECODER_LAYER012_CASCADE_DIR)/layer2-fault/trace.hex")" -eq 1; \
+	test ! -e "$(DECODER_LAYER012_CASCADE_DIR)/layer2-fault/comparison.txt"; \
+	if grep -E '/decoder_layer2_vectors/(trace|final)\.hex' "$$opens"; then exit 1; fi; \
+	printf '%s\n' 'DECODER_LAYER2_FAILURE_GATE_PASS natural_terminal=0 raw_rows=1 oracle_opened=0 comparison_created=0' >> "$$fault"; \
+	cat "$$log"; cat "$$compare"; tail -n 2 "$$fault"; \
+	printf '%s\n' 'DECODER_LAYER012_SCOPE_PASS layers=0,1,2 tokens=2 tamper=pass fault=pass reset=pass backpressure=pass full24=excluded model=excluded dialogue=excluded synthesis=excluded ppa=excluded fpga=excluded performance=excluded'
 
 model24-execution: model24-execution-validation model24-execution-tests
 	@printf '%s\n' 'MODEL24_EXECUTION_PASS structural_schedule=483 layer0_rtl_binding=authenticated layer0_iverilog=separate_boundary layers_1_through_23_rtl=deferred full_model_numerics=deferred dialogue=deferred'

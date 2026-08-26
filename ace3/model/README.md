@@ -26,6 +26,12 @@ bindings before simulation.
 native-AWQ projection oracle for two sequential tokens. The generated trace
 retains stage and tensor indices, including Qwen half-split RoPE handoffs, and
 the validator reruns the composition before either RTL simulator executes.
+The integrated RTL milestone compares all 46,676 trace rows and 1,792 final
+hidden rows under Verilator after authenticating every generated artifact.
+Icarus remains the four-state authority for the focused width, reset, clear,
+fault, preload, SiLU-streaming, and qzeros-address boundaries; a full two-token
+Icarus trace is not claimed because a fault-free bounded run reached its
+5,400-second limit after 7,000,000 controller cycles.
 
 `model24_execution_oracle.py` also provides the fixed tokenizer/host profile for
 `Qwen/Qwen2.5-0.5B-Instruct-AWQ` revision

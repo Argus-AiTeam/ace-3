@@ -25,9 +25,24 @@ cache-miss propagation; bounded X/Z rejection is claimed only for Icarus.
 
 `make decoder-layer0` regenerates and authenticates the two-token layer-0
 oracle stream, rejects a tampered trace, runs the fast index/reset/clear/fault
-boundary, and compares all stage and final records under Icarus and Verilator.
+and qzeros boundaries under Icarus, and compares all stage and final records
+under Verilator. The full Icarus target remains available explicitly, but a
+pre-launch canonical-path gate rejects direct and symlink raw/vector aliases
+before cleanup or simulator access. Every Icarus fatal after raw-path binding
+writes and closes an abnormal terminal before stopping; a focused injected
+failure checks this without restarting the full Icarus trace. A
+fault-free run reached the 5,400-second bound at 7,000,000 of the required
+controller cycles, so no full-trace Icarus comparison is claimed.
 `make decoder-preload-micro` runs a vector-free, bounded preload-only lifecycle
 under both simulators, including expected timeout failures and the non-vacuous
 `S_IDLE` to `S_N1_START` transition. Each preload epoch accepts exactly 2,688
 ordered entries (896 each for norm1, norm2, and activation); the clear/reload
 lifecycle checks 5,376 accepted entries across two epochs.
+
+`make decoder-layer01-verilator-cascade` compiles separate layer-0 and layer-1
+instances of the parameterized decoder engine. It gates the official layer-0
+handoff on natural completion before materializing layer-1 vectors, then
+compares every layer-1 trace and final row after a second natural completion.
+`make decoder-layer1-iverilog-boundary` is the focused four-state counterpart:
+it covers layer-1 elaboration, official vector loading, reset, and abnormal
+terminal closure without claiming a full Icarus numerical run.

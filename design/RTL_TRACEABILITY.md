@@ -405,3 +405,111 @@ for `model-api.json`, and
 for the layer-0 q-projection FP16 scale sample. These operands are deterministic
 official-derived selections, not captured runtime Q/K/V activations. The
 evidence establishes standalone attention-core correctness only.
+
+## Decoder layer-0 integration mapping
+
+Decoder references are JSON Pointers into
+`ace3/contracts/decoder_layer0_token_engine.json`.
+
+| Requirement | Contract authority | RTL implementation | Executable check |
+| --- | --- | --- | --- |
+| `DECODER-L0-COMPOSE-001` | `/scope`, `/geometry`, `/numerical_order` | `ace3_decoder_layer0_token_engine` serially composes the accepted projection, RMSNorm, half-split RoPE, FP16 K/V cache, attention, residual, and SiLU operators for the fixed layer-0 geometries. | The complete Verilator run compares 46,676 retained stage rows and 1,792 final hidden rows for positions 0 and 1. |
+| `DECODER-L0-CACHE-001` | `/geometry`, `/trace` | RoPE-K completion resets the K/V writeback iterator to head zero, writes both K/V heads, and preserves sequential slot-zero context while admitting an independent slot-one position zero. | The full run requires two sequential token completions and a non-vacuous slot-isolation start; focused Icarus cache and address tests remain retained. |
+| `DECODER-L0-STREAM-001` | `/protocol_responsibilities` | Residual-1 and residual-2 consume their one-entry outputs while inputs stream; the final residual waits until the preceding DOWN trace is accepted. | Deterministic output stalls cover the streaming path and every final row is byte-compared after natural simulator completion. |
+| `DECODER-L0-EVIDENCE-001` | `/trace`, `/oracle_integer_safety` | Generated tensors, coefficients, traces, and final rows are SHA256-authenticated and independently regenerated before simulation. | Tamper rejection, a strict natural-terminal gate, byte comparison, and injected failure with no Oracle-file open are required. |
+| `DECODER-L0-BOUNDARY-001` | `/scope` | The numerical claim is one reduced official layer-0 trace under Verilator plus focused Icarus four-state boundaries. | A fault-free Icarus full-trace attempt reached the 5,400-second bound at 7,000,000 controller cycles, before completing token zero; no Icarus full-trace pass is claimed. |
+
+## Decoder layer-0 verification surfaces and claim boundary
+
+| Surface | Path or target |
+| --- | --- |
+| Frozen contract | `ace3/contracts/decoder_layer0_token_engine.json` (`7026c694baf8c45ea3808cb10582bdd6884bb85de5c3e1c6e8b5553f1751cf99`) |
+| Serialized bindings | `ace3/contracts/decoder_layer0_vector_bindings.json` (`12c433d7d3999d2afdcf9f3424a1340c3ada1ccf1a7983e66f23b2d736769040`) |
+| Generated boundary manifest | `build/decoder_layer0_vectors/boundary_manifest.json` (`c0e77c256b5c4ae68de55a8102a949835508f46ab0515d9edd0d9c48739b4089`, regenerated and ignored) |
+| Independent oracle | `ace3/model/decoder_layer0_oracle.py` (`5c775a363d73b8dc551a7362519d70b293eb08cf600b21af08157b24a1992d13`) |
+| Official vector generator | `ace3/model/generate_decoder_layer0_vectors.py` (`2cbc91f71b56bbf2c1f819642cca02249df3f48d17ac4d05c384692cc0e0bda8`) |
+| Authenticated validator | `ace3/model/validate_decoder_layer0_vectors.py` (`851cccaf713029781e9703547d9d9224b81dc3248293574e0235f69eb888701e`) |
+| Integrated RTL | `ace3/rtl/ace3_decoder_layer0_token_engine.sv` (`d33868936bf97e76dc9a4420803f1c221127b83ddd94c43d9e844b2af152aed8`) |
+| Qzeros address RTL | `ace3/rtl/ace3_decoder_qzeros_address.sv` (`cf5f8e9d41cc82eb5082046566665cbd14be48e3c2e7ae60b4753ae9409ec344`) |
+| Icarus testbench | `ace3/tb/ace3_decoder_layer0_token_engine_tb.sv` (`5440f1084a54be331713721c57cd696587b4a1e3e6522a6c0169f11be608629c`) |
+| Verilator harness | `ace3/tb/ace3_decoder_layer0_token_engine_main.cpp` (`31f312030712b2e30e08baa426a835e74d70d14f577ae4a318cf869301652a22`) |
+| Fresh bounded aggregate | `make decoder-layer0 OFFICIAL_TENSOR_DIR=/path/to/authenticated/official` |
+
+This establishes the reduced official layer-0 integrated trace and post-layer
+hidden output under Verilator, with focused Icarus four-state boundary coverage.
+It does not establish all 24 layers, the tied language-model head, full-model
+execution, readable dialogue, formal proof, synthesis, timing, area, power,
+FPGA deployment, latency, throughput, or other performance.
+
+## Decoder layer-0 to layer-1 cascade
+
+The parameterized `ace3_decoder_layer0_token_engine` binds its compiled
+`LAYER_INDEX` to the runtime vector namespace. The bounded cascade executes
+layer 0 first, accepts its two-token final stream only after natural completion
+and independent comparison, then materializes layer-1 tensors and oracle rows
+from the fixed official checkpoint. Layer 1 is compiled separately with
+`LAYER_INDEX=1` and consumes the byte-identical layer-0 final stream.
+
+| Surface | Binding |
+| --- | --- |
+| Official checkpoint | `model24_execution_vectors/model.safetensors` (`c50d807b7bed7ff314308972e0f4bcf4e5a70bc60ad88fc7df53940831ed0c1b`) |
+| Reviewed tensor map | `ace3/contracts/model24_tensor_map.json` (`11a03bed8049cd815ac2c37384a7ba15d71d2f69ee397110d1cd443193474624`) |
+| Official layer-1 descriptor | `model.layers.1.` (`c8a037c0043ededc764f02b14671781ceeb1fb5be3fa6b7f8e114d75a98ad8f4`) |
+| Layer-0 handoff | 1,792 rows, SHA256 `22768ac6b337f920faac7de59b4eb43a203e1db45cdf688820fcbb35cdfe3446` |
+| Layer-1 vector generator | `ace3/model/generate_decoder_layer1_vectors.py` (`879976cc1465537b98a6b37b40bbfcd74f88ec8450a922252e42cfd1c99f23d7`) |
+| Independent indexed oracle | `ace3/model/model24_execution_oracle.py` (`777b91ed3a566a2dd66edd5feb87faff1d0b47e0d7b2c10d7f1f73181cccaf1f`) |
+| Post-layer-1 oracle | 1,792 rows, SHA256 `2324470c304f23a372378af6f9f65cc7a646fbaa614882c4ced44110b99dca85` |
+| Focused four-state check | `make decoder-layer1-iverilog-boundary` |
+| Complete numerical check | `make decoder-layer01-verilator-cascade` |
+
+The cascade gate rejects a modified layer-0 handoff before creating layer-1
+vectors. The layer-1 simulator writes only raw rows and a terminal; oracle
+files are opened by the later comparison gate only after an exact successful
+natural terminal. Injected failure after one raw row must leave no comparison
+report and no oracle-file open. Focused Icarus covers layer-1 elaboration,
+official vector loading, reset, and abnormal-terminal closure; a full Icarus
+layer-1 numerical pass is not claimed.
+
+This evidence is limited to two tokens through official decoder layers 0 and 1.
+It excludes layers 2 through 23, the tied language-model head, full-model
+execution, readable dialogue, formal proof, synthesis, timing, area, power,
+FPGA deployment, latency, throughput, and other performance.
+
+## Decoder layer-0 through layer-2 cascade
+
+The bounded continuation reuses the accepted layer-0/layer-1 cascade and
+requires its naturally completed layer-1 raw final stream to match the
+independent post-layer-1 Oracle before any layer-2 materialization. The
+layer-2 generator then authenticates the predecessor hash, official checkpoint,
+reviewed tensor map, layer descriptor, and all 26 consumed tensor values.
+Layer 2 is compiled separately with `LAYER_INDEX=2`.
+
+| Surface | Binding |
+| --- | --- |
+| Official checkpoint | `model24_execution_vectors/model.safetensors` (`c50d807b7bed7ff314308972e0f4bcf4e5a70bc60ad88fc7df53940831ed0c1b`) |
+| Reviewed tensor map | `ace3/contracts/model24_tensor_map.json` (`11a03bed8049cd815ac2c37384a7ba15d71d2f69ee397110d1cd443193474624`) |
+| Official layer-2 descriptor | `model.layers.2.` (`07b907a2f7a800af011b630ce2a026593f05fbd9447e3f106e8970be7888d916`) |
+| Layer-1 handoff | 1,792 rows, SHA256 `2324470c304f23a372378af6f9f65cc7a646fbaa614882c4ced44110b99dca85` |
+| Layer-2 vector generator | `ace3/model/generate_decoder_layer2_vectors.py` (`86eb43c07fe6972c6544274fd5d88385043dd90a801d7ba0091a18d6444fc418`) |
+| Independent indexed Oracle | `ace3/model/model24_execution_oracle.py` (`777b91ed3a566a2dd66edd5feb87faff1d0b47e0d7b2c10d7f1f73181cccaf1f`) |
+| Parameterized RTL | `ace3/rtl/ace3_decoder_layer0_token_engine.sv` (`d33868936bf97e76dc9a4420803f1c221127b83ddd94c43d9e844b2af152aed8`) |
+| Focused four-state testbench | `ace3/tb/ace3_decoder_layer0_token_engine_tb.sv` (`5440f1084a54be331713721c57cd696587b4a1e3e6522a6c0169f11be608629c`) |
+| Two-state harness | `ace3/tb/ace3_decoder_layer0_token_engine_main.cpp` (`31f312030712b2e30e08baa426a835e74d70d14f577ae4a318cf869301652a22`) |
+| Post-layer-2 Oracle | 1,792 rows, SHA256 `244c9d1d52923ecfff743c165da563468746f47557284865a4b22910a967c511` |
+| Focused four-state check | `make decoder-layer2-iverilog-boundary` |
+| Complete numerical check | `make decoder-layer012-verilator-cascade` |
+
+The layer-2 simulator remains Oracle-free and writes raw rows plus a terminal.
+Only an exact natural terminal permits comparison of all 46,676 retained stage
+rows and all 1,792 final rows. Deterministic backpressure is active throughout
+the complete Verilator run. The continuation rejects a modified layer-1
+handoff before vector output and proves that an injected simulator failure
+after one durable raw row neither opens Oracle outputs nor creates comparison
+evidence. Focused Icarus covers layer-2 elaboration, official vector loading,
+reset, and abnormal-terminal closure; a full Icarus layer-2 numerical run is
+not claimed.
+
+This evidence is limited to two tokens through official decoder layers 0, 1,
+and 2. It excludes layers 3 through 23, the tied language-model head,
+full-model execution, readable dialogue, formal proof, synthesis, timing,
+area, power, FPGA deployment, latency, throughput, and other performance.

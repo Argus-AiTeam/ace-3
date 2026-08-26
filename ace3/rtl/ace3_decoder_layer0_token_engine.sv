@@ -2,11 +2,13 @@
 `default_nettype none
 
 /*
- * One deliberately serial Qwen2.5 layer-0 token engine.  Keeping the
+ * One deliberately serial Qwen2.5 decoder-layer token engine.  Keeping the
  * projections serial makes the (very large) AWQ tensor port unambiguous:
  * every request describes precisely one word of one tensor.
  */
-module ace3_decoder_layer0_token_engine (
+module ace3_decoder_layer0_token_engine #(
+    parameter integer LAYER_INDEX = 0
+) (
     input  wire clk_i, input wire rst_ni, input wire clear_i,
 
     input wire load_valid_i, output wire load_ready_o,
@@ -47,7 +49,8 @@ module ace3_decoder_layer0_token_engine (
     output wire done_valid_o, input wire done_ready_i,
     output wire [1:0] done_cache_slot_o, output wire [14:0] done_position_o,
     output wire [31:0] done_cycles_o, output wire [31:0] done_stall_cycles_o,
-    output wire busy_o, output wire [5:0] phase_o
+    output wire busy_o, output wire [5:0] phase_o,
+    output wire [4:0] layer_index_o
 );
     localparam [4:0] TRACE_NORM1  = 5'd0,  TRACE_Q      = 5'd1;
     localparam [4:0] TRACE_K      = 5'd2,  TRACE_V      = 5'd3;
@@ -81,8 +84,13 @@ module ace3_decoder_layer0_token_engine (
     localparam integer HEAD_DIM = 64;
     localparam integer Q_FLAT_MAX = QUERY_HEADS * HEAD_DIM - 1;
     localparam integer KV_FLAT_MAX = KV_HEADS * HEAD_DIM - 1;
+    localparam [4:0] LAYER_INDEX_VALUE = LAYER_INDEX[4:0];
+
+    assign layer_index_o = LAYER_INDEX_VALUE;
 
     initial begin
+        if ((LAYER_INDEX < 0) || (LAYER_INDEX > 23))
+            $error("decoder layer index must be in [0,23]");
         if (Q_FLAT_MAX != 895)
             $error("Q flattened geometry must end at index 895");
         if (KV_FLAT_MAX != 127)
@@ -163,7 +171,7 @@ module ace3_decoder_layer0_token_engine (
     end endfunction
 
     wire idle_w = state_q == S_IDLE;
-    wire final_mode_w = state_q == S_R2_OUT;
+    wire final_mode_w = (state_q == S_R2_IN) || (state_q == S_R2_OUT);
     wire trace_free_w = !trace_valid_q || (trace_valid_q && trace_ready_i &&
                                            known1(trace_ready_i));
     wire active_w = !idle_w;
@@ -412,11 +420,11 @@ module ace3_decoder_layer0_token_engine (
     ace3_fp16_residual_add_core #(.VECTOR_SIZE(896)) res1 (
       .clk_i(clk_i),.rst_ni(rst_ni),.clear_i(clear_i),.start_valid_i(state_q==S_R1_START),.start_ready_o(r1_start_ready_w),.element_count_i(13'd896),
       .in_valid_i(state_q==S_R1_IN),.in_ready_o(r1_in_ready_w),.projection_f16_i(o_mem[hidden_index_q]),.residual_f16_i(activation_mem[hidden_index_q]),
-      .out_valid_o(r1_out_valid_w),.out_ready_i(controller_healthy_w&&(state_q==S_R1_OUT)&&trace_free_w&&(!r1_out_valid_w||r1_result_ok_w)),.out_f16_o(r1_out_w),.out_index_o(r1_idx_w),.out_last_o(r1_last_w),.invalid_operand_o(r1_invalid_w),.saturation_o(r1_saturation_w),.busy_o(r1_busy_w));
+      .out_valid_o(r1_out_valid_w),.out_ready_i(controller_healthy_w&&((state_q==S_R1_IN)||(state_q==S_R1_OUT))&&trace_free_w&&(!r1_out_valid_w||r1_result_ok_w)),.out_f16_o(r1_out_w),.out_index_o(r1_idx_w),.out_last_o(r1_last_w),.invalid_operand_o(r1_invalid_w),.saturation_o(r1_saturation_w),.busy_o(r1_busy_w));
     ace3_fp16_residual_add_core #(.VECTOR_SIZE(896)) res2 (
-      .clk_i(clk_i),.rst_ni(rst_ni),.clear_i(clear_i),.start_valid_i(state_q==S_R2_START),.start_ready_o(r2_start_ready_w),.element_count_i(13'd896),
+      .clk_i(clk_i),.rst_ni(rst_ni),.clear_i(clear_i),.start_valid_i((state_q==S_R2_START)&&trace_free_w),.start_ready_o(r2_start_ready_w),.element_count_i(13'd896),
       .in_valid_i(state_q==S_R2_IN),.in_ready_o(r2_in_ready_w),.projection_f16_i(down_mem[hidden_index_q]),.residual_f16_i(res1_mem[hidden_index_q]),
-      .out_valid_o(r2_out_valid_w),.out_ready_i(controller_healthy_w&&(state_q==S_R2_OUT)&&final_ready_i&&trace_ready_i&&known1(final_ready_i)&&known1(trace_ready_i)&&(!r2_out_valid_w||r2_result_ok_w)),.out_f16_o(r2_out_w),.out_index_o(r2_idx_w),.out_last_o(r2_last_w),.invalid_operand_o(r2_invalid_w),.saturation_o(r2_saturation_w),.busy_o(r2_busy_w));
+      .out_valid_o(r2_out_valid_w),.out_ready_i(controller_healthy_w&&final_mode_w&&final_ready_i&&trace_ready_i&&known1(final_ready_i)&&known1(trace_ready_i)&&(!r2_out_valid_w||r2_result_ok_w)),.out_f16_o(r2_out_w),.out_index_o(r2_idx_w),.out_last_o(r2_last_w),.invalid_operand_o(r2_invalid_w),.saturation_o(r2_saturation_w),.busy_o(r2_busy_w));
     wire si_start_ready_w,si_in_ready_w,si_out_valid_w; wire [15:0] si_out_w; wire [12:0] si_idx_w; wire si_last_w;
     wire si_invalid_w,si_saturation_w,si_busy_w;
     wire si_index_valid_w = known13(si_idx_w) && (si_idx_w < 13'd4864);
@@ -598,8 +606,9 @@ module ace3_decoder_layer0_token_engine (
     wire vector_result_fault_w =
        ((state_q==S_N1_OUT)&&n1_out_valid_w&&!n1_result_ok_w) ||
        ((state_q==S_N2_OUT)&&n2_out_valid_w&&!n2_result_ok_w) ||
-       ((state_q==S_R1_OUT)&&r1_out_valid_w&&!r1_result_ok_w) ||
-       ((state_q==S_R2_OUT)&&r2_out_valid_w&&!r2_result_ok_w) ||
+       (((state_q==S_R1_IN)||(state_q==S_R1_OUT))&&
+        r1_out_valid_w&&!r1_result_ok_w) ||
+       (final_mode_w&&r2_out_valid_w&&!r2_result_ok_w) ||
        (((state_q==S_SI_IN)||(state_q==S_SI_OUT))&&
         si_out_valid_w&&!si_result_ok_w);
     wire rope_result_fault_w =
@@ -723,7 +732,7 @@ module ace3_decoder_layer0_token_engine (
           S_RK_REQ: if(rope_valid_i&&rope_ready_o) state_q<=S_RK_LO;
           S_RK_LO: if(rope_out_valid_w&&trace_free_w&&kv_pair_valid_w&&rope_result_ok_w) begin rk_mem[kv_flat_index_w]<=rope_lo_w;trace_valid_q<=1;trace_stage_q<=TRACE_RK;trace_index_q<={6'd0,kv_flat_index_w};trace_f16_q<=rope_lo_w;trace_position_q<=token_position_q;state_q<=S_RK_HI;end
           S_RK_HI: if(rope_out_valid_w&&trace_free_w&&kv_pair_valid_w&&rope_result_ok_w) begin rk_mem[kv_flat_high_index_w]<=rope_hi_w;trace_valid_q<=1;trace_stage_q<=TRACE_RK;trace_index_q<={6'd0,kv_flat_high_index_w};trace_f16_q<=rope_hi_w;trace_position_q<=token_position_q;
-            if(dim_q==6'd31)begin dim_q<=0;if(head_q==4'd1)state_q<=S_CW_LO;else begin head_q<=head_q+4'd1;state_q<=S_RK_REQ;end end else begin dim_q<=dim_q+6'd1;state_q<=S_RK_REQ;end end
+            if(dim_q==6'd31)begin dim_q<=0;if(head_q==4'd1)begin head_q<=0;state_q<=S_CW_LO;end else begin head_q<=head_q+4'd1;state_q<=S_RK_REQ;end end else begin dim_q<=dim_q+6'd1;state_q<=S_RK_REQ;end end
           S_CW_LO: if(cache_wr_ready_w&&trace_free_w&&kv_flat_valid_w) begin trace_valid_q<=1;trace_stage_q<=TRACE_CK;trace_index_q<={6'd0,kv_flat_index_w};trace_f16_q<=rk_mem[kv_flat_index_w];trace_position_q<=token_position_q;state_q<=S_CW_HI;end
           S_CW_HI: if(trace_free_w&&kv_flat_valid_w) begin trace_valid_q<=1;trace_stage_q<=TRACE_CV;trace_index_q<={6'd0,kv_flat_index_w};trace_f16_q<=v_mem[kv_flat_index_w];trace_position_q<=token_position_q;
             if(dim_q==6'd63)begin dim_q<=0;if(head_q==4'd1)begin head_q<=0;key_position_q<=0;state_q<=S_SC_START;end else head_q<=head_q+4'd1;end else dim_q<=dim_q+6'd1; if(!(dim_q==6'd63&&head_q==4'd1))state_q<=S_CW_LO; end
@@ -742,7 +751,10 @@ module ace3_decoder_layer0_token_engine (
           S_AV_OUT: if(av_out_valid_w&&trace_free_w&&q_flat_valid_w&&av_result_ok_w)begin attention_mem[q_flat_index_w]<=av_out_w;trace_valid_q<=1;trace_stage_q<=TRACE_AV;trace_index_q<={3'd0,q_flat_index_w};trace_f16_q<=av_out_w;trace_position_q<=token_position_q;
             if(dim_q==6'd63)begin dim_q<=0;if(head_q==4'd13)begin psel_q<=PK_O;state_q<=S_P_START;end else begin head_q<=head_q+4'd1;key_position_q<=0;state_q<=S_SC_START;end end else begin dim_q<=dim_q+6'd1;key_position_q<=0;state_q<=S_AV_START;end end
           S_R1_START:if(r1_start_ready_w)begin hidden_index_q<=0;state_q<=S_R1_IN;end
-          S_R1_IN:if(r1_in_ready_w)begin if(hidden_index_q==10'd895)state_q<=S_R1_OUT;else hidden_index_q<=hidden_index_q+10'd1;end
+          S_R1_IN:begin
+            if(r1_in_ready_w)begin if(hidden_index_q==10'd895)state_q<=S_R1_OUT;else hidden_index_q<=hidden_index_q+10'd1;end
+            if(r1_out_valid_w&&trace_free_w&&r1_result_ok_w)begin res1_mem[r1_idx_w[9:0]]<=r1_out_w;trace_valid_q<=1;trace_stage_q<=TRACE_RES1;trace_index_q<=r1_idx_w;trace_f16_q<=r1_out_w;trace_position_q<=token_position_q;if(r1_last_w)state_q<=S_N2_START;end
+          end
           S_R1_OUT:if(r1_out_valid_w&&trace_free_w&&r1_result_ok_w)begin res1_mem[r1_idx_w[9:0]]<=r1_out_w;trace_valid_q<=1;trace_stage_q<=TRACE_RES1;trace_index_q<=r1_idx_w;trace_f16_q<=r1_out_w;trace_position_q<=token_position_q;if(r1_last_w)state_q<=S_N2_START;end
           S_N2_START:if(n2_start_ready_w)begin hidden_index_q<=0;state_q<=S_N2_IN;end
           S_N2_IN:if(n2_in_ready_w)begin if(hidden_index_q==10'd895)state_q<=S_N2_OUT;else hidden_index_q<=hidden_index_q+10'd1;end
@@ -753,8 +765,11 @@ module ace3_decoder_layer0_token_engine (
             if(si_out_valid_w&&trace_free_w&&si_result_ok_w)begin silu_mem[si_idx_w[12:0]]<=si_out_w;si_output_count_q<=si_output_count_q+13'd1;trace_valid_q<=1;trace_stage_q<=TRACE_SILU;trace_index_q<=si_idx_w;trace_f16_q<=si_out_w;trace_position_q<=token_position_q;end
           end
           S_SI_OUT:if(si_out_valid_w&&trace_free_w&&si_result_ok_w)begin silu_mem[si_idx_w[12:0]]<=si_out_w;si_output_count_q<=si_output_count_q+13'd1;trace_valid_q<=1;trace_stage_q<=TRACE_SILU;trace_index_q<=si_idx_w;trace_f16_q<=si_out_w;trace_position_q<=token_position_q;if(si_last_w)begin psel_q<=PK_DOWN;state_q<=S_P_START;end end
-          S_R2_START:if(r2_start_ready_w)begin hidden_index_q<=0;state_q<=S_R2_IN;end
-          S_R2_IN:if(r2_in_ready_w)begin if(hidden_index_q==10'd895)state_q<=S_R2_OUT;else hidden_index_q<=hidden_index_q+10'd1;end
+          S_R2_START:if(r2_start_ready_w&&trace_free_w)begin hidden_index_q<=0;state_q<=S_R2_IN;end
+          S_R2_IN:begin
+            if(r2_in_ready_w)begin if(hidden_index_q==10'd895)state_q<=S_R2_OUT;else hidden_index_q<=hidden_index_q+10'd1;end
+            if(r2_out_valid_w&&r2_result_ok_w&&final_ready_i&&trace_ready_i&&known1(final_ready_i)&&known1(trace_ready_i)&&r2_last_w&&context_len_q[token_slot_q]=={1'b0,token_position_q})begin context_len_q[token_slot_q]<={1'b0,token_position_q}+8'd1;done_valid_q<=1;done_slot_q<=token_slot_q;done_position_q<=token_position_q;done_cycle_q<=cycle_q+32'd1;done_stall_q<=stall_q;state_q<=S_IDLE;end
+          end
           S_R2_OUT:if(r2_out_valid_w&&r2_result_ok_w&&final_ready_i&&trace_ready_i&&known1(final_ready_i)&&known1(trace_ready_i)&&r2_last_w&&context_len_q[token_slot_q]=={1'b0,token_position_q})begin context_len_q[token_slot_q]<={1'b0,token_position_q}+8'd1;done_valid_q<=1;done_slot_q<=token_slot_q;done_position_q<=token_position_q;done_cycle_q<=cycle_q+32'd1;done_stall_q<=stall_q;state_q<=S_IDLE;end
           S_FAULT:state_q<=S_FAULT;
           default: state_q<=S_IDLE;

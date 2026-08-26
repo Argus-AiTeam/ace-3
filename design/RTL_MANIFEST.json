@@ -1,8 +1,8 @@
 {
   "schema_version": 2,
-  "manifest_id": "ace3_fp16_adaptation_qkv_rope_kv_cache_attention_rtl",
+  "manifest_id": "ace3_fp16_adaptation_qkv_rope_kv_cache_attention_decoder_layer0_rtl",
   "scope": {
-    "milestone": "bounded FP16 adaptation, QKV projection, RoPE, FP16 K/V-cache, and attention RTL simulation",
+    "milestone": "bounded FP16 adaptation, QKV projection, RoPE, FP16 K/V-cache, attention, and decoder layer-0 RTL simulation",
     "baseline_commit": "645760c1de73c83c44515b6174b03fdfa04ba9bb",
     "baseline_subject": "feat(rtl): add standalone attention block",
     "included_modules": [
@@ -16,10 +16,12 @@
       "ace3_fp16_kv_cache",
       "ace3_attention_score_core",
       "ace3_attention_softmax_core",
-      "ace3_attention_value_core"
+      "ace3_attention_value_core",
+      "ace3_decoder_qzeros_address",
+      "ace3_decoder_layer0_token_engine"
     ],
     "excluded_claims": [
-      "decoder-layer or full-model execution",
+      "all-24-layer or full-model execution",
       "correctly rounded transcendental SiLU",
       "synthesis, timing, area, power, FPGA, or silicon",
       "dialogue or model quality"
@@ -41,6 +43,12 @@
       "path": "ace3/contracts/attention_block.json",
       "sha256": "9c96b51f89c747b001debb69929940ccd252f39777f8d01a904f2b56aae418ac",
       "applies_to": "ATTENTION-* requirements",
+      "status": "frozen and unchanged by this manifest"
+    },
+    {
+      "path": "ace3/contracts/decoder_layer0_token_engine.json",
+      "sha256": "7026c694baf8c45ea3808cb10582bdd6884bb85de5c3e1c6e8b5553f1751cf99",
+      "applies_to": "DECODER-L0-* requirements",
       "status": "frozen and unchanged by this manifest"
     }
   ],
@@ -298,6 +306,37 @@
       "summary": "The three attention cores are first-party ACE-3 RTL bound to the fixed official model identity and the accepted FP16 conversion helpers.",
       "contract_refs": [
         "/provenance"
+      ]
+    },
+    {
+      "id": "DECODER-L0-COMPOSE-001",
+      "summary": "The fixed layer-0 controller serially composes the accepted projection, FP16 adaptation, RoPE, K/V cache, attention, residual, and MLP operators.",
+      "contract_refs": [
+        "/scope",
+        "/geometry",
+        "/numerical_order"
+      ]
+    },
+    {
+      "id": "DECODER-L0-PROTOCOL-001",
+      "summary": "The controller preserves retained outputs under backpressure, streams one-entry residual outputs without deadlock, and aborts loaded or active state on reset and clear.",
+      "contract_refs": [
+        "/protocol_responsibilities"
+      ]
+    },
+    {
+      "id": "DECODER-L0-EVIDENCE-001",
+      "summary": "Two authenticated sequential tokens produce 46,676 intermediate rows and 1,792 final rows that are independently regenerated and byte-compared after natural Verilator completion.",
+      "contract_refs": [
+        "/trace",
+        "/oracle_integer_safety"
+      ]
+    },
+    {
+      "id": "DECODER-L0-BOUNDARY-001",
+      "summary": "The claim is one reduced official layer-0 trace under Verilator plus focused Icarus four-state boundaries; a 5,400-second Icarus full-trace limit is not reported as a pass.",
+      "contract_refs": [
+        "/scope"
       ]
     }
   ],
@@ -1168,6 +1207,160 @@
         "A modified attention_score_terms.hex must fail serialized SHA256 authentication before simulation."
       ]
     },
+    "decoder_layer0": {
+      "contract": {
+        "path": "ace3/contracts/decoder_layer0_token_engine.json",
+        "sha256": "7026c694baf8c45ea3808cb10582bdd6884bb85de5c3e1c6e8b5553f1751cf99"
+      },
+      "bindings": {
+        "path": "ace3/contracts/decoder_layer0_vector_bindings.json",
+        "sha256": "12c433d7d3999d2afdcf9f3424a1340c3ada1ccf1a7983e66f23b2d736769040",
+        "generated_boundary_manifest_sha256": "c0e77c256b5c4ae68de55a8102a949835508f46ab0515d9edd0d9c48739b4089"
+      },
+      "independent_bit_level_oracle": {
+        "path": "ace3/model/decoder_layer0_oracle.py",
+        "sha256": "5c775a363d73b8dc551a7362519d70b293eb08cf600b21af08157b24a1992d13"
+      },
+      "official_checkpoint_vector_generator": {
+        "path": "ace3/model/generate_decoder_layer0_vectors.py",
+        "sha256": "2cbc91f71b56bbf2c1f819642cca02249df3f48d17ac4d05c384692cc0e0bda8"
+      },
+      "authenticated_vector_validator": {
+        "path": "ace3/model/validate_decoder_layer0_vectors.py",
+        "sha256": "851cccaf713029781e9703547d9d9224b81dc3248293574e0235f69eb888701e"
+      },
+      "integrated_rtl": {
+        "path": "ace3/rtl/ace3_decoder_layer0_token_engine.sv",
+        "sha256": "d33868936bf97e76dc9a4420803f1c221127b83ddd94c43d9e844b2af152aed8"
+      },
+      "qzeros_address_rtl": {
+        "path": "ace3/rtl/ace3_decoder_qzeros_address.sv",
+        "sha256": "cf5f8e9d41cc82eb5082046566665cbd14be48e3c2e7ae60b4753ae9409ec344"
+      },
+      "four_state_icarus_testbench": {
+        "path": "ace3/tb/ace3_decoder_layer0_token_engine_tb.sv",
+        "sha256": "5440f1084a54be331713721c57cd696587b4a1e3e6522a6c0169f11be608629c",
+        "full_trace_status": "runtime_limited_after_5400_seconds_at_7000000_controller_cycles"
+      },
+      "two_state_verilator_harness": {
+        "path": "ace3/tb/ace3_decoder_layer0_token_engine_main.cpp",
+        "sha256": "31f312030712b2e30e08baa426a835e74d70d14f577ae4a318cf869301652a22"
+      },
+      "targets": [
+        "make decoder-layer0-tamper-rejection",
+        "make decoder-layer0-width-boundary",
+        "make decoder-qzeros-boundary-iverilog",
+        "make decoder-layer0-verilator-simulation",
+        "make decoder-layer0"
+      ],
+      "coverage_obligations": [
+        "The validator re-authenticates 32 generated artifacts and independently recomputes every trace and final row before simulation.",
+        "The Verilator harness compares 46,676 retained intermediate rows and 1,792 final rows for positions zero and one, including cache reuse and independent slot admission.",
+        "Focused Icarus runs retain four-state width, reset, clear, fail-closed, preload, SiLU-streaming, and qzeros-address coverage.",
+        "Injected simulator failure after one durable raw row must not open Oracle trace or final artifacts and must not create a comparison report.",
+        "No Icarus full-trace numerical comparison is claimed."
+      ]
+    },
+    "decoder_layer01_cascade": {
+      "official_model_binding": {
+        "repository": "Qwen/Qwen2.5-0.5B-Instruct-AWQ",
+        "revision": "db09cd27ead7fee40cdee309693cf83601b9c899",
+        "checkpoint_sha256": "c50d807b7bed7ff314308972e0f4bcf4e5a70bc60ad88fc7df53940831ed0c1b",
+        "tensor_map_sha256": "11a03bed8049cd815ac2c37384a7ba15d71d2f69ee397110d1cd443193474624"
+      },
+      "layer1_binding": {
+        "layer_id": 1,
+        "namespace": "model.layers.1.",
+        "descriptor_sha256": "c8a037c0043ededc764f02b14671781ceeb1fb5be3fa6b7f8e114d75a98ad8f4"
+      },
+      "layer0_handoff_sha256": "22768ac6b337f920faac7de59b4eb43a203e1db45cdf688820fcbb35cdfe3446",
+      "post_layer1_final_sha256": "2324470c304f23a372378af6f9f65cc7a646fbaa614882c4ced44110b99dca85",
+      "official_checkpoint_vector_generator": {
+        "path": "ace3/model/generate_decoder_layer1_vectors.py",
+        "sha256": "879976cc1465537b98a6b37b40bbfcd74f88ec8450a922252e42cfd1c99f23d7"
+      },
+      "independent_bit_level_oracle": {
+        "path": "ace3/model/model24_execution_oracle.py",
+        "sha256": "777b91ed3a566a2dd66edd5feb87faff1d0b47e0d7b2c10d7f1f73181cccaf1f"
+      },
+      "parameterized_rtl": {
+        "path": "ace3/rtl/ace3_decoder_layer0_token_engine.sv",
+        "sha256": "d33868936bf97e76dc9a4420803f1c221127b83ddd94c43d9e844b2af152aed8",
+        "layer_parameter": "LAYER_INDEX"
+      },
+      "four_state_icarus_testbench": {
+        "path": "ace3/tb/ace3_decoder_layer0_token_engine_tb.sv",
+        "sha256": "5440f1084a54be331713721c57cd696587b4a1e3e6522a6c0169f11be608629c",
+        "coverage": "layer-1 elaboration, official vector load, reset, and abnormal-terminal closure"
+      },
+      "two_state_verilator_harness": {
+        "path": "ace3/tb/ace3_decoder_layer0_token_engine_main.cpp",
+        "sha256": "31f312030712b2e30e08baa426a835e74d70d14f577ae4a318cf869301652a22"
+      },
+      "targets": [
+        "make decoder-layer1-vectors",
+        "make decoder-layer1-iverilog-boundary",
+        "make decoder-layer01-verilator-cascade"
+      ],
+      "coverage_obligations": [
+        "Layer-0 raw final rows must naturally complete and match the independent layer-0 oracle before they may be consumed as layer-1 inputs.",
+        "The layer-1 materializer authenticates the official checkpoint, reviewed tensor map, layer descriptor, all 26 consumed tensors, and the exact layer-0 handoff hash.",
+        "The complete Verilator cascade compares all 46,676 retained layer-1 stage rows and all 1,792 post-layer-1 rows after a strict natural-terminal gate.",
+        "A tampered layer-0 handoff must be rejected before layer-1 vector output exists; injected layer-1 simulator failure must not open oracle outputs or create comparison evidence.",
+        "Focused Icarus coverage is required for the changed layer identity/vector/reset boundary; no full Icarus layer-1 numerical pass is claimed.",
+        "No claim is made for layers 2 through 23, the tied language-model head, full-model execution, dialogue, synthesis, PPA, FPGA deployment, latency, throughput, or other performance."
+      ]
+    },
+    "decoder_layer012_cascade": {
+      "official_model_binding": {
+        "repository": "Qwen/Qwen2.5-0.5B-Instruct-AWQ",
+        "revision": "db09cd27ead7fee40cdee309693cf83601b9c899",
+        "checkpoint_sha256": "c50d807b7bed7ff314308972e0f4bcf4e5a70bc60ad88fc7df53940831ed0c1b",
+        "tensor_map_sha256": "11a03bed8049cd815ac2c37384a7ba15d71d2f69ee397110d1cd443193474624"
+      },
+      "layer2_binding": {
+        "layer_id": 2,
+        "namespace": "model.layers.2.",
+        "descriptor_sha256": "07b907a2f7a800af011b630ce2a026593f05fbd9447e3f106e8970be7888d916"
+      },
+      "layer1_handoff_sha256": "2324470c304f23a372378af6f9f65cc7a646fbaa614882c4ced44110b99dca85",
+      "post_layer2_final_sha256": "244c9d1d52923ecfff743c165da563468746f47557284865a4b22910a967c511",
+      "official_checkpoint_vector_generator": {
+        "path": "ace3/model/generate_decoder_layer2_vectors.py",
+        "sha256": "86eb43c07fe6972c6544274fd5d88385043dd90a801d7ba0091a18d6444fc418"
+      },
+      "independent_bit_level_oracle": {
+        "path": "ace3/model/model24_execution_oracle.py",
+        "sha256": "777b91ed3a566a2dd66edd5feb87faff1d0b47e0d7b2c10d7f1f73181cccaf1f"
+      },
+      "parameterized_rtl": {
+        "path": "ace3/rtl/ace3_decoder_layer0_token_engine.sv",
+        "sha256": "d33868936bf97e76dc9a4420803f1c221127b83ddd94c43d9e844b2af152aed8",
+        "layer_parameter": "LAYER_INDEX"
+      },
+      "four_state_icarus_testbench": {
+        "path": "ace3/tb/ace3_decoder_layer0_token_engine_tb.sv",
+        "sha256": "5440f1084a54be331713721c57cd696587b4a1e3e6522a6c0169f11be608629c",
+        "coverage": "layer-2 elaboration, official vector load, reset, and abnormal-terminal closure"
+      },
+      "two_state_verilator_harness": {
+        "path": "ace3/tb/ace3_decoder_layer0_token_engine_main.cpp",
+        "sha256": "31f312030712b2e30e08baa426a835e74d70d14f577ae4a318cf869301652a22"
+      },
+      "targets": [
+        "make decoder-layer2-vectors",
+        "make decoder-layer2-iverilog-boundary",
+        "make decoder-layer012-verilator-cascade"
+      ],
+      "coverage_obligations": [
+        "The accepted layer-0/layer-1 cascade must naturally complete and match its independent Oracles before its exact post-layer-1 raw final rows may be consumed as layer-2 inputs.",
+        "The layer-2 materializer authenticates the official checkpoint, reviewed tensor map, layer-2 descriptor, all 26 consumed tensors, and the exact layer-1 handoff hash.",
+        "The complete Verilator continuation compares all 46,676 retained layer-2 stage rows and all 1,792 post-layer-2 rows after a strict natural-terminal gate while exercising deterministic backpressure.",
+        "A tampered layer-1 handoff must be rejected before layer-2 vector output exists; injected layer-2 simulator failure must not open Oracle outputs or create comparison evidence.",
+        "Focused Icarus coverage is required for the changed layer identity/vector/reset boundary; no full Icarus layer-2 numerical pass is claimed.",
+        "No claim is made for layers 3 through 23, the tied language-model head, full-model execution, dialogue, synthesis, PPA, FPGA deployment, latency, throughput, or other performance."
+      ]
+    },
     "aggregate_regression": {
       "fresh_nonclean_command": "make OFFICIAL_TENSOR_DIR=/path/to/official_tensors test",
       "retained_targets": [
@@ -1178,10 +1371,11 @@
         "projection",
         "fp16-adaptation",
         "qkv-rope-cache",
-        "attention"
+        "attention",
+        "decoder-layer0"
       ],
       "bounded_claim_exclusions": [
-        "decoder-layer or full-model execution",
+        "all-24-layer or full-model execution",
         "synthesis, timing, area, power, FPGA, or silicon",
         "dialogue or model quality"
       ]

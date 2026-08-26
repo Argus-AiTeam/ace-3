@@ -19,7 +19,10 @@ cached-V accumulation.
 
 The layer-0 token engine serially composes the accepted projection, FP16
 adaptation, half-split RoPE, K/V cache, and attention cores for the fixed
-Qwen2.5 geometry. The bounded evidence here is Icarus simulation of its width,
-reset, clear, and fail-closed boundary plus model24 structural vectors bound to
-the exact RTL and testbench hashes. Full numerical token execution, all 24
-layers, dialogue, synthesis, PPA, and FPGA behavior remain outside this claim.
+Qwen2.5 geometry. The bounded evidence includes a complete two-token Verilator
+comparison of 46,676 intermediate rows and 1,792 post-layer hidden rows plus
+focused Icarus width, reset, clear, fail-closed, preload, streaming, and qzeros
+address checks. A fault-free full Icarus trace exceeded the 5,400-second bound
+after 7,000,000 controller cycles and is not claimed. All 24 layers, the tied
+language-model head, dialogue, synthesis, PPA, and FPGA behavior remain outside
+this claim.

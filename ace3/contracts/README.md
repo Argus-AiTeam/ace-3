@@ -22,3 +22,6 @@ policy, fixed-point widths, rounding, approximation bound, and error behavior.
 fixed-checkpoint decoder layer and two sequential token positions.
 `decoder_layer0_vector_bindings.json` binds the complete stage trace, final
 outputs, coefficients, and serialized layer-0 tensors used by both simulators.
+The accepted integrated claim requires a complete Verilator comparison and
+focused Icarus four-state boundaries. Full-trace Icarus execution remains an
+explicit runtime limitation rather than a passing numerical claim.
