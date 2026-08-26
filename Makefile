@@ -511,12 +511,12 @@ projection-geometry: projection-json-validation
 	    -Pace3_awq_w4a16_projection_engine.IN_FEATURES=$$1 \
 	    -Pace3_awq_w4a16_projection_engine.OUT_FEATURES=$$2 \
 	    -o "$(PROJECTION_GEOMETRY_DIR)/$$3.vvp" \
-	    "$(RTL)" "$(PROJECTION_ROUNDER_RTL)" "$(PROJECTION_RTL)" \
+	    "$(FP16_FIXED_RTL)" "$(RTL)" "$(PROJECTION_ROUNDER_RTL)" "$(PROJECTION_RTL)" \
 	    >> "$$log" 2>&1 || { cat "$$log"; exit 1; }; \
 	  "$(VERILATOR)" --lint-only --Wall \
 	    --top-module ace3_awq_w4a16_projection_engine \
 	    -GIN_FEATURES=$$1 -GOUT_FEATURES=$$2 \
-	    "$(RTL)" "$(PROJECTION_ROUNDER_RTL)" "$(PROJECTION_RTL)" \
+	    "$(FP16_FIXED_RTL)" "$(RTL)" "$(PROJECTION_ROUNDER_RTL)" "$(PROJECTION_RTL)" \
 	    >> "$$log" 2>&1 || { cat "$$log"; exit 1; }; \
 	done; \
 	printf '%s\n' 'PROJECTION_GEOMETRY_PASS simulators=iverilog,verilator geometries=4 q_o=896x896 k_v=896x128 gate_up=896x4864 down=4864x896' >> "$$log"; \
@@ -530,7 +530,7 @@ projection-iverilog-compile: projection-json-validation
 	if "$(IVERILOG)" -g2012 -Wall -I "$(PROJECTION_VECTOR_DIR)" \
 	    -s ace3_awq_w4a16_projection_engine_tb \
 	    -o "$(PROJECTION_IVERILOG_BIN)" \
-	    "$(RTL)" "$(PROJECTION_ROUNDER_RTL)" "$(PROJECTION_RTL)" \
+	    "$(FP16_FIXED_RTL)" "$(RTL)" "$(PROJECTION_ROUNDER_RTL)" "$(PROJECTION_RTL)" \
 	    "$(PROJECTION_TB)" >> "$$log" 2>&1; then :; \
 	else status=$$?; cat "$$log"; exit $$status; fi; \
 	cat "$$log"
@@ -552,7 +552,7 @@ projection-4864-compile: projection-json-validation
 	if "$(IVERILOG)" -g2012 -Wall \
 	    -s ace3_awq_w4a16_projection_4864_cycle_tb \
 	    -o "$(PROJECTION_4864_BIN)" \
-	    "$(RTL)" "$(PROJECTION_ROUNDER_RTL)" "$(PROJECTION_RTL)" \
+	    "$(FP16_FIXED_RTL)" "$(RTL)" "$(PROJECTION_ROUNDER_RTL)" "$(PROJECTION_RTL)" \
 	    "$(PROJECTION_4864_TB)" >> "$$log" 2>&1; then :; \
 	else status=$$?; cat "$$log"; exit $$status; fi; \
 	cat "$$log"
@@ -574,7 +574,7 @@ projection-verilator-compile: projection-json-validation
 	if cd "$(ROOT)" && "$(VERILATOR)" --cc --exe --build --Wall \
 	    --top-module ace3_awq_w4a16_projection_engine \
 	    --Mdir "$(PROJECTION_VERILATOR_OBJ_DIR)" \
-	    "$(RTL)" "$(PROJECTION_ROUNDER_RTL)" "$(PROJECTION_RTL)" \
+	    "$(FP16_FIXED_RTL)" "$(RTL)" "$(PROJECTION_ROUNDER_RTL)" "$(PROJECTION_RTL)" \
 	    "$(PROJECTION_CPP_TB)" >> "$$log" 2>&1; then :; \
 	else status=$$?; cat "$$log"; exit $$status; fi; \
 	test -x "$(PROJECTION_VERILATOR_BIN)"; cat "$$log"
@@ -779,14 +779,14 @@ qkv-geometry: qkv-json-validation
 	: > "$$log"; \
 	"$(IVERILOG)" -g2012 -Wall -s ace3_qkv_projection_geometry_tb \
 	    -o "$(QKV_GEOMETRY_BIN)" \
-	    "$(PROJECTION_ROUNDER_RTL)" "$(RTL)" "$(PROJECTION_RTL)" \
+	    "$(FP16_FIXED_RTL)" "$(PROJECTION_ROUNDER_RTL)" "$(RTL)" "$(PROJECTION_RTL)" \
 	    "$(QKV_CLUSTER_RTL)" "$(QKV_GEOMETRY_TB)" >> "$$log" 2>&1 \
 	    || { cat "$$log"; exit 1; }; \
 	"$(VVP)" "$(QKV_GEOMETRY_BIN)" >> "$$log" 2>&1 \
 	    || { cat "$$log"; exit 1; }; \
 	"$(VERILATOR)" --lint-only --Wall \
 	    --top-module ace3_qkv_projection_cluster \
-	    "$(PROJECTION_ROUNDER_RTL)" "$(RTL)" "$(PROJECTION_RTL)" \
+	    "$(FP16_FIXED_RTL)" "$(PROJECTION_ROUNDER_RTL)" "$(RTL)" "$(PROJECTION_RTL)" \
 	    "$(QKV_CLUSTER_RTL)" >> "$$log" 2>&1 \
 	    || { cat "$$log"; exit 1; }; \
 	printf '%s\n' 'QKV_GEOMETRY_PASS simulators=iverilog,verilator q=896x896 k=896x128 v=896x128 query_heads=14 kv_heads=2 head_dim=64' >> "$$log"; \
