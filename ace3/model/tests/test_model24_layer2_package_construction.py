@@ -17,7 +17,133 @@ sys.path.insert(0, str(MODEL_DIR))
 import model24_execution_oracle as oracle  # noqa: E402
 
 
-class Model24Layer2PackageConstructionTests(unittest.TestCase):
+class Model24IndexedPackageConstructionTests(unittest.TestCase):
+    LAYER2_CAPTURE_CPP = """
+if(layer_index != 2)
+    throw std::runtime_error("this sealed invocation requires layer index 2");
+"schema=ace3-layer2-simulator-terminal-v1\\nlayer_index=2\\nnatural_terminal=1\\n"
+std::cout << "ACE3_LAYER2_CAPTURE_NATURAL_TERMINAL";
+"schema=ace3-layer2-simulator-terminal-v1\\nlayer_index=2\\nnatural_terminal=0\\n"
+std::cerr << "ACE3_LAYER2_CAPTURE_EXCEPTION";
+tensor(dir, "layer2_input_layernorm_weight.fp16le.bin");
+tensor(dir, "layer2_post_attention_layernorm_weight.fp16le.bin");
+projection(dir, "layer2_self_attn_q_proj", true);
+projection(dir, "layer2_self_attn_k_proj", true);
+projection(dir, "layer2_self_attn_v_proj", true);
+projection(dir, "layer2_self_attn_o_proj", false);
+projection(dir, "layer2_mlp_gate_proj", false);
+projection(dir, "layer2_mlp_up_proj", false);
+projection(dir, "layer2_mlp_down_proj", false);
+"""
+    LAYER2_CAPTURE_HEADER = (
+        'counts_.append("schema=ace3-layer2-raw-counts-v1\\nlayer_index=2\\n");'
+    )
+
+    @classmethod
+    def layer3_capture(cls) -> tuple[str, str]:
+        return oracle.retarget_indexed_capture_sources(
+            cls.LAYER2_CAPTURE_CPP,
+            cls.LAYER2_CAPTURE_HEADER,
+            source_layer_index=2,
+            target_layer_index=3,
+        )
+
+    def test_layer2_capture_binding_regression(self) -> None:
+        oracle.validate_indexed_capture_sources(
+            self.LAYER2_CAPTURE_CPP,
+            self.LAYER2_CAPTURE_HEADER,
+            2,
+        )
+        filenames = oracle.indexed_capture_tensor_filenames(
+            self.LAYER2_CAPTURE_CPP,
+            2,
+        )
+        self.assertEqual(len(filenames), 26)
+        self.assertTrue(all(name.startswith("layer2_") for name in filenames))
+        self.assertEqual(
+            self.LAYER2_CAPTURE_CPP.count(
+                "schema=ace3-layer2-simulator-terminal-v1"
+            ),
+            2,
+        )
+        self.assertEqual(self.LAYER2_CAPTURE_CPP.count("layer_index=2"), 2)
+
+    def test_layer3_capture_binding_regression(self) -> None:
+        cpp_source, raw_evidence_header = self.layer3_capture()
+
+        oracle.validate_indexed_capture_sources(cpp_source, raw_evidence_header, 3)
+        filenames = oracle.indexed_capture_tensor_filenames(cpp_source, 3)
+        self.assertEqual(len(filenames), 26)
+        self.assertTrue(all(name.startswith("layer3_") for name in filenames))
+        self.assertEqual(
+            cpp_source.count("schema=ace3-layer3-simulator-terminal-v1"),
+            2,
+        )
+        self.assertEqual(cpp_source.count("layer_index=3"), 2)
+        self.assertNotIn("ace3-layer2", cpp_source)
+        self.assertNotIn("layer_index=2", raw_evidence_header)
+
+    def test_wrong_requested_index_is_rejected(self) -> None:
+        with self.assertRaisesRegex(
+            oracle.ContractError,
+            "capture source layer-index binding mismatch",
+        ):
+            oracle.validate_indexed_capture_sources(
+                self.LAYER2_CAPTURE_CPP,
+                self.LAYER2_CAPTURE_HEADER,
+                3,
+            )
+
+    def test_wrong_argv_index_is_rejected(self) -> None:
+        wrong_argv_source = self.LAYER2_CAPTURE_CPP.replace(
+            "if(layer_index != 2)",
+            "if(layer_index != 3)",
+            1,
+        )
+        with self.assertRaisesRegex(
+            oracle.ContractError,
+            "capture source layer-index binding mismatch",
+        ):
+            oracle.validate_indexed_capture_sources(
+                wrong_argv_source,
+                self.LAYER2_CAPTURE_HEADER,
+                2,
+            )
+
+    def test_wrong_terminal_index_is_rejected(self) -> None:
+        cpp_source, raw_evidence_header = self.layer3_capture()
+        wrong_terminal_source = cpp_source.replace(
+            "layer_index=3\\nnatural_terminal=1",
+            "layer_index=2\\nnatural_terminal=1",
+            1,
+        )
+        with self.assertRaisesRegex(
+            oracle.ContractError,
+            "capture source layer-index binding mismatch",
+        ):
+            oracle.validate_indexed_capture_sources(
+                wrong_terminal_source,
+                raw_evidence_header,
+                3,
+            )
+
+    def test_wrong_tensor_namespace_is_rejected(self) -> None:
+        cpp_source, raw_evidence_header = self.layer3_capture()
+        wrong_tensor_source = cpp_source.replace(
+            "layer3_input_layernorm_weight.fp16le.bin",
+            "layer2_input_layernorm_weight.fp16le.bin",
+            1,
+        )
+        with self.assertRaisesRegex(
+            oracle.ContractError,
+            "capture tensor layer-index binding mismatch",
+        ):
+            oracle.validate_indexed_capture_sources(
+                wrong_tensor_source,
+                raw_evidence_header,
+                3,
+            )
+
     def test_layer2_manifest_binds_authenticated_layer1_handoff(self) -> None:
         payload = (
             b"0000003c00\n"

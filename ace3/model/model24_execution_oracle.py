@@ -5,6 +5,7 @@ from __future__ import annotations
 
 import hashlib
 import json
+import re
 import subprocess
 from dataclasses import dataclass
 from pathlib import Path
@@ -353,6 +354,167 @@ def indexed_layer_input_handoff_binding(
         "consumer_layer_index": layer_index,
         "byte_preserved_as": "inputs.hex",
     }
+
+
+def indexed_capture_tensor_filenames(
+    cpp_source: str,
+    layer_index: int,
+) -> tuple[str, ...]:
+    indexed_layer_binding(layer_index)
+    direct_tensors = re.findall(
+        r'tensor\(dir,\s*"(layer(\d+)_[A-Za-z0-9_]+\.fp16le\.bin)"\)',
+        cpp_source,
+    )
+    projections = re.findall(
+        r'projection\(dir,\s*"(layer(\d+)_[A-Za-z0-9_]+)",\s*(true|false)\)',
+        cpp_source,
+    )
+    require(
+        len(direct_tensors) == 2 and len(projections) == 7,
+        "capture tensor request set mismatch",
+    )
+    observed = {
+        int(index)
+        for _, index in (*direct_tensors, *((name, index) for name, index, _ in projections))
+    }
+    require(
+        observed == {layer_index},
+        "capture tensor layer-index binding mismatch",
+    )
+    filenames = [f"{name}.hex" for name, _ in direct_tensors]
+    for prefix, _, has_bias in projections:
+        filenames.extend(
+            (
+                f"{prefix}_qweight.i32le.bin.hex",
+                f"{prefix}_qzeros.i32le.bin.hex",
+                f"{prefix}_scales.fp16le.bin.hex",
+            )
+        )
+        if has_bias == "true":
+            filenames.append(f"{prefix}_bias.fp16le.bin.hex")
+    require(
+        len(filenames) == 26 and len(set(filenames)) == len(filenames),
+        "capture tensor filename set mismatch",
+    )
+    return tuple(filenames)
+
+
+def validate_indexed_capture_tensor_files(
+    cpp_source: str,
+    vector_dir: Path,
+    layer_index: int,
+) -> tuple[str, ...]:
+    filenames = indexed_capture_tensor_filenames(cpp_source, layer_index)
+    tensor_dir = vector_dir / "tensors"
+    missing = [name for name in filenames if not (tensor_dir / name).is_file()]
+    require(not missing, "capture tensor files missing: " + ", ".join(missing))
+    return filenames
+
+
+def validate_indexed_capture_sources(
+    cpp_source: str,
+    raw_evidence_header: str,
+    layer_index: int,
+) -> None:
+    indexed_layer_binding(layer_index)
+    expected_cpp = {
+        f"if(layer_index != {layer_index})": 1,
+        f"this sealed invocation requires layer index {layer_index}": 1,
+        f"schema=ace3-layer{layer_index}-simulator-terminal-v1": 2,
+        f"layer_index={layer_index}": 2,
+        f"ACE3_LAYER{layer_index}_CAPTURE": 2,
+    }
+    expected_header = {
+        f"schema=ace3-layer{layer_index}-raw-counts-v1": 1,
+        f"layer_index={layer_index}": 1,
+    }
+    require(
+        all(cpp_source.count(marker) == count for marker, count in expected_cpp.items())
+        and all(
+            raw_evidence_header.count(marker) == count
+            for marker, count in expected_header.items()
+        ),
+        "capture source layer-index binding mismatch",
+    )
+    observed = {
+        int(value)
+        for pattern, source in (
+            (r"ace3-layer(\d+)-simulator-terminal-v1", cpp_source),
+            (r"ACE3_LAYER(\d+)_CAPTURE", cpp_source),
+            (r"ace3-layer(\d+)-raw-counts-v1", raw_evidence_header),
+        )
+        for value in re.findall(pattern, source)
+    }
+    require(
+        observed == {layer_index},
+        "capture source contains a stale layer-index marker",
+    )
+    indexed_capture_tensor_filenames(cpp_source, layer_index)
+
+
+def retarget_indexed_capture_sources(
+    cpp_source: str,
+    raw_evidence_header: str,
+    *,
+    source_layer_index: int,
+    target_layer_index: int,
+) -> tuple[str, str]:
+    validate_indexed_capture_sources(
+        cpp_source,
+        raw_evidence_header,
+        source_layer_index,
+    )
+    require(
+        source_layer_index != target_layer_index,
+        "capture source and target layer indexes must differ",
+    )
+    indexed_layer_binding(target_layer_index)
+    cpp_replacements = (
+        (
+            f"if(layer_index != {source_layer_index})",
+            f"if(layer_index != {target_layer_index})",
+        ),
+        (
+            f"this sealed invocation requires layer index {source_layer_index}",
+            f"this sealed invocation requires layer index {target_layer_index}",
+        ),
+        (
+            f"schema=ace3-layer{source_layer_index}-simulator-terminal-v1",
+            f"schema=ace3-layer{target_layer_index}-simulator-terminal-v1",
+        ),
+        (
+            f"layer_index={source_layer_index}",
+            f"layer_index={target_layer_index}",
+        ),
+        (
+            f"ACE3_LAYER{source_layer_index}_CAPTURE",
+            f"ACE3_LAYER{target_layer_index}_CAPTURE",
+        ),
+    )
+    header_replacements = (
+        (
+            f"schema=ace3-layer{source_layer_index}-raw-counts-v1",
+            f"schema=ace3-layer{target_layer_index}-raw-counts-v1",
+        ),
+        (
+            f"layer_index={source_layer_index}",
+            f"layer_index={target_layer_index}",
+        ),
+    )
+    for old, new in cpp_replacements:
+        cpp_source = cpp_source.replace(old, new)
+    cpp_source = cpp_source.replace(
+        f"layer{source_layer_index}_",
+        f"layer{target_layer_index}_",
+    )
+    for old, new in header_replacements:
+        raw_evidence_header = raw_evidence_header.replace(old, new)
+    validate_indexed_capture_sources(
+        cpp_source,
+        raw_evidence_header,
+        target_layer_index,
+    )
+    return cpp_source, raw_evidence_header
 
 
 def _layer_tensor_payloads(
