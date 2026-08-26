@@ -40,6 +40,7 @@ from model24_first_voice_hybrid import (  # noqa: E402
     hash_file,
     plan_execution,
     sha256_bytes,
+    state_tip_commitment,
     state_record_paths,
     validate_state_envelope,
     write_json,
@@ -59,6 +60,7 @@ class Model24FirstVoiceHybridTests(unittest.TestCase):
             / "model24_first_voice_hybrid_unit"
             / self._testMethodName
         )
+        self.trusted_tips: dict[int, dict[str, object]] = {}
         shutil.rmtree(self.work, ignore_errors=True)
         self.work.mkdir(parents=True)
 
@@ -136,6 +138,10 @@ class Model24FirstVoiceHybridTests(unittest.TestCase):
             "state": hash_file(state_path),
         }
         write_json(envelope_path, envelope)
+        self.trusted_tips[layer_index] = state_tip_commitment(
+            envelope,
+            envelope_path.read_bytes(),
+        )
         return state_path, envelope_path
 
     def _write_two_record_chain(self) -> tuple[Path, Path]:
@@ -155,6 +161,7 @@ class Model24FirstVoiceHybridTests(unittest.TestCase):
             next_position=next_position,
             build_manifest_sha256="1" * 64,
             binary_sha256="2" * 64,
+            expected_tip=self.trusted_tips.get(7),
         )
 
     def _mutate_current_envelope(self, field: str, value: object) -> None:
@@ -363,6 +370,7 @@ class Model24FirstVoiceHybridTests(unittest.TestCase):
                 next_position=2,
                 build_manifest_sha256="1" * 64,
                 binary_sha256="9" * 64,
+                expected_tip=self.trusted_tips[7],
             )
         self.assertEqual(raised.exception.code, "stale_rtl_state")
 

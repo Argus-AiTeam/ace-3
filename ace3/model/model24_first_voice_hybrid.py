@@ -80,6 +80,35 @@ STATE_ENVELOPE_KEYS = frozenset(
     }
 )
 STATE_HASH_RECORD_KEYS = frozenset({"bytes", "sha256"})
+TRUSTED_TIP_KIND = "ace3_model24_first_voice_trusted_tip"
+TRUSTED_TIP_SCHEMA_VERSION = 1
+TRUSTED_TIP_KEYS = frozenset(
+    {
+        "schema_version",
+        "kind",
+        "model_binding",
+        "build_manifest_sha256",
+        "binary_sha256",
+        "layer_index",
+        "cache_slot",
+        "next_position",
+        "envelope",
+        "state",
+        "input_activation_sha256",
+        "output_hidden_sha256",
+    }
+)
+TRUSTED_TIP_CHECKPOINT_KIND = "ace3_model24_first_voice_trusted_tips_checkpoint"
+TRUSTED_TIP_CHECKPOINT_KEYS = frozenset(
+    {
+        "schema_version",
+        "kind",
+        "model_binding",
+        "build_manifest_sha256",
+        "tips",
+    }
+)
+MODEL_BINDING_KEYS = frozenset({"repository", "revision", "checkpoint_sha256"})
 MAX_POSITIONS = 128
 DEFAULT_MAX_NEW_TOKENS = 4
 MINIMUM_MAX_NEW_TOKENS = 2
@@ -155,6 +184,232 @@ def hash_file(path: Path) -> dict[str, Any]:
             digest.update(payload)
             size += len(payload)
     return {"bytes": size, "sha256": digest.hexdigest()}
+
+
+def _is_sha256(value: Any) -> bool:
+    return (
+        type(value) is str
+        and len(value) == 64
+        and all(character in "0123456789abcdef" for character in value)
+    )
+
+
+def _validate_hash_record(record: Any, label: str) -> dict[str, Any]:
+    require(
+        type(record) is dict
+        and set(record) == STATE_HASH_RECORD_KEYS
+        and type(record.get("bytes")) is int
+        and record["bytes"] >= 0
+        and _is_sha256(record.get("sha256")),
+        "stale_rtl_state",
+        f"{label} hash record schema mismatch",
+    )
+    return record
+
+
+def _validate_model_binding(binding: Any, label: str) -> dict[str, Any]:
+    require(
+        type(binding) is dict
+        and set(binding) == MODEL_BINDING_KEYS
+        and type(binding.get("repository")) is str
+        and type(binding.get("revision")) is str
+        and _is_sha256(binding.get("checkpoint_sha256"))
+        and binding
+        == {
+            "repository": MODEL_REPOSITORY,
+            "revision": MODEL_REVISION,
+            "checkpoint_sha256": CHECKPOINT_SHA256,
+        },
+        "stale_rtl_state",
+        f"{label} model binding schema mismatch",
+    )
+    return binding
+
+
+def _validate_state_envelope_schema(
+    envelope: Any,
+    label: str,
+) -> dict[str, Any]:
+    require(
+        type(envelope) is dict
+        and set(envelope) == STATE_ENVELOPE_KEYS
+        and type(envelope.get("schema_version")) is int
+        and envelope["schema_version"] == STATE_SCHEMA_VERSION
+        and type(envelope.get("kind")) is str
+        and envelope["kind"] == STATE_KIND
+        and type(envelope.get("layer_index")) is int
+        and 0 <= envelope["layer_index"] < LAYER_COUNT
+        and type(envelope.get("cache_slot")) is int
+        and envelope["cache_slot"] == 0
+        and type(envelope.get("next_position")) is int
+        and envelope["next_position"] > 0
+        and _is_sha256(envelope.get("build_manifest_sha256"))
+        and _is_sha256(envelope.get("binary_sha256"))
+        and (
+            envelope.get("parent_state_sha256") is None
+            or _is_sha256(envelope.get("parent_state_sha256"))
+        )
+        and (
+            envelope.get("parent_envelope_sha256") is None
+            or _is_sha256(envelope.get("parent_envelope_sha256"))
+        )
+        and _is_sha256(envelope.get("input_activation_sha256"))
+        and _is_sha256(envelope.get("output_hidden_sha256")),
+        "stale_rtl_state",
+        f"{label} state envelope schema mismatch",
+    )
+    _validate_model_binding(envelope.get("model_binding"), label)
+    _validate_hash_record(envelope.get("state"), f"{label} state")
+    return envelope
+
+
+def _validate_trusted_tip(tip: Any, label: str) -> dict[str, Any]:
+    require(
+        type(tip) is dict
+        and set(tip) == TRUSTED_TIP_KEYS
+        and type(tip.get("schema_version")) is int
+        and tip["schema_version"] == TRUSTED_TIP_SCHEMA_VERSION
+        and type(tip.get("kind")) is str
+        and tip["kind"] == TRUSTED_TIP_KIND
+        and type(tip.get("layer_index")) is int
+        and 0 <= tip["layer_index"] < LAYER_COUNT
+        and type(tip.get("cache_slot")) is int
+        and tip["cache_slot"] == 0
+        and type(tip.get("next_position")) is int
+        and tip["next_position"] > 0
+        and _is_sha256(tip.get("build_manifest_sha256"))
+        and _is_sha256(tip.get("binary_sha256"))
+        and _is_sha256(tip.get("input_activation_sha256"))
+        and _is_sha256(tip.get("output_hidden_sha256")),
+        "stale_rtl_state",
+        f"{label} trusted tip schema mismatch",
+    )
+    _validate_model_binding(tip.get("model_binding"), label)
+    _validate_hash_record(tip.get("envelope"), f"{label} envelope")
+    _validate_hash_record(tip.get("state"), f"{label} state")
+    return tip
+
+
+def state_tip_commitment(
+    envelope: Mapping[str, Any],
+    envelope_payload: bytes,
+) -> dict[str, Any]:
+    validated = _validate_state_envelope_schema(envelope, "new")
+    require(
+        envelope_payload == canonical_json(validated),
+        "stale_rtl_state",
+        "new state envelope payload is not canonical",
+    )
+    return {
+        "schema_version": TRUSTED_TIP_SCHEMA_VERSION,
+        "kind": TRUSTED_TIP_KIND,
+        "model_binding": dict(validated["model_binding"]),
+        "build_manifest_sha256": validated["build_manifest_sha256"],
+        "binary_sha256": validated["binary_sha256"],
+        "layer_index": validated["layer_index"],
+        "cache_slot": validated["cache_slot"],
+        "next_position": validated["next_position"],
+        "envelope": {
+            "bytes": len(envelope_payload),
+            "sha256": sha256_bytes(envelope_payload),
+        },
+        "state": dict(validated["state"]),
+        "input_activation_sha256": validated["input_activation_sha256"],
+        "output_hidden_sha256": validated["output_hidden_sha256"],
+    }
+
+
+def write_trusted_tips_checkpoint(
+    path: Path,
+    tips: Mapping[int, Mapping[str, Any]],
+    *,
+    build_manifest_sha256: str,
+) -> dict[str, Any]:
+    require(
+        _is_sha256(build_manifest_sha256),
+        "stale_rtl_state",
+        "trusted tips checkpoint build binding schema mismatch",
+    )
+    ordered = []
+    for layer_index in sorted(tips):
+        require(
+            type(layer_index) is int,
+            "stale_rtl_state",
+            "trusted tips checkpoint layer key schema mismatch",
+        )
+        tip = _validate_trusted_tip(
+            tips[layer_index], f"layer {layer_index} checkpoint"
+        )
+        require(
+            tip["layer_index"] == layer_index
+            and tip["build_manifest_sha256"] == build_manifest_sha256,
+            "stale_rtl_state",
+            f"layer {layer_index} trusted tip checkpoint binding mismatch",
+        )
+        ordered.append(tip)
+    document = {
+        "schema_version": 1,
+        "kind": TRUSTED_TIP_CHECKPOINT_KIND,
+        "model_binding": {
+            "repository": MODEL_REPOSITORY,
+            "revision": MODEL_REVISION,
+            "checkpoint_sha256": CHECKPOINT_SHA256,
+        },
+        "build_manifest_sha256": build_manifest_sha256,
+        "tips": ordered,
+    }
+    write_json(path, document)
+    return hash_file(path)
+
+
+def load_trusted_tips_checkpoint(
+    path: Path,
+    expected_checkpoint: Mapping[str, Any] | None,
+    *,
+    build_manifest_sha256: str,
+) -> dict[int, dict[str, Any]]:
+    require(
+        expected_checkpoint is not None,
+        "stale_rtl_state",
+        "trusted tips checkpoint requires an independently authenticated digest",
+    )
+    expected = _validate_hash_record(
+        expected_checkpoint, "expected trusted tips checkpoint"
+    )
+    require(
+        path.is_file() and hash_file(path) == expected,
+        "stale_rtl_state",
+        "trusted tips checkpoint digest mismatch",
+    )
+    payload = path.read_bytes()
+    document = load_json(path, "trusted tips checkpoint")
+    require(
+        payload == canonical_json(document)
+        and type(document) is dict
+        and set(document) == TRUSTED_TIP_CHECKPOINT_KEYS
+        and type(document.get("schema_version")) is int
+        and document["schema_version"] == 1
+        and type(document.get("kind")) is str
+        and document["kind"] == TRUSTED_TIP_CHECKPOINT_KIND
+        and _is_sha256(document.get("build_manifest_sha256"))
+        and document["build_manifest_sha256"] == build_manifest_sha256
+        and type(document.get("tips")) is list,
+        "stale_rtl_state",
+        "trusted tips checkpoint schema or build binding mismatch",
+    )
+    _validate_model_binding(document.get("model_binding"), "checkpoint")
+    tips: dict[int, dict[str, Any]] = {}
+    for raw_tip in document["tips"]:
+        tip = _validate_trusted_tip(raw_tip, "checkpoint")
+        layer_index = tip["layer_index"]
+        require(
+            layer_index not in tips
+            and tip["build_manifest_sha256"] == build_manifest_sha256,
+            "stale_rtl_state",
+            f"layer {layer_index} trusted tip checkpoint is duplicate or stale",
+        )
+        tips[layer_index] = tip
+    return tips
 
 
 def load_json(path: Path, label: str) -> dict[str, Any]:
@@ -236,7 +491,8 @@ def contract_binding(repository_root: Path) -> tuple[dict[str, Any], dict[str, A
     contract = load_json(path, "First Voice contract")
     require(
         contract.get("kind") == "ace3_model24_first_voice_hybrid_contract"
-        and contract.get("schema_version") == 1,
+        and type(contract.get("schema_version")) is int
+        and contract.get("schema_version") == 2,
         "contract_mismatch",
         "First Voice contract schema mismatch",
     )
@@ -748,13 +1004,7 @@ def _validate_retained_state_record(
         "stale_rtl_state",
         f"layer {layer_index} state envelope is not canonical",
     )
-    require(
-        set(envelope) == STATE_ENVELOPE_KEYS
-        and envelope.get("schema_version") == STATE_SCHEMA_VERSION
-        and envelope.get("kind") == STATE_KIND,
-        "stale_rtl_state",
-        f"layer {layer_index} state envelope schema mismatch",
-    )
+    _validate_state_envelope_schema(envelope, f"layer {layer_index}")
     require(
         envelope.get("model_binding")
         == {
@@ -845,7 +1095,23 @@ def validate_state_envelope(
     next_position: int,
     build_manifest_sha256: str,
     binary_sha256: str,
+    expected_tip: Mapping[str, Any] | None,
 ) -> dict[str, Any]:
+    require(
+        expected_tip is not None,
+        "stale_rtl_state",
+        f"layer {layer_index} restore has no trusted chain-tip commitment",
+    )
+    tip = _validate_trusted_tip(expected_tip, f"layer {layer_index}")
+    require(
+        tip["layer_index"] == layer_index
+        and tip["cache_slot"] == 0
+        and tip["next_position"] == next_position
+        and tip["build_manifest_sha256"] == build_manifest_sha256
+        and tip["binary_sha256"] == binary_sha256,
+        "stale_rtl_state",
+        f"layer {layer_index} trusted chain-tip owner or position mismatch",
+    )
     expected_state_path, expected_envelope_path = state_record_paths(
         states_dir,
         layer_index,
@@ -857,13 +1123,26 @@ def validate_state_envelope(
         "stale_rtl_state",
         f"layer {layer_index} state record path mismatch",
     )
-    envelope, _ = _validate_retained_state_record(
+    envelope, envelope_payload = _validate_retained_state_record(
         states_dir=states_dir,
         runtime_dir=runtime_dir,
         layer_index=layer_index,
         next_position=next_position,
         build_manifest_sha256=build_manifest_sha256,
         binary_sha256=binary_sha256,
+    )
+    require(
+        tip["envelope"]
+        == {
+            "bytes": len(envelope_payload),
+            "sha256": sha256_bytes(envelope_payload),
+        }
+        and tip["state"] == hash_file(state_path)
+        and tip["input_activation_sha256"]
+        == envelope["input_activation_sha256"]
+        and tip["output_hidden_sha256"] == envelope["output_hidden_sha256"],
+        "stale_rtl_state",
+        f"layer {layer_index} trusted chain-tip digest mismatch",
     )
     return envelope
 
@@ -1065,6 +1344,7 @@ def _run_transaction(
     hidden_bits: np.ndarray,
     build_manifest_sha256: str,
     binary_sha256: str,
+    trusted_tips: dict[int, dict[str, Any]],
 ) -> tuple[np.ndarray, dict[str, Any]]:
     transaction_dir = runtime_dir / f"position{position:03d}" / f"layer{layer_index:02d}"
     raw_dir = transaction_dir / "raw"
@@ -1088,6 +1368,7 @@ def _run_transaction(
             next_position=position,
             build_manifest_sha256=build_manifest_sha256,
             binary_sha256=binary_sha256,
+            expected_tip=trusted_tips.get(layer_index),
         )
     else:
         require(
@@ -1206,12 +1487,17 @@ def _run_transaction(
         "output_hidden_sha256": sha256_bytes(_canonical_bytes(output_bits)),
         "state": state_record,
     }
+    envelope_payload = canonical_json(envelope)
     try:
         write_json(staging_envelope_path, envelope)
         os.replace(staging_dir, record_dir)
     except Exception:
         shutil.rmtree(staging_dir, ignore_errors=True)
         raise
+    trusted_tips[layer_index] = state_tip_commitment(
+        envelope,
+        envelope_payload,
+    )
     record = {
         "layer_index": layer_index,
         "position": position,
@@ -1414,6 +1700,7 @@ def execute(
     states_dir = output_dir / "states"
     tensor_map = _authenticate_tensor_map(tensor_map_path)
     tensor_manifests: dict[int, dict[str, Any]] = {}
+    trusted_tips: dict[int, dict[str, Any]] = {}
 
     torch.set_num_threads(8)
     torch.use_deterministic_algorithms(True)
@@ -1460,6 +1747,7 @@ def execute(
                     hidden_bits=input_bits,
                     build_manifest_sha256=build_manifest_sha256,
                     binary_sha256=binary_hashes[layer_index],
+                    trusted_tips=trusted_tips,
                 )
             finally:
                 if vector_workspace.exists():

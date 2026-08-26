@@ -14,12 +14,16 @@ RTL claim.
 
 Each represented prompt or fed-back generated token traverses all 24 compiled
 Verilator decoders. Every layer retains an immutable `--savable` state image
-and canonical exact-schema envelope for each represented position. Before
-restore, the driver recursively authenticates every retained predecessor state
-and envelope plus each transition's retained input activation and output
-hidden hash, compiled binary, checkpoint, layer, cache slot, and next position.
-Extra or missing fields and noncanonical envelope bytes are rejected. State is
-committed only after a natural token terminal. Tokenization, chat serialization, embedding lookup,
+and canonical exact-schema envelope for each represented position. The runtime
+also carries a separate trusted tip per layer that commits the envelope, opaque
+state, transition input/output, compiled binary, checkpoint, owner, and next
+position. Before `--state-in`, validation requires that caller-held commitment;
+it never reconstructs the expected tip from the mutable envelope. Canonical
+resume checkpoints carry the tips but are accepted only against a separately
+held expected bytes/SHA256 record. Missing, stale, malformed, or mismatched tips
+fail closed. Every integer field is exact JSON `int`; booleans and integral
+floats are rejected, as are extra or missing fields and noncanonical bytes.
+State is committed only after a natural token terminal. Tokenization, chat serialization, embedding lookup,
 final RMSNorm, tied `lm_head`, full-vocabulary greedy selection, and decoding
 are host operations. PyTorch CPU float64 dequantized-AWQ execution provides the
 independent causal reference.
@@ -57,8 +61,9 @@ make model24-first-voice-layer-compile FIRST_VOICE_RTL_LAYER_INDEX=3
 The target compiles the existing indexed decoder with `--savable`, serializes a
 live partially executing RTL model, restores it into a fresh model, and compares
 1,024 subsequent cycles. Python tests cover capacity, negative checkpoint,
-stale-position and state hashes, every parent/activation/output lineage field,
-missing or wrong predecessors, and exact canonical envelope schema. Full execution additionally requires
+self-rehashed state/input/output tampering, missing or wrong trusted tips,
+authenticated checkpoint resume, stale positions and predecessors, and exact
+canonical envelope/tip/checkpoint types. Full execution additionally requires
 the authenticated checkpoint/tokenizer and all 24 compiled indexed binaries:
 
 The compact-builder test target proves success/failure Mdir cleanup and rejects
