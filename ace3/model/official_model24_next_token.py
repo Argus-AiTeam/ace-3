@@ -8,6 +8,7 @@ import hashlib
 import json
 import math
 from pathlib import Path
+from tempfile import TemporaryDirectory
 from typing import Any, Mapping
 
 import numpy as np
@@ -894,6 +895,7 @@ def generate(
 def validate_directory(
     vector_dir: Path,
     checkpoint_path: Path = DEFAULT_OFFICIAL_CHECKPOINT,
+    tokenizer_dir: Path = DEFAULT_OFFICIAL_TOKENIZER_DIR,
 ) -> dict[str, Any]:
     _require(vector_dir.is_dir(), f"evidence directory is missing: {vector_dir}")
     actual_names = {path.name for path in vector_dir.iterdir() if path.is_file()}
@@ -920,6 +922,13 @@ def validate_directory(
     summary = validate_document(document)
     _require(summary == manifest["summary"], "manifest summary mismatch")
     authenticate_evidence_tensors(document, checkpoint_path)
+    with TemporaryDirectory(prefix="ace3-next-token-validation-") as temporary:
+        regenerated = generate(Path(temporary), checkpoint_path, tokenizer_dir)
+    _require(
+        regenerated[ARTIFACT_NAME] == evidence_payload
+        and regenerated[MANIFEST_NAME] == (vector_dir / MANIFEST_NAME).read_bytes(),
+        "independent evidence regeneration mismatch",
+    )
     return summary
 
 
@@ -969,6 +978,7 @@ def main() -> None:
             summary = validate_directory(
                 args.vector_dir.resolve(),
                 args.official_checkpoint.resolve(),
+                args.official_tokenizer_dir.resolve(),
             )
             print(
                 "OFFICIAL_MODEL24_NEXT_TOKEN_VALIDATION_PASS "

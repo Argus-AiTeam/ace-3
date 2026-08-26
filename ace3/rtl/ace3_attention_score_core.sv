@@ -36,15 +36,15 @@ module ace3_attention_score_core #(
 );
     localparam integer PAIR_INDEX_WIDTH =
         (HEAD_DIM <= 1) ? 1 : $clog2(HEAD_DIM);
-    localparam [PAIR_INDEX_WIDTH-1:0] LAST_PAIR = HEAD_DIM - 1;
+    localparam integer POSITION_MAX = 128;
 
     reg active_q;
     reg [PAIR_INDEX_WIDTH-1:0] pair_index_q;
     reg signed [89:0] accumulator_q;
     reg [3:0] query_head_q;
     reg [3:0] key_head_q;
-    reg [14:0] query_position_q;
-    reg [14:0] key_position_q;
+    reg [6:0] query_position_q;
+    reg [6:0] key_position_q;
     reg causal_q;
     reg cache_miss_q;
     reg invalid_q;
@@ -53,8 +53,8 @@ module ace3_attention_score_core #(
     reg [15:0] score_f16_q;
     reg [3:0] out_query_head_q;
     reg [3:0] out_key_head_q;
-    reg [14:0] out_query_position_q;
-    reg [14:0] out_key_position_q;
+    reg [6:0] out_query_position_q;
+    reg [6:0] out_key_position_q;
     reg out_causal_q;
     reg out_cache_miss_q;
     reg out_invalid_q;
@@ -78,10 +78,16 @@ module ace3_attention_score_core #(
 
     wire [3:0] mapped_key_head_w =
         (query_head_i < 4'd7) ? 4'd0 : 4'd1;
+    wire [31:0] query_position_ext_w = {17'd0, query_position_i};
+    wire [31:0] key_position_ext_w = {17'd0, key_position_i};
+    wire [31:0] pair_index_ext_w =
+        {{(32-PAIR_INDEX_WIDTH){1'b0}}, pair_index_q};
     wire config_valid_w =
         (query_head_i < 4'd14) &&
         (key_head_i < 4'd2) &&
-        (key_head_i == mapped_key_head_w);
+        (key_head_i == mapped_key_head_w) &&
+        (query_position_ext_w < POSITION_MAX) &&
+        (key_position_ext_w < POSITION_MAX);
     wire start_metadata_known_w =
         known4(query_head_i) && known4(key_head_i) &&
         known15(query_position_i) && known15(key_position_i);
@@ -149,7 +155,7 @@ module ace3_attention_score_core #(
         begin
             negative = value[89];
             magnitude = negative ? (~value + 90'd1) : value;
-            base = magnitude >> 27;
+            base = magnitude[89:27];
             remainder = magnitude[26:0];
             increment =
                 (remainder > 27'h4000000) ||
@@ -169,8 +175,8 @@ module ace3_attention_score_core #(
     assign score_f16_o = score_f16_q;
     assign query_head_o = out_query_head_q;
     assign key_head_o = out_key_head_q;
-    assign query_position_o = out_query_position_q;
-    assign key_position_o = out_key_position_q;
+    assign query_position_o = {8'd0, out_query_position_q};
+    assign key_position_o = {8'd0, out_key_position_q};
     assign causal_o = out_causal_q;
     assign cache_miss_o = out_cache_miss_q;
     assign invalid_operand_o = out_invalid_q;
@@ -184,8 +190,8 @@ module ace3_attention_score_core #(
             accumulator_q <= 90'sd0;
             query_head_q <= 4'd0;
             key_head_q <= 4'd0;
-            query_position_q <= 15'd0;
-            key_position_q <= 15'd0;
+            query_position_q <= 7'd0;
+            key_position_q <= 7'd0;
             causal_q <= 1'b0;
             cache_miss_q <= 1'b0;
             invalid_q <= 1'b0;
@@ -193,8 +199,8 @@ module ace3_attention_score_core #(
             score_f16_q <= 16'd0;
             out_query_head_q <= 4'd0;
             out_key_head_q <= 4'd0;
-            out_query_position_q <= 15'd0;
-            out_key_position_q <= 15'd0;
+            out_query_position_q <= 7'd0;
+            out_key_position_q <= 7'd0;
             out_causal_q <= 1'b0;
             out_cache_miss_q <= 1'b0;
             out_invalid_q <= 1'b0;
@@ -205,8 +211,8 @@ module ace3_attention_score_core #(
             accumulator_q <= 90'sd0;
             query_head_q <= 4'd0;
             key_head_q <= 4'd0;
-            query_position_q <= 15'd0;
-            key_position_q <= 15'd0;
+            query_position_q <= 7'd0;
+            key_position_q <= 7'd0;
             causal_q <= 1'b0;
             cache_miss_q <= 1'b0;
             invalid_q <= 1'b0;
@@ -214,8 +220,8 @@ module ace3_attention_score_core #(
             score_f16_q <= 16'd0;
             out_query_head_q <= 4'd0;
             out_key_head_q <= 4'd0;
-            out_query_position_q <= 15'd0;
-            out_key_position_q <= 15'd0;
+            out_query_position_q <= 7'd0;
+            out_key_position_q <= 7'd0;
             out_causal_q <= 1'b0;
             out_cache_miss_q <= 1'b0;
             out_invalid_q <= 1'b0;
@@ -230,8 +236,8 @@ module ace3_attention_score_core #(
                 accumulator_q <= 90'sd0;
                 query_head_q <= query_head_i;
                 key_head_q <= key_head_i;
-                query_position_q <= query_position_i;
-                key_position_q <= key_position_i;
+                query_position_q <= query_position_i[6:0];
+                key_position_q <= key_position_i[6:0];
                 causal_q <= key_position_i <= query_position_i;
                 cache_miss_q <= 1'b0;
                 invalid_q <= 1'b0;
@@ -241,7 +247,7 @@ module ace3_attention_score_core #(
                 accumulator_q <= accumulator_next_w;
                 cache_miss_q <= cache_miss_next_w;
                 invalid_q <= invalid_next_w;
-                if (pair_index_q == LAST_PAIR) begin
+                if (pair_index_ext_w == (HEAD_DIM - 1)) begin
                     active_q <= 1'b0;
                     pair_index_q <= {PAIR_INDEX_WIDTH{1'b0}};
                     out_valid_q <= 1'b1;

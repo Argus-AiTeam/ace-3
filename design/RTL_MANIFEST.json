@@ -1,10 +1,10 @@
 {
   "schema_version": 2,
-  "manifest_id": "ace3_fp16_adaptation_qkv_rope_kv_cache_rtl",
+  "manifest_id": "ace3_fp16_adaptation_qkv_rope_kv_cache_attention_rtl",
   "scope": {
-    "milestone": "bounded FP16 adaptation plus QKV projection, RoPE, and FP16 K/V-cache RTL simulation",
-    "baseline_commit": "241c977dda5ae4615681c583eb8301dfe9d3dd05",
-    "baseline_subject": "feat(rtl): add FP16 adaptation operators",
+    "milestone": "bounded FP16 adaptation, QKV projection, RoPE, FP16 K/V-cache, and attention RTL simulation",
+    "baseline_commit": "645760c1de73c83c44515b6174b03fdfa04ba9bb",
+    "baseline_subject": "feat(rtl): add standalone attention block",
     "included_modules": [
       "ace3_fp16_to_q24",
       "ace3_q24_to_fp16_rne",
@@ -13,12 +13,12 @@
       "ace3_fp16_silu_gate_core",
       "ace3_qkv_projection_cluster",
       "ace3_qwen2_rope_pair",
-      "ace3_fp16_kv_cache"
+      "ace3_fp16_kv_cache",
+      "ace3_attention_score_core",
+      "ace3_attention_softmax_core",
+      "ace3_attention_value_core"
     ],
     "excluded_claims": [
-      "attention scores",
-      "softmax",
-      "value composition",
       "decoder-layer or full-model execution",
       "correctly rounded transcendental SiLU",
       "synthesis, timing, area, power, FPGA, or silicon",
@@ -35,6 +35,12 @@
       "path": "ace3/contracts/qkv_rope_kv_cache.json",
       "sha256": "4451a9044f82781dcfd861f44583b59e006f1044279c744f886c3f880ce7b098",
       "applies_to": "QKV-* requirements",
+      "status": "frozen and unchanged by this manifest"
+    },
+    {
+      "path": "ace3/contracts/attention_block.json",
+      "sha256": "9c96b51f89c747b001debb69929940ccd252f39777f8d01a904f2b56aae418ac",
+      "applies_to": "ATTENTION-* requirements",
       "status": "frozen and unchanged by this manifest"
     }
   ],
@@ -237,12 +243,68 @@
         "/rope/implementation",
         "/kv_cache/implementation"
       ]
+    },
+    {
+      "id": "ATTENTION-GEOMETRY-001",
+      "summary": "The attention cores implement 14 query heads, two K/V heads, 64-element heads, floor(query_head/7) GQA mapping, and key_position <= query_position causal eligibility.",
+      "contract_refs": [
+        "/geometry"
+      ]
+    },
+    {
+      "id": "ATTENTION-SCORE-001",
+      "summary": "Score accumulation decodes finite FP16 Q/K exactly to Q24, accumulates 64 Q48 products, applies the exact 1/8 scale with RNE, and converts once to FP16.",
+      "contract_refs": [
+        "/numerical_policy/score"
+      ]
+    },
+    {
+      "id": "ATTENTION-SOFTMAX-001",
+      "summary": "Causal softmax uses Q24 max subtraction, the frozen 17-point Q0.24 exponential interpolation, exact denominator accumulation, and RNE normalization.",
+      "contract_refs": [
+        "/numerical_policy/softmax"
+      ]
+    },
+    {
+      "id": "ATTENTION-VALUE-001",
+      "summary": "Value composition accumulates required FP16 probability/V products exactly in Q48 and converts the final Q24 result once to FP16.",
+      "contract_refs": [
+        "/numerical_policy/value_composition"
+      ]
+    },
+    {
+      "id": "ATTENTION-PROTOCOL-001",
+      "summary": "Reset and clear abort active work, outputs remain stable under backpressure, and invalid or unknown configuration and payload metadata cannot be accepted.",
+      "contract_refs": [
+        "/protocol_policy"
+      ]
+    },
+    {
+      "id": "ATTENTION-EVIDENCE-001",
+      "summary": "Hash-authenticated official-checkpoint-derived and directed vectors are independently recomputed and compared in Icarus four-state and Verilator two-state simulation with tamper rejection.",
+      "contract_refs": [
+        "/verification_boundary/required"
+      ]
+    },
+    {
+      "id": "ATTENTION-BOUNDARY-001",
+      "summary": "The attention claim stops at standalone score, causal softmax, and value-composition cores and excludes decoder, model, physical-implementation, and performance claims.",
+      "contract_refs": [
+        "/verification_boundary/excluded"
+      ]
+    },
+    {
+      "id": "ATTENTION-PROVENANCE-001",
+      "summary": "The three attention cores are first-party ACE-3 RTL bound to the fixed official model identity and the accepted FP16 conversion helpers.",
+      "contract_refs": [
+        "/provenance"
+      ]
     }
   ],
   "source_units": [
     {
       "path": "ace3/rtl/ace3_fp16_fixed.sv",
-      "sha256": "896c0e4c1405bf1cb80141a69259a94af905833ae45a8c7f1338664b4c0552d9",
+      "sha256": "e7f38a3434b60849896a0a5bab549bd6d4b6a4908280a2860a33fc8e839c86c8",
       "provenance": {
         "classification": "first_party_ace3_rtl",
         "copied_from_ace2": false,
@@ -903,6 +965,103 @@
             "QKV-BOUNDARY-001",
             "QKV-PROVENANCE-001"
           ]
+        },
+        {
+          "path": "ace3/rtl/ace3_attention_score_core.sv",
+          "sha256": "35db39940444c3f286c0110c94f46347e7192511b162a7ef4d10a6b299be5221",
+          "provenance": {
+            "classification": "first_party_ace3_rtl",
+            "copied_from_ace2": false,
+            "origin": "Authored for the fixed Qwen2.5 scaled-QK and causal-status contract.",
+            "ace2_relationship": "No ACE-2 source or W4A8 arithmetic is copied."
+          },
+          "modules": [
+            {
+              "name": "ace3_attention_score_core",
+              "kind": "sequential_ready_valid_reduction_core",
+              "parameters": [
+                {"name": "HEAD_DIM", "declaration": "parameter integer HEAD_DIM = 64", "default": 64}
+              ],
+              "contract_ports": "/modules/0/ports",
+              "dependencies": [
+                "ace3_fp16_to_q24",
+                "ace3_q24_to_fp16_rne(WIDTH=64)"
+              ],
+              "requirement_ids": [
+                "ATTENTION-GEOMETRY-001",
+                "ATTENTION-SCORE-001",
+                "ATTENTION-PROTOCOL-001",
+                "ATTENTION-EVIDENCE-001",
+                "ATTENTION-BOUNDARY-001",
+                "ATTENTION-PROVENANCE-001"
+              ]
+            }
+          ]
+        },
+        {
+          "path": "ace3/rtl/ace3_attention_softmax_core.sv",
+          "sha256": "899220e73557cbbb46f4e409551b2396e59ad230b126b2f3fc4809fd8d9d11ca",
+          "provenance": {
+            "classification": "first_party_ace3_rtl",
+            "copied_from_ace2": false,
+            "origin": "Authored for the fixed causal Q0.24 softmax approximation contract.",
+            "ace2_relationship": "No ACE-2 source or W4A8 arithmetic is copied."
+          },
+          "modules": [
+            {
+              "name": "ace3_attention_softmax_core",
+              "kind": "sequential_buffered_row_core",
+              "parameters": [
+                {"name": "CONTEXT_MAX", "declaration": "parameter integer CONTEXT_MAX = 128", "default": 128}
+              ],
+              "contract_ports": "/modules/1/ports",
+              "dependencies": [
+                "ace3_fp16_to_q24",
+                "ace3_q24_to_fp16_rne(WIDTH=26)"
+              ],
+              "requirement_ids": [
+                "ATTENTION-GEOMETRY-001",
+                "ATTENTION-SOFTMAX-001",
+                "ATTENTION-PROTOCOL-001",
+                "ATTENTION-EVIDENCE-001",
+                "ATTENTION-BOUNDARY-001",
+                "ATTENTION-PROVENANCE-001"
+              ]
+            }
+          ]
+        },
+        {
+          "path": "ace3/rtl/ace3_attention_value_core.sv",
+          "sha256": "17beacde641684df7f87c03d62c8187e43f6b8a6a928734cd8a3916ce8d14201",
+          "provenance": {
+            "classification": "first_party_ace3_rtl",
+            "copied_from_ace2": false,
+            "origin": "Authored for the fixed FP16 attention value-composition contract.",
+            "ace2_relationship": "No ACE-2 source or W4A8 arithmetic is copied."
+          },
+          "modules": [
+            {
+              "name": "ace3_attention_value_core",
+              "kind": "sequential_ready_valid_reduction_core",
+              "parameters": [
+                {"name": "HEAD_DIM", "declaration": "parameter integer HEAD_DIM = 64", "default": 64},
+                {"name": "CONTEXT_MAX", "declaration": "parameter integer CONTEXT_MAX = 128", "default": 128}
+              ],
+              "contract_ports": "/modules/2/ports",
+              "dependencies": [
+                "ace3_fp16_to_q24",
+                "ace3_q24_to_fp16_rne(WIDTH=67)"
+              ],
+              "requirement_ids": [
+                "ATTENTION-GEOMETRY-001",
+                "ATTENTION-VALUE-001",
+                "ATTENTION-PROTOCOL-001",
+                "ATTENTION-EVIDENCE-001",
+                "ATTENTION-BOUNDARY-001",
+                "ATTENTION-PROVENANCE-001"
+              ]
+            }
+          ]
         }
       ]
     }
@@ -952,6 +1111,63 @@
         "The validator rejects a modified rope_cases.hex by serialized SHA256 before simulation."
       ]
     },
+    "attention": {
+      "frozen_contract": {
+        "path": "ace3/contracts/attention_block.json",
+        "sha256": "9c96b51f89c747b001debb69929940ccd252f39777f8d01a904f2b56aae418ac"
+      },
+      "serialized_bindings": {
+        "path": "ace3/contracts/attention_vector_bindings.json",
+        "sha256": "bb3ea6f8561058c0c1857f41eaa6d32320a1351fc9ba10e1da4cd9a0fdf450d3",
+        "generated_manifest_sha256": "25cbb9327b4bdcc16fd326e8902ab57daedf15a59b9b1759a0ac14e0c8d05f25"
+      },
+      "official_source_sha256": {
+        "config.json": "bd20ae34a91eb38230b870d39f56677d1cda1e8b6688ad627e6efb6ca9f44090",
+        "model-api.json": "9a4a3beea2283031c91d0de501fcb1a8613f9b5f5d6039111eac421833d5a768",
+        "sample-model_layers_0_self_attn_q_proj-scales.bin": "687adc7d7bcd6e45a065f914dd27a1284b7e48260491bb0d26ae1e13b78ac321"
+      },
+      "shared_fp16_rtl": {
+        "path": "ace3/rtl/ace3_fp16_fixed.sv",
+        "sha256": "e7f38a3434b60849896a0a5bab549bd6d4b6a4908280a2860a33fc8e839c86c8"
+      },
+      "independent_bit_level_oracle": {
+        "path": "ace3/model/attention_oracle.py",
+        "sha256": "0d18f27c4c01e4c7f9397958ca52f63960308374a2baf35e96e730cce15a6acd"
+      },
+      "official_checkpoint_vector_generator": {
+        "path": "ace3/model/generate_attention_vectors.py",
+        "sha256": "5db02bdf108390e83841dee3d8f55fe28deafe9ec21f6cc20bdf62e8946db8eb"
+      },
+      "authenticated_vector_validator": {
+        "path": "ace3/model/validate_attention_vectors.py",
+        "sha256": "64400a6c10b4f1850f9b0623f457fb66aec1f57319f456577987175ec9aabc61"
+      },
+      "four_state_icarus_testbench": {
+        "path": "ace3/tb/ace3_attention_block_tb.sv",
+        "sha256": "40fe3d9332684415e01f1fcc5f404dfb26ad644118d014bd532f9854bd982036"
+      },
+      "two_state_verilator_harness": {
+        "path": "ace3/tb/ace3_attention_main.cpp",
+        "sha256": "5f5fa0ecc7b27ccd5b75d663f7d605b51cdca3f98a44b9af38e72bed50cc0ae0"
+      },
+      "verilator_top": {
+        "path": "ace3/tb/ace3_attention_verilator_top.sv",
+        "sha256": "83c04b524db8363ac6c99a651dd2e57f9a96d13a0f5a6d488da7dce26af9512e"
+      },
+      "targets": [
+        "make attention-oracle",
+        "make attention-tamper-rejection",
+        "make attention-iverilog-simulation",
+        "make attention-verilator-simulation"
+      ],
+      "coverage_obligations": [
+        "The validator independently recomputes 20 score cases, 20 softmax rows with 140 probabilities, and 20 value-composition cases spanning every query head and both GQA K/V groups.",
+        "Official-derived operands are deterministic selections from hash-authenticated layer-0 q_proj FP16 scales, not captured runtime Q/K/V activations; directed cases cover masks, misses, invalids, saturation, cancellation, and upstream row errors.",
+        "Both simulators compare every retained numerical result and status and check reset, clear, output backpressure, causal masking, cache-miss propagation, and invalid GQA configuration rejection.",
+        "Icarus additionally requires six bounded X/Z non-acceptance checks; Verilator repeats the legal arithmetic and protocol surface as a two-state build and simulation.",
+        "A modified attention_score_terms.hex must fail serialized SHA256 authentication before simulation."
+      ]
+    },
     "aggregate_regression": {
       "fresh_nonclean_command": "make OFFICIAL_TENSOR_DIR=/path/to/official_tensors test",
       "retained_targets": [
@@ -961,12 +1177,10 @@
         "verilator",
         "projection",
         "fp16-adaptation",
-        "qkv-rope-cache"
+        "qkv-rope-cache",
+        "attention"
       ],
       "bounded_claim_exclusions": [
-        "attention scores",
-        "softmax",
-        "value composition",
         "decoder-layer or full-model execution",
         "synthesis, timing, area, power, FPGA, or silicon",
         "dialogue or model quality"

@@ -962,6 +962,36 @@ def validate_directory(
         == [EXCLUDED_UNREVIEWED_EVIDENCE],
         "manifest result or provenance mismatch",
     )
+    regenerated_rows, regenerated_diagnostics, regenerated_metadata = execute_batch(
+        checkpoint_path,
+        tokenizer_dir,
+    )
+    authenticated_rows = copy.deepcopy(rows)
+    authenticated_regenerated_rows = copy.deepcopy(regenerated_rows)
+    for row in authenticated_rows:
+        row.pop("wall_time_seconds_diagnostic", None)
+    for row in authenticated_regenerated_rows:
+        row.pop("wall_time_seconds_diagnostic", None)
+    _require(
+        authenticated_regenerated_rows == authenticated_rows,
+        "independent evidence regeneration mismatch",
+    )
+    regenerated_summary = _build_summary(
+        regenerated_rows,
+        regenerated_diagnostics,
+        regenerated_metadata,
+        tokenizer,
+        tokenizer_dir,
+        require_complete=True,
+    )
+    authenticated_summary = copy.deepcopy(summary)
+    authenticated_regenerated_summary = copy.deepcopy(regenerated_summary)
+    authenticated_summary.pop("diagnostics", None)
+    authenticated_regenerated_summary.pop("diagnostics", None)
+    _require(
+        authenticated_regenerated_summary == authenticated_summary,
+        "independent summary regeneration mismatch",
+    )
     return summary
 
 

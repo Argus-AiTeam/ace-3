@@ -1,0 +1,216 @@
+{
+  "claim_boundary": "Hashes bind an independent, fixed two-token layer-0 token-engine simulation vector set only. They exclude full model/24-layer execution, dialogue, synthesis, PPA, and FPGA claims.",
+  "expected_source_manifest_sha256": "5d4579ae64c17d92ff8a4d407fbf98a18321ffb3d3538c8ff7d7ea58d99d31b9",
+  "generation": {
+    "cache_slot": 0,
+    "final_records": 1792,
+    "positions": [
+      0,
+      1
+    ],
+    "rope_coefficients": 64,
+    "tensor_hex_files": 26,
+    "token_ids": [
+      9707,
+      1879
+    ],
+    "tokens": 2,
+    "trace_records": 46676
+  },
+  "kind": "ace3_decoder_layer0_vector_bindings",
+  "schema_version": 1,
+  "serialized_artifacts": [
+    {
+      "byte_count": 1029,
+      "file": "boundary_manifest.json",
+      "line_count": 43,
+      "sha256": "c0e77c256b5c4ae68de55a8102a949835508f46ab0515d9edd0d9c48739b4089"
+    },
+    {
+      "byte_count": 217,
+      "file": "decoder_layer0_params.svh",
+      "line_count": 4,
+      "sha256": "88e36463cde45400a7534e75733689a50311a7b2171c3b93fcbe1c3d12e1dbe8"
+    },
+    {
+      "byte_count": 19712,
+      "file": "final.hex",
+      "line_count": 1792,
+      "sha256": "22768ac6b337f920faac7de59b4eb43a203e1db45cdf688820fcbb35cdfe3446"
+    },
+    {
+      "byte_count": 19712,
+      "file": "inputs.hex",
+      "line_count": 1792,
+      "sha256": "0a716c8b61ad51f6663f7fad27abe89f59bf048438b7d13b23a160ab20635826"
+    },
+    {
+      "byte_count": 960,
+      "file": "rope_coefficients.hex",
+      "line_count": 64,
+      "sha256": "b073c61d1c8532c88d52807398d55dd1cf14e3c085aa38c2016745f7d0e92d18"
+    },
+    {
+      "byte_count": 4480,
+      "file": "tensors/layer0_input_layernorm_weight.fp16le.bin.hex",
+      "line_count": 896,
+      "sha256": "8194bcf5ec8a8b0cf0731eda8b764580abf88f21b4f23e87c2ed425167ab8ee2"
+    },
+    {
+      "byte_count": 4902912,
+      "file": "tensors/layer0_mlp_down_proj_qweight.i32le.bin.hex",
+      "line_count": 544768,
+      "sha256": "803af5d5177a96eb2d88cfe60f246f523d27a0849579f39ae8bb0c7094bb952c"
+    },
+    {
+      "byte_count": 38304,
+      "file": "tensors/layer0_mlp_down_proj_qzeros.i32le.bin.hex",
+      "line_count": 4256,
+      "sha256": "30d40ad1e88cc57603bf30d72bdb98d535534675aef453076421c29aa415400d"
+    },
+    {
+      "byte_count": 170240,
+      "file": "tensors/layer0_mlp_down_proj_scales.fp16le.bin.hex",
+      "line_count": 34048,
+      "sha256": "51bab23519ca18249133451f2fd46adf4dd9f34406da965d2f94ae89b519e71d"
+    },
+    {
+      "byte_count": 4902912,
+      "file": "tensors/layer0_mlp_gate_proj_qweight.i32le.bin.hex",
+      "line_count": 544768,
+      "sha256": "9379df43735f659e8b6553044c4efb1e3551409a1050640cd0bbd58398988a3c"
+    },
+    {
+      "byte_count": 38304,
+      "file": "tensors/layer0_mlp_gate_proj_qzeros.i32le.bin.hex",
+      "line_count": 4256,
+      "sha256": "081834e95ea32381adaed114a96984dd16f45fe3494d5230bc11fc33202f3569"
+    },
+    {
+      "byte_count": 170240,
+      "file": "tensors/layer0_mlp_gate_proj_scales.fp16le.bin.hex",
+      "line_count": 34048,
+      "sha256": "57ddbd5a5a2041503d668f16c3e264f583d44f5c3035925fc4f6a4e1440a7732"
+    },
+    {
+      "byte_count": 4902912,
+      "file": "tensors/layer0_mlp_up_proj_qweight.i32le.bin.hex",
+      "line_count": 544768,
+      "sha256": "a69b89e8b9ab4ab76ccb6f2c8389aa195f1410b9c09e8f4c93126d90286573ab"
+    },
+    {
+      "byte_count": 38304,
+      "file": "tensors/layer0_mlp_up_proj_qzeros.i32le.bin.hex",
+      "line_count": 4256,
+      "sha256": "8745e30012ecd151999978a66dcd329d5f4f1e3cda52e456c087eeee5b931f8b"
+    },
+    {
+      "byte_count": 170240,
+      "file": "tensors/layer0_mlp_up_proj_scales.fp16le.bin.hex",
+      "line_count": 34048,
+      "sha256": "0d8de2c53b36153e050b6851813165e22e535a71c46254303439260f57d19285"
+    },
+    {
+      "byte_count": 4480,
+      "file": "tensors/layer0_post_attention_layernorm_weight.fp16le.bin.hex",
+      "line_count": 896,
+      "sha256": "dbb3647ac8533a8d071aa0965a43232c52c4513e32aa8c82681ec4cf8c398217"
+    },
+    {
+      "byte_count": 640,
+      "file": "tensors/layer0_self_attn_k_proj_bias.fp16le.bin.hex",
+      "line_count": 128,
+      "sha256": "95e06ead4f83381e89ed37057fdbe9b9fc4b9bc31b9ba059fe9c6312a7862f51"
+    },
+    {
+      "byte_count": 129024,
+      "file": "tensors/layer0_self_attn_k_proj_qweight.i32le.bin.hex",
+      "line_count": 14336,
+      "sha256": "5946f7e73be8f48c6418ac940646cb81f0f908abcd40fcf00d9144dc67702b20"
+    },
+    {
+      "byte_count": 1008,
+      "file": "tensors/layer0_self_attn_k_proj_qzeros.i32le.bin.hex",
+      "line_count": 112,
+      "sha256": "fb302c92fb5e2a75a50109414a57a4863f9581021268603d4e0f34e5945659df"
+    },
+    {
+      "byte_count": 4480,
+      "file": "tensors/layer0_self_attn_k_proj_scales.fp16le.bin.hex",
+      "line_count": 896,
+      "sha256": "38b44a2f66ba81a45b5bf251ece475f779c8ea8ff8efcc28f5ade427d63de218"
+    },
+    {
+      "byte_count": 903168,
+      "file": "tensors/layer0_self_attn_o_proj_qweight.i32le.bin.hex",
+      "line_count": 100352,
+      "sha256": "98f866fa4d4bd3a1b06f73be5af28d4cbc8e63e5f6f5d2d142775bb7c2ab92b4"
+    },
+    {
+      "byte_count": 7056,
+      "file": "tensors/layer0_self_attn_o_proj_qzeros.i32le.bin.hex",
+      "line_count": 784,
+      "sha256": "94bbfac90b420b2fb608a81d975505cef17ce27783e7d0a23af8f4d8e7337fef"
+    },
+    {
+      "byte_count": 31360,
+      "file": "tensors/layer0_self_attn_o_proj_scales.fp16le.bin.hex",
+      "line_count": 6272,
+      "sha256": "9efcffb206066d36bed953147a4b97505bfb304e56887fb5da40da4e10473b7a"
+    },
+    {
+      "byte_count": 4480,
+      "file": "tensors/layer0_self_attn_q_proj_bias.fp16le.bin.hex",
+      "line_count": 896,
+      "sha256": "77e5f8c9af6fc7ccf7890e186ed021d6a594ba66fffc5274ae0383b8c4f3afdd"
+    },
+    {
+      "byte_count": 903168,
+      "file": "tensors/layer0_self_attn_q_proj_qweight.i32le.bin.hex",
+      "line_count": 100352,
+      "sha256": "b68749ce7bcb5bc334ea076dd5c6b84555b235b3ecce1ddd190e1a8f598647c4"
+    },
+    {
+      "byte_count": 7056,
+      "file": "tensors/layer0_self_attn_q_proj_qzeros.i32le.bin.hex",
+      "line_count": 784,
+      "sha256": "393e36be6beb6698ab7d16180a061bc3f2d2e572fbf92d9f5cfa3ca61f5aa61b"
+    },
+    {
+      "byte_count": 31360,
+      "file": "tensors/layer0_self_attn_q_proj_scales.fp16le.bin.hex",
+      "line_count": 6272,
+      "sha256": "e25b91151fc0f06f5ed5fb87f5d4ce9a9f83f5cbcdcf14c776ae2dabb3b59625"
+    },
+    {
+      "byte_count": 640,
+      "file": "tensors/layer0_self_attn_v_proj_bias.fp16le.bin.hex",
+      "line_count": 128,
+      "sha256": "a9443ace26f5120883763e89c7e4b2a33d8a15c08683e9634ad891e7450e5565"
+    },
+    {
+      "byte_count": 129024,
+      "file": "tensors/layer0_self_attn_v_proj_qweight.i32le.bin.hex",
+      "line_count": 14336,
+      "sha256": "71dd6b3b10b2cc1709d043832d7e0222ca9c13003c0c0d6c2565998cd5fcf914"
+    },
+    {
+      "byte_count": 1008,
+      "file": "tensors/layer0_self_attn_v_proj_qzeros.i32le.bin.hex",
+      "line_count": 112,
+      "sha256": "6757ac359f6079b38822472875c9689adaa83b9d28e173b421c8c957bade9b61"
+    },
+    {
+      "byte_count": 4480,
+      "file": "tensors/layer0_self_attn_v_proj_scales.fp16le.bin.hex",
+      "line_count": 896,
+      "sha256": "1a771367832eef4e491ccbd8cb0dc907c465ae1c89783c9198b9e5380046b33c"
+    },
+    {
+      "byte_count": 793492,
+      "file": "trace.hex",
+      "line_count": 46676,
+      "sha256": "75e84bd06d40f2c33bb97f61b0f067481a0870606afd1e0ae1c1dd261718410d"
+    }
+  ]
+}

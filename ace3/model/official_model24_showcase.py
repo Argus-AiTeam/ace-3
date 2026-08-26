@@ -6,6 +6,7 @@ from __future__ import annotations
 import argparse
 import json
 from pathlib import Path
+from tempfile import TemporaryDirectory
 from typing import Any, Mapping
 
 import torch
@@ -621,6 +622,31 @@ def validate_directory(
     document = json.loads(evidence_payload)
     summary = validate_showcase_document(document, tokenizer, tokenizer_dir)
     _require(summary == manifest["summary"], "manifest summary mismatch")
+    completed = [
+        row["generation"]
+        for row in document["rows"]
+        if row["generation"] is not None
+    ]
+    _require(completed, "showcase has no completed generations")
+    max_new_tokens = completed[0]["max_new_tokens"]
+    _require(
+        all(row["max_new_tokens"] == max_new_tokens for row in completed),
+        "showcase max_new_tokens mismatch",
+    )
+    with TemporaryDirectory(prefix="ace3-showcase-validation-") as temporary:
+        regenerated = generate(
+            Path(temporary),
+            checkpoint_path,
+            tokenizer_dir,
+            max_new_tokens=max_new_tokens,
+        )
+    _require(
+        all(
+            regenerated[name] == (vector_dir / name).read_bytes()
+            for name in regenerated
+        ),
+        "independent evidence regeneration mismatch",
+    )
     return summary
 
 

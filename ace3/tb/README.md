@@ -22,3 +22,12 @@ The attention harness is shared by Icarus and Verilator and checks every
 authenticated score, probability, and value-composition record. Both runs cover
 retained backpressure, reset/clear aborts, causal masking, GQA mapping, and
 cache-miss propagation; bounded X/Z rejection is claimed only for Icarus.
+
+`make decoder-layer0` regenerates and authenticates the two-token layer-0
+oracle stream, rejects a tampered trace, runs the fast index/reset/clear/fault
+boundary, and compares all stage and final records under Icarus and Verilator.
+`make decoder-preload-micro` runs a vector-free, bounded preload-only lifecycle
+under both simulators, including expected timeout failures and the non-vacuous
+`S_IDLE` to `S_N1_START` transition. Each preload epoch accepts exactly 2,688
+ordered entries (896 each for norm1, norm2, and activation); the clear/reload
+lifecycle checks 5,376 accepted entries across two epochs.

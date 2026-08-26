@@ -22,46 +22,78 @@ approximation. Its generator re-authenticates the accepted checkpoint samples;
 its validator recomputes all serialized stage results and enforces SHA-256
 bindings before simulation.
 
-`model24_execution_oracle.py` executes the complete 483-event, 24-layer
-software/oracle schedule with deterministic reduced geometry. It uses native
-asymmetric packed-INT4 AWQ G128 projections, FP16 activations and layer-owned KV
-state, residual handoffs, final RMSNorm, and a grouped lm_head tied to the
-embedding values. Generate and independently validate canonical evidence with:
+`decoder_layer0_oracle.py` composes those independent integer oracles with the
+native-AWQ projection oracle for two sequential tokens. The generated trace
+retains stage and tensor indices, including Qwen half-split RoPE handoffs, and
+the validator reruns the composition before either RTL simulator executes.
 
-```sh
-python3 ace3/model/generate_model24_execution_vectors.py --output-dir build/model24_execution/vectors
-python3 ace3/model/validate_model24_execution_vectors.py --vector-dir build/model24_execution/vectors
-```
+`model24_execution_oracle.py` also provides the fixed tokenizer/host profile for
+`Qwen/Qwen2.5-0.5B-Instruct-AWQ` revision
+`db09cd27ead7fee40cdee309693cf83601b9c899`. It hash-authenticates
+`tokenizer.json` and `tokenizer_config.json`, serializes and round-trips one
+fixed system/user chat prompt, and steps every prompt and generated token
+through the published 483-event structural `ExecutionMachine`. The host emits
+the reduced fixture sequence `Hello world` followed by `<|im_end|>`, records
+cache-slot/position reuse and stop handling, and rejects IDs outside its
+explicit reduced execution vocabulary. The reduced logits are deterministic
+test fixtures.
 
-The evidence is bounded to reduced-geometry software/oracle execution. It does
-not establish official-checkpoint logits or dialogue, decoder RTL acceptance,
-accelerator latency, synthesis, PPA, or FPGA behavior.
-
-## Official Model24 continuation suite
-
-`official_model24_systematic_continuations.py` runs the authenticated official
-checkpoint and tokenizer through a deterministic 32-case English and Chinese
-suite. Every row preserves the serialized prompt, raw decoded output, token IDs,
-stop reason, per-step Primary/PyTorch comparisons, FP16 KV lineage, failures,
-and source/checkpoint/tokenizer hashes.
-
-The checkpoint and tokenizer are not distributed by this repository. Supply the
-authenticated `Qwen/Qwen2.5-0.5B-Instruct-AWQ` assets when regenerating:
-
-```sh
-make OFFICIAL_MODEL24_CHECKPOINT=/path/to/model.safetensors \
-  OFFICIAL_MODEL24_TOKENIZER_DIR=/path/to/tokenizer \
-  official-model24-systematic-continuations
-```
-
-The Python CLIs accept `--official-checkpoint` and
-`--official-tokenizer-dir`; their portable defaults can also be configured with
+The Model24 Make targets expect the pinned checkpoint at
+`model24_execution_vectors/model.safetensors` and its authenticated tokenizer
+files under `model24_execution_vectors/tokenizer/`. These paths are
+repository-relative and the assets are not committed. Override them with
+`OFFICIAL_MODEL24_CHECKPOINT` and `OFFICIAL_MODEL24_TOKENIZER_DIR` when the
+official assets are stored elsewhere. Direct Python invocations may use
 `ACE3_OFFICIAL_MODEL24_CHECKPOINT` and
-`ACE3_OFFICIAL_MODEL24_TOKENIZER_DIR`. Without configuration, the tokenizer
-defaults to the repository-relative `model24_execution_vectors/tokenizer/` and
-fails with an explicit configuration error when that directory is absent.
+`ACE3_OFFICIAL_MODEL24_TOKENIZER_DIR`, or pass the corresponding CLI options.
 
-The independently reviewed result set is tracked under
+The same oracle separately authenticates the complete fixed-revision
+`model.safetensors` object and the `model.norm.weight`, `lm_head.weight`, and
+`model.embed_tokens.weight` payloads. It verifies the distinct tied-weight
+ranges byte-for-byte, applies the integer-only final RMSNorm to a fixed FP16
+structural terminal-state fixture, and computes all 151,936 tied-head logits
+with exact Q47.48 accumulation and binary16 round-to-nearest-even. The host
+records stable top-10/argmax selection and decodes the selected token with the
+authenticated tokenizer. This establishes the official final-projection
+token-decision slice only: the fixture is not an official numerical layer-23
+output, and full-model numerical execution and readable dialogue remain
+unclaimed.
+
+`official_single_decoder_layer.py` authenticates all 26 consumed layer-0 tensors
+and two official embedding rows directly from the pinned checkpoint. It executes
+the two-token `Hello world` slice through native-AWQ projections, accepted
+bit-level FP16 adaptation/attention operators, and an FP16 K/V cache. Generated
+evidence records official-shape intermediate hashes, 42 sampled exact projection
+bit-oracle checks, bounded comparisons to an independent PyTorch Qwen2 path, and
+an FP16 post-layer handoff. Layers 1 through 23 and a valid terminal hidden state
+remain explicitly outside this boundary.
+
+`official_model24_dialogue.py` runs the authenticated fixed chat prompt through
+all 24 layers and the tied head in a deterministic greedy loop. It extends the
+FP16 K/V cache at each generated position, records per-step hidden/logit hashes
+and cache parentage, and compares every selected token with a PyTorch CPU
+float64 dequantized-AWQ reference. Acceptance authenticates and preserves the
+actual official-tokenizer output instead of requiring a canned lexical result.
+
+`official_model24_showcase.py` reuses that authenticated 24-layer executor for
+six raw-continuation and official-chat-template prompts in English, Chinese,
+and Python. The adjacent JSON evidence preserves every prompt and raw output,
+all generated token IDs, stop reasons, full-vocabulary tied-head decisions,
+per-token Primary/PyTorch errors, incremental FP16 K/V lineage, and failures.
+`SHOWCASE.md` is a non-authoritative readable projection of those complete rows.
+
+`official_model24_systematic_continuations.py` extends the reviewed
+`showcasecontinuations15c` baseline to a fixed, checked-in 32-case English and
+Chinese first batch spanning continuation, chat, factual, commonsense, code,
+and short reasoning prompts. The generator always executes the complete ordered
+suite and emits authenticated JSONL, JSON summary, Markdown report, and run log
+artifacts under `build/official_model24_systematic_continuations/`. Every step
+states ACE-versus-PyTorch agreement or mismatch and retains FP16 K/V parentage.
+Diagnostic host wall time is preserved but is not product latency or throughput
+evidence. Unreviewed ancestry `486e5d848245` is excluded from acceptance and
+claim-bearing evidence.
+
+The independently reviewed bounded software/oracle result set is tracked under
 [`results/model24-systematic-continuations/`](../../results/model24-systematic-continuations/).
-It is bounded software/oracle evidence, not RTL, synthesis, PPA, FPGA, latency,
-throughput, or broad model-quality evidence.
+It is not RTL, synthesis, PPA, FPGA, latency, throughput, or broad
+dialogue-quality evidence.

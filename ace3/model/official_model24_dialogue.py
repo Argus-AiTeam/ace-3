@@ -9,6 +9,7 @@ import json
 import math
 from dataclasses import dataclass
 from pathlib import Path
+from tempfile import TemporaryDirectory
 from typing import Any, Mapping, Sequence
 
 import numpy as np
@@ -79,7 +80,7 @@ MODEL24_BINDING_RELATIVE_PATH = (
     "ace3/contracts/model24_execution_vector_bindings.json"
 )
 MODEL24_BINDING_SHA256 = (
-    "21d40c99780a1e9bf6067e42fe8c034b01c90897c60cddb300b117e9532d542f"
+    "79389eda61e1bf2b59cf93f834bb6705d38cede797aa07479fc029109c150df1"
 )
 
 
@@ -1270,6 +1271,20 @@ def validate_directory(
     document = _json_without_duplicates(evidence_payload, ARTIFACT_NAME)
     summary = validate_document(document, tokenizer)
     _dialogue_require(summary == manifest["summary"], "manifest summary mismatch")
+    with TemporaryDirectory(prefix="ace3-dialogue-validation-") as temporary:
+        regenerated = generate(
+            Path(temporary),
+            checkpoint_path,
+            tokenizer_dir,
+            max_new_tokens=document["generation"]["max_new_tokens"],
+        )
+    _dialogue_require(
+        all(
+            regenerated[name] == (vector_dir / name).read_bytes()
+            for name in regenerated
+        ),
+        "independent evidence regeneration mismatch",
+    )
     return summary
 
 

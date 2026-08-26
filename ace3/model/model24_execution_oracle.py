@@ -6,6 +6,7 @@ from __future__ import annotations
 import hashlib
 import json
 import os
+import re
 import subprocess
 from dataclasses import dataclass
 from pathlib import Path
@@ -14,6 +15,7 @@ from typing import Any, Iterable, Mapping, Sequence
 import numpy as np
 
 from awq_bit_oracle import q47_48_to_f16
+from decoder_layer0_oracle import run_token as run_decoder_layer_token
 from fp16_adaptation_oracle import decode_f16_q24, q24_to_f16, rmsnorm
 from model24_oracle import (
     CHECKPOINT_SHA256,
@@ -23,6 +25,8 @@ from model24_oracle import (
     authenticate_checkpoint,
     expected_tensor_records,
 )
+from projection_oracle import complete_projection_output
+from qwen2_rope_oracle import qwen2_coefficient
 from official_single_decoder_layer import (
     LayerExecutionError,
     official_single_decoder_layer_contract,
@@ -32,17 +36,22 @@ from official_single_decoder_layer import (
 PARENT_COMMIT = "3cf65b762d928e02e2b64fbba4389e294e1aa2c5"
 MODEL_REPOSITORY = "Qwen/Qwen2.5-0.5B-Instruct-AWQ"
 MODEL_REVISION = "db09cd27ead7fee40cdee309693cf83601b9c899"
-REPOSITORY_ROOT = Path(__file__).resolve().parents[2]
 DEFAULT_OFFICIAL_CHECKPOINT = Path(
     os.environ.get(
         "ACE3_OFFICIAL_MODEL24_CHECKPOINT",
-        REPOSITORY_ROOT / "model24_execution_vectors" / "model.safetensors",
+        Path(__file__).resolve().parents[2]
+        / "model24_execution_vectors"
+        / "model.safetensors",
     )
 )
-DEFAULT_OFFICIAL_TOKENIZER_DIR = Path(
-    os.environ.get(
-        "ACE3_OFFICIAL_MODEL24_TOKENIZER_DIR",
-        REPOSITORY_ROOT / "model24_execution_vectors" / "tokenizer",
+DEFAULT_OFFICIAL_TOKENIZER_DIR = (
+    Path(
+        os.environ.get(
+            "ACE3_OFFICIAL_MODEL24_TOKENIZER_DIR",
+            Path(__file__).resolve().parents[2]
+            / "model24_execution_vectors"
+            / "tokenizer",
+        )
     )
 )
 TOKENIZER_SHA256 = (
@@ -107,7 +116,7 @@ CONTROL_MAP_SHA256 = (
     "3364dc4c2c585f4687d8ad7943792ca4c44265b85463b91ab2a1c6866690b611"
 )
 DECODER_SOURCE_SHA256 = (
-    "f266c9b60a245d63001e30a03beeaa042a02781d7f9b9f8953f5a885ef455296"
+    "ea1ed72cec4f0b15b852265de55f886201eda15d8413b706d23896fc0712a0d6"
 )
 DECODER_INTERFACE_SHA256 = (
     "93445f03e9bb72c5fff5b18388703c8e734a5ab3a75e6e8c85992c183e39c2ab"
@@ -221,6 +230,10 @@ LAYER_DESCRIPTOR_SHA256 = (
     "9c1eef81355729ab3a32f6b21b58a5a17b3f6477f18f8553fe4bd74e7ea1592d",
 )
 
+LAYER0_VL15_FINAL_ROWS_SHA256 = (
+    "22768ac6b337f920faac7de59b4eb43a203e1db45cdf688820fcbb35cdfe3446"
+)
+
 
 class ContractError(RuntimeError):
     """Raised when an execution contract or vector fails closed."""
@@ -331,6 +344,523 @@ def layer_bindings() -> list[dict[str, Any]]:
         }
         for layer_id, descriptor_sha256 in enumerate(LAYER_DESCRIPTOR_SHA256)
     ]
+
+
+def indexed_layer_binding(layer_index: int) -> dict[str, Any]:
+    require(
+        type(layer_index) is int and 0 <= layer_index < len(LAYER_DESCRIPTOR_SHA256),
+        "layer_index out of range",
+    )
+    return layer_bindings()[layer_index]
+
+
+def indexed_layer_tensor_records(
+    tensor_map: Mapping[str, Any],
+    layer_index: int,
+) -> list[dict[str, Any]]:
+    binding = indexed_layer_binding(layer_index)
+    namespaces = tensor_map.get("layer_namespaces")
+    require(isinstance(namespaces, list), "tensor map layer_namespaces missing")
+    matches = [
+        item
+        for item in namespaces
+        if isinstance(item, dict) and item.get("layer_id") == layer_index
+    ]
+    require(len(matches) == 1, "selected layer namespace is not unique")
+    require_document(
+        {
+            **binding,
+            "tensor_count": 26,
+        },
+        {
+            "layer_id": matches[0].get("layer_id"),
+            "namespace": matches[0].get("namespace"),
+            "descriptor_sha256": matches[0].get("descriptor_sha256"),
+            "tensor_count": matches[0].get("tensor_count"),
+        },
+        "selected layer namespace",
+    )
+    tensors = tensor_map.get("tensors")
+    require(isinstance(tensors, list), "tensor map tensors missing")
+    records = [
+        dict(item)
+        for item in tensors
+        if isinstance(item, dict)
+        and isinstance(item.get("name"), str)
+        and item["name"].startswith(binding["namespace"])
+    ]
+    require(len(records) == 26, "selected layer tensor count mismatch")
+    require(
+        all(item["name"].count(".") >= 4 for item in records),
+        "selected layer tensor name mismatch",
+    )
+    return sorted(records, key=lambda item: item["name"])
+
+
+def load_two_token_handoff(
+    path: Path,
+    *,
+    expected_sha256: str | None = None,
+) -> tuple[list[list[int]], dict[str, Any]]:
+    payload = path.read_bytes()
+    digest = sha256_bytes(payload)
+    if expected_sha256 is not None:
+        require(digest == expected_sha256, "two-token handoff SHA256 mismatch")
+    require(payload.endswith(b"\n"), "two-token handoff must be LF terminated")
+    lines = payload.splitlines()
+    require(len(lines) == 2 * OFFICIAL_GEOMETRY.hidden_size, "two-token handoff row count")
+    rows = [
+        [0] * OFFICIAL_GEOMETRY.hidden_size
+        for _ in range(2)
+    ]
+    for ordinal, line in enumerate(lines):
+        require(len(line) == 10, f"two-token handoff row {ordinal} width")
+        try:
+            token = int(line[0:2], 16)
+            index = int(line[2:6], 16)
+            value = int(line[6:10], 16)
+        except ValueError as error:
+            raise ContractError(f"two-token handoff row {ordinal} is not hex") from error
+        expected_token, expected_index = divmod(
+            ordinal,
+            OFFICIAL_GEOMETRY.hidden_size,
+        )
+        require(
+            (token, index) == (expected_token, expected_index),
+            f"two-token handoff row {ordinal} is out of sequence",
+        )
+        rows[token][index] = value
+    return rows, {
+        "sha256": digest,
+        "rows": len(lines),
+        "shape": [2, OFFICIAL_GEOMETRY.hidden_size],
+        "dtype": "F16",
+        "record_format": "token[7:0] index[15:0] f16[15:0]",
+    }
+
+
+def indexed_layer_input_handoff_binding(
+    layer_index: int,
+    handoff_binding: Mapping[str, Any],
+) -> dict[str, Any]:
+    indexed_layer_binding(layer_index)
+    require(layer_index > 0, "indexed decoder layer requires a predecessor handoff")
+    return {
+        **handoff_binding,
+        "source": f"authenticated decoder layer {layer_index - 1} raw final rows",
+        "source_layer_index": layer_index - 1,
+        "consumer_layer_index": layer_index,
+        "byte_preserved_as": "inputs.hex",
+    }
+
+
+def indexed_capture_tensor_filenames(
+    cpp_source: str,
+    layer_index: int,
+) -> tuple[str, ...]:
+    indexed_layer_binding(layer_index)
+    direct_tensors = re.findall(
+        r'tensor\(dir,\s*"(layer(\d+)_[A-Za-z0-9_]+\.fp16le\.bin)"\)',
+        cpp_source,
+    )
+    projections = re.findall(
+        r'projection\(dir,\s*"(layer(\d+)_[A-Za-z0-9_]+)",\s*(true|false)\)',
+        cpp_source,
+    )
+    require(
+        len(direct_tensors) == 2 and len(projections) == 7,
+        "capture tensor request set mismatch",
+    )
+    observed = {
+        int(index)
+        for _, index in (*direct_tensors, *((name, index) for name, index, _ in projections))
+    }
+    require(
+        observed == {layer_index},
+        "capture tensor layer-index binding mismatch",
+    )
+    filenames = [f"{name}.hex" for name, _ in direct_tensors]
+    for prefix, _, has_bias in projections:
+        filenames.extend(
+            (
+                f"{prefix}_qweight.i32le.bin.hex",
+                f"{prefix}_qzeros.i32le.bin.hex",
+                f"{prefix}_scales.fp16le.bin.hex",
+            )
+        )
+        if has_bias == "true":
+            filenames.append(f"{prefix}_bias.fp16le.bin.hex")
+    require(
+        len(filenames) == 26 and len(set(filenames)) == len(filenames),
+        "capture tensor filename set mismatch",
+    )
+    return tuple(filenames)
+
+
+def validate_indexed_capture_tensor_files(
+    cpp_source: str,
+    vector_dir: Path,
+    layer_index: int,
+) -> tuple[str, ...]:
+    filenames = indexed_capture_tensor_filenames(cpp_source, layer_index)
+    tensor_dir = vector_dir / "tensors"
+    missing = [name for name in filenames if not (tensor_dir / name).is_file()]
+    require(not missing, "capture tensor files missing: " + ", ".join(missing))
+    return filenames
+
+
+def validate_indexed_capture_sources(
+    cpp_source: str,
+    raw_evidence_header: str,
+    layer_index: int,
+) -> None:
+    indexed_layer_binding(layer_index)
+    expected_cpp = {
+        f"if(layer_index != {layer_index})": 1,
+        f"this sealed invocation requires layer index {layer_index}": 1,
+        f"schema=ace3-layer{layer_index}-simulator-terminal-v1": 2,
+        f"layer_index={layer_index}": 2,
+        f"ACE3_LAYER{layer_index}_CAPTURE": 2,
+    }
+    expected_header = {
+        f"schema=ace3-layer{layer_index}-raw-counts-v1": 1,
+        f"layer_index={layer_index}": 1,
+    }
+    require(
+        all(cpp_source.count(marker) == count for marker, count in expected_cpp.items())
+        and all(
+            raw_evidence_header.count(marker) == count
+            for marker, count in expected_header.items()
+        ),
+        "capture source layer-index binding mismatch",
+    )
+    observed = {
+        int(value)
+        for pattern, source in (
+            (r"ace3-layer(\d+)-simulator-terminal-v1", cpp_source),
+            (r"ACE3_LAYER(\d+)_CAPTURE", cpp_source),
+            (r"ace3-layer(\d+)-raw-counts-v1", raw_evidence_header),
+        )
+        for value in re.findall(pattern, source)
+    }
+    require(
+        observed == {layer_index},
+        "capture source contains a stale layer-index marker",
+    )
+    indexed_capture_tensor_filenames(cpp_source, layer_index)
+
+
+def retarget_indexed_capture_sources(
+    cpp_source: str,
+    raw_evidence_header: str,
+    *,
+    source_layer_index: int,
+    target_layer_index: int,
+) -> tuple[str, str]:
+    validate_indexed_capture_sources(
+        cpp_source,
+        raw_evidence_header,
+        source_layer_index,
+    )
+    require(
+        source_layer_index != target_layer_index,
+        "capture source and target layer indexes must differ",
+    )
+    indexed_layer_binding(target_layer_index)
+    cpp_replacements = (
+        (
+            f"if(layer_index != {source_layer_index})",
+            f"if(layer_index != {target_layer_index})",
+        ),
+        (
+            f"this sealed invocation requires layer index {source_layer_index}",
+            f"this sealed invocation requires layer index {target_layer_index}",
+        ),
+        (
+            f"schema=ace3-layer{source_layer_index}-simulator-terminal-v1",
+            f"schema=ace3-layer{target_layer_index}-simulator-terminal-v1",
+        ),
+        (
+            f"layer_index={source_layer_index}",
+            f"layer_index={target_layer_index}",
+        ),
+        (
+            f"ACE3_LAYER{source_layer_index}_CAPTURE",
+            f"ACE3_LAYER{target_layer_index}_CAPTURE",
+        ),
+    )
+    header_replacements = (
+        (
+            f"schema=ace3-layer{source_layer_index}-raw-counts-v1",
+            f"schema=ace3-layer{target_layer_index}-raw-counts-v1",
+        ),
+        (
+            f"layer_index={source_layer_index}",
+            f"layer_index={target_layer_index}",
+        ),
+    )
+    for old, new in cpp_replacements:
+        cpp_source = cpp_source.replace(old, new)
+    cpp_source = cpp_source.replace(
+        f"layer{source_layer_index}_",
+        f"layer{target_layer_index}_",
+    )
+    for old, new in header_replacements:
+        raw_evidence_header = raw_evidence_header.replace(old, new)
+    validate_indexed_capture_sources(
+        cpp_source,
+        raw_evidence_header,
+        target_layer_index,
+    )
+    return cpp_source, raw_evidence_header
+
+
+def _layer_tensor_payloads(
+    checkpoint_path: Path,
+    tensor_map_path: Path,
+    layer_index: int,
+) -> tuple[dict[str, bytes], list[dict[str, Any]], dict[str, Any]]:
+    authenticate_checkpoint(checkpoint_path)
+    tensor_map_payload = tensor_map_path.read_bytes()
+    require(
+        sha256_bytes(tensor_map_payload) == TENSOR_MAP_SHA256,
+        "reviewed tensor map SHA256 mismatch",
+    )
+    tensor_map = load_json_bytes(tensor_map_payload, "tensor map")
+    require(isinstance(tensor_map, dict), "tensor map root must be an object")
+    records = indexed_layer_tensor_records(tensor_map, layer_index)
+    try:
+        from safetensors import safe_open
+    except ImportError as error:
+        raise ContractError("the safetensors package is required") from error
+    payloads: dict[str, bytes] = {}
+    with safe_open(checkpoint_path, framework="np") as checkpoint:
+        for record in records:
+            name = record["name"]
+            value = np.asarray(checkpoint.get_tensor(name))
+            dtype = {"F16": "<f2", "I32": "<i4"}.get(record.get("dtype"))
+            require(dtype is not None, f"{name} unsupported tensor dtype")
+            require(list(value.shape) == record.get("shape"), f"{name} shape mismatch")
+            raw = np.ascontiguousarray(value, dtype=dtype).tobytes()
+            require(len(raw) == record.get("byte_length"), f"{name} byte length mismatch")
+            payloads[name] = raw
+    return payloads, records, indexed_layer_binding(layer_index)
+
+
+def indexed_layer_tensor_value_hashes(
+    checkpoint_path: Path,
+    tensor_map_path: Path,
+    layer_index: int,
+) -> dict[str, str]:
+    payloads, _, _ = _layer_tensor_payloads(
+        checkpoint_path,
+        tensor_map_path,
+        layer_index,
+    )
+    return {
+        name: sha256_bytes(payload)
+        for name, payload in sorted(payloads.items())
+    }
+
+
+def sampled_indexed_q_projection_rows(
+    checkpoint_path: Path,
+    tensor_map_path: Path,
+    handoff_path: Path,
+    layer_index: int,
+    channels: Sequence[int] = (0, 127, 895),
+) -> list[dict[str, int]]:
+    require(
+        all(type(channel) is int and 0 <= channel < OFFICIAL_GEOMETRY.hidden_size
+            for channel in channels),
+        "sampled q_proj channel out of range",
+    )
+    payloads, _, binding = _layer_tensor_payloads(
+        checkpoint_path,
+        tensor_map_path,
+        layer_index,
+    )
+    handoff, _ = load_two_token_handoff(handoff_path)
+    prefix = binding["namespace"]
+
+    def words(suffix: str, unit: int) -> list[int]:
+        raw = payloads[prefix + suffix]
+        dtype = "<u2" if unit == 2 else "<u4"
+        return np.frombuffer(raw, dtype=dtype).astype(np.uint64).tolist()
+
+    norm1 = rmsnorm(
+        handoff[0],
+        words("input_layernorm.weight", 2),
+    )[0]
+    require(not any(invalid for _, invalid, _ in norm1), "sampled input RMSNorm invalid")
+    activation = [value for value, _, _ in norm1]
+    qweight = words("self_attn.q_proj.qweight", 4)
+    qzeros = words("self_attn.q_proj.qzeros", 4)
+    scales = words("self_attn.q_proj.scales", 2)
+    bias = words("self_attn.q_proj.bias", 2)
+    groups = OFFICIAL_GEOMETRY.hidden_size // OFFICIAL_GEOMETRY.group_size
+    packed_words = OFFICIAL_GEOMETRY.hidden_size // 8
+    result: list[dict[str, int]] = []
+    for channel in channels:
+        packed, lane = divmod(channel, 8)
+        _, value, invalid, _, _ = complete_projection_output(
+            activation,
+            [
+                qweight[index * packed_words + packed]
+                for index in range(OFFICIAL_GEOMETRY.hidden_size)
+            ],
+            [qzeros[group * packed_words + packed] for group in range(groups)],
+            [scales[group * OFFICIAL_GEOMETRY.hidden_size + channel]
+             for group in range(groups)],
+            lane,
+            bias[channel],
+        )
+        require(not invalid, f"sampled q_proj channel {channel} invalid")
+        result.append({"channel": channel, "f16": value})
+    return result
+
+
+def materialize_indexed_decoder_vectors(
+    checkpoint_path: Path,
+    tensor_map_path: Path,
+    handoff_path: Path,
+    output_dir: Path,
+    *,
+    layer_index: int,
+    expected_handoff_sha256: str | None = None,
+) -> dict[str, Any]:
+    indexed_layer_binding(layer_index)
+    if expected_handoff_sha256 is None:
+        require(
+            layer_index == 1,
+            "expected predecessor handoff SHA256 is required",
+        )
+        expected_handoff_sha256 = LAYER0_VL15_FINAL_ROWS_SHA256
+    handoff, handoff_binding = load_two_token_handoff(
+        handoff_path,
+        expected_sha256=expected_handoff_sha256,
+    )
+    payloads, records, binding = _layer_tensor_payloads(
+        checkpoint_path,
+        tensor_map_path,
+        layer_index,
+    )
+    require(not output_dir.exists(), "indexed decoder output directory already exists")
+    tensor_dir = output_dir / "tensors"
+    tensor_dir.mkdir(parents=True)
+    prefix = binding["namespace"]
+    values: dict[str, list[int]] = {}
+    tensor_manifest: list[dict[str, Any]] = []
+    for record in records:
+        name = record["name"]
+        suffix = name.removeprefix(prefix)
+        dtype = record["dtype"]
+        unit = 2 if dtype == "F16" else 4
+        serialized = (
+            f"layer{layer_index}_{suffix.replace('.', '_')}."
+            f"{'fp16le.bin' if unit == 2 else 'i32le.bin'}"
+        )
+        raw = payloads[name]
+        (tensor_dir / f"{serialized}.hex").write_text(
+            "".join(
+                f"{int.from_bytes(raw[index:index + unit], 'little'):0{unit * 2}x}\n"
+                for index in range(0, len(raw), unit)
+            ),
+            encoding="ascii",
+        )
+        values[f"model.layers.0.{suffix}:"] = (
+            np.frombuffer(raw, dtype="<u2" if unit == 2 else "<u4")
+            .astype(np.uint64)
+            .tolist()
+        )
+        tensor_manifest.append(
+            {
+                "checkpoint_name": name,
+                "serialized_hex": f"tensors/{serialized}.hex",
+                "dtype": dtype,
+                "shape": record["shape"],
+                "bytes": len(raw),
+                "sha256": sha256_bytes(raw),
+            }
+        )
+
+    cache_k: list[list[int]] = []
+    cache_v: list[list[int]] = []
+    all_trace: list[tuple[int, int, int, int, int]] = []
+    final_rows: list[list[int]] = []
+    for token, activation in enumerate(handoff):
+        final, trace = run_decoder_layer_token(
+            values,
+            activation,
+            token,
+            cache_k,
+            cache_v,
+        )
+        final_rows.append(final)
+        all_trace.extend(
+            (token, stage, index, item, position)
+            for stage, index, item, position in trace
+        )
+
+    inputs_payload = handoff_path.read_bytes()
+    (output_dir / "inputs.hex").write_bytes(inputs_payload)
+    (output_dir / "trace.hex").write_text(
+        "".join(
+            f"{token:02x}{position:04x}{stage:02x}{index:04x}{item:04x}\n"
+            for token, stage, index, item, position in all_trace
+        ),
+        encoding="ascii",
+    )
+    (output_dir / "final.hex").write_text(
+        "".join(
+            f"{token:02x}{index:04x}{item:04x}\n"
+            for token, row in enumerate(final_rows)
+            for index, item in enumerate(row)
+        ),
+        encoding="ascii",
+    )
+    rope = []
+    for position in range(2):
+        for pair in range(32):
+            cosine, sine = qwen2_coefficient(position, pair)
+            rope.append(f"{position:04x}{pair:02x}{cosine:04x}{sine:04x}\n")
+    (output_dir / "rope_coefficients.hex").write_text("".join(rope), encoding="ascii")
+    stage_counts: dict[str, int] = {}
+    for _, stage, _, _, _ in all_trace:
+        stage_counts[str(stage)] = stage_counts.get(str(stage), 0) + 1
+    manifest = {
+        "schema_version": 1,
+        "kind": "ace3_indexed_decoder_layer_two_token_trace",
+        "layer_index": layer_index,
+        "model_binding": {
+            "repository": MODEL_REPOSITORY,
+            "revision": MODEL_REVISION,
+            "checkpoint_sha256": CHECKPOINT_SHA256,
+            "tensor_map_sha256": TENSOR_MAP_SHA256,
+        },
+        "layer_binding": binding,
+        "input_handoff": indexed_layer_input_handoff_binding(
+            layer_index,
+            handoff_binding,
+        ),
+        "positions": [0, 1],
+        "cache_slot": 0,
+        "trace_records": len(all_trace),
+        "final_records": sum(len(row) for row in final_rows),
+        "stage_counts": stage_counts,
+        "consumed_tensors": tensor_manifest,
+        "numeric_profile": {
+            "projection": "native asymmetric packed INT4 AWQ W4A16 G128 GEMM",
+            "qzero_adjustment": "none",
+            "activations": "FP16",
+            "kv": "FP16",
+        },
+    }
+    (output_dir / "boundary_manifest.json").write_text(
+        json.dumps(manifest, indent=2, sort_keys=True) + "\n",
+        encoding="ascii",
+    )
+    return manifest
 
 
 def residual_handoffs(geometry: Geometry) -> list[dict[str, Any]]:
@@ -779,15 +1309,12 @@ def validate_decoder_snapshot(repository_root: Path) -> None:
 def authenticate_tokenizer(tokenizer_dir: Path) -> Any:
     require(
         tokenizer_dir.is_dir(),
-        "official tokenizer directory is missing: "
-        f"{tokenizer_dir}; pass --official-tokenizer-dir or set "
-        "ACE3_OFFICIAL_MODEL24_TOKENIZER_DIR",
+        (
+            "official tokenizer directory is missing; pass "
+            "--official-tokenizer-dir or set "
+            "ACE3_OFFICIAL_MODEL24_TOKENIZER_DIR"
+        ),
     )
-    for filename in ("tokenizer.json", "tokenizer_config.json"):
-        require(
-            (tokenizer_dir / filename).is_file(),
-            f"official tokenizer file is missing: {tokenizer_dir / filename}",
-        )
     tokenizer_payload = (tokenizer_dir / "tokenizer.json").read_bytes()
     config_payload = (tokenizer_dir / "tokenizer_config.json").read_bytes()
     require(

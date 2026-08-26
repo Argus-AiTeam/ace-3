@@ -1,0 +1,23 @@
+{
+  "schema_version": 1,
+  "kind": "ace3_projection_bias_vector_bindings",
+  "claim_boundary": "These records bind focused BIAS_ENABLE=1 projection-engine simulation inputs and results. Reset, clear, backpressure, and X/Z protocol testing remain testbench responsibilities; this is not a full decoder or model claim.",
+  "source_sha256": {
+    "layer0_self_attn_q_proj_bias.fp16le.bin": "e9612c72520a62dd903796d9535de2081e1cd15a724b2972513599ff276b9e72"
+  },
+  "generation": {
+    "in_features": 128,
+    "out_features": 8,
+    "bias_enable": 1,
+    "cases": 5,
+    "pairs": 640,
+    "bias_boundary": "round complete Q53.48 projection to FP16, then use FP16 residual_add for bias"
+  },
+  "serialized_artifacts": [
+    {"file": "cases.hex", "sha256": "3e2e504b674328cc88129d0f636af8b64c533e49e085b3e9e96b30837cfa8d1e", "byte_count": 45},
+    {"file": "expected.hex", "sha256": "2052330f89d43903ddff8109beb53f888f13959f44852ba1ca790d4a9e4015d9", "byte_count": 165},
+    {"file": "manifest.json", "sha256": "46a80072ebaf5a86a94760903f57152984a29f7e7248a29e6bcdd1fa025d0b09", "byte_count": 1573},
+    {"file": "meta.hex", "sha256": "762f530a0f9f61a00c6de38bc81a580662fd62ea15c89f462dea0ee4a3915178", "byte_count": 65},
+    {"file": "pairs.hex", "sha256": "c6da07523b06c37f068f2f76fd779ff5451cd71c82f8f71a1dedf66ba1e1e906", "byte_count": 8320}
+  ]
+}

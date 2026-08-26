@@ -97,6 +97,7 @@ module ace3_attention_block_tb;
     integer stalls;
     integer reset_checks;
     integer clear_checks;
+    integer gqa_rejection_checks;
     integer xz_checks;
     integer case_index;
     integer softmax_term_base;
@@ -566,6 +567,37 @@ module ace3_attention_block_tb;
         end
     endtask
 
+    task check_invalid_gqa_rejection;
+        begin
+            @(negedge clk);
+            score_query_head = 4'd6;
+            score_key_head = 4'd1;
+            score_start_valid = 1'b1;
+            #1;
+            if (score_start_ready !== 1'b0) begin
+                $display("SCORE_INVALID_GQA_ACCEPTED");
+                failures = failures + 1;
+            end
+            gqa_rejection_checks = gqa_rejection_checks + 1;
+            score_start_valid = 1'b0;
+            score_query_head = 4'd0;
+            score_key_head = 4'd0;
+
+            value_query_head = 4'd7;
+            value_head = 4'd0;
+            value_start_valid = 1'b1;
+            #1;
+            if (value_start_ready !== 1'b0) begin
+                $display("VALUE_INVALID_GQA_ACCEPTED");
+                failures = failures + 1;
+            end
+            gqa_rejection_checks = gqa_rejection_checks + 1;
+            value_start_valid = 1'b0;
+            value_query_head = 4'd0;
+            value_head = 4'd0;
+        end
+    endtask
+
     task check_clear_abort;
         begin
             @(negedge clk);
@@ -703,6 +735,7 @@ module ace3_attention_block_tb;
         stalls = 0;
         reset_checks = 0;
         clear_checks = 0;
+        gqa_rejection_checks = 0;
         xz_checks = 0;
         softmax_term_base = 0;
         value_term_base = 0;
@@ -742,6 +775,7 @@ module ace3_attention_block_tb;
             value_term_base = value_term_base +
                 value_cases[case_index][44:29];
         end
+        check_invalid_gqa_rejection();
         check_clear_abort();
 `ifndef VERILATOR
         check_xz_rejection();
@@ -755,12 +789,13 @@ module ace3_attention_block_tb;
         end
         if (failures == 0) begin
 `ifdef VERILATOR
-            $display("ACE3_ATTENTION_VERILATOR_PASS score_cases=%0d softmax_outputs=%0d value_cases=%0d stalls=%0d reset=%0d clear=%0d cache_miss=pass causal=pass gqa=14_to_2",
+            $display("ACE3_ATTENTION_VERILATOR_PASS score_cases=%0d softmax_outputs=%0d value_cases=%0d stalls=%0d reset=%0d clear=%0d gqa_rejections=%0d cache_miss=pass causal=pass gqa=14_to_2",
 `else
-            $display("ACE3_ATTENTION_IVERILOG_PASS score_cases=%0d softmax_outputs=%0d value_cases=%0d stalls=%0d reset=%0d clear=%0d xz=%0d cache_miss=pass causal=pass gqa=14_to_2",
+            $display("ACE3_ATTENTION_IVERILOG_PASS score_cases=%0d softmax_outputs=%0d value_cases=%0d stalls=%0d reset=%0d clear=%0d gqa_rejections=%0d xz=%0d cache_miss=pass causal=pass gqa=14_to_2",
 `endif
                      score_outputs, softmax_outputs, value_outputs,
-                     stalls, reset_checks, clear_checks
+                     stalls, reset_checks, clear_checks,
+                     gqa_rejection_checks
 `ifndef VERILATOR
                      , xz_checks
 `endif

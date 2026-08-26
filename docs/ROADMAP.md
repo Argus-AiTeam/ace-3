@@ -28,8 +28,8 @@
 - [ ] FP16 residual path.
 - [ ] FP16 RMSNorm with declared reduction precision.
 - [x] FP16 RoPE.
-- [ ] Mixed-precision attention score and composition.
-- [ ] Softmax with explicit internal precision.
+- [x] Mixed-precision attention score and composition.
+- [x] Softmax with explicit internal precision.
 - [x] Indexed FP16 K/V cache primitive with overwrite and isolation checks.
 - [ ] FP16 SiLU and gated MLP.
 - [ ] Tied FP16 embedding and language-model head.

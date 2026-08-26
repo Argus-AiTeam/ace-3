@@ -4,7 +4,6 @@
 from __future__ import annotations
 
 import copy
-import struct
 import subprocess
 import sys
 import tempfile
@@ -19,29 +18,44 @@ sys.path.insert(0, str(MODEL_DIR))
 from generate_model24_execution_vectors import generate  # noqa: E402
 from model24_execution_oracle import (  # noqa: E402
     ContractError,
+    CHECKPOINT_SHA256,
+    DEFAULT_OFFICIAL_TOKENIZER_DIR,
+    DECODER_INTERFACE_SHA256,
+    DECODER_SOURCE_SHA256,
+    EOS_TOKEN_ID,
     ExecutionMachine,
+    FIXED_CHAT_MESSAGES,
+    FIXED_CHAT_SERIALIZATION,
+    FIXED_CHAT_TOKEN_IDS,
     Geometry,
+    FIXED_TERMINAL_HIDDEN_SHA256,
+    FINAL_NORM_SHA256,
     LAYER_DESCRIPTOR_SHA256,
     OFFICIAL_GEOMETRY,
-    ORACLE_GEOMETRY,
     PER_LAYER_OPERATIONS,
-    FP16KVCache,
-    SoftwareOracleEngine,
+    REDUCED_RESPONSE_TOKEN_IDS,
+    TIED_WEIGHT_SHA256,
+    StructuralModel24Host,
+    TOKENIZER_CONFIG_SHA256,
+    TOKENIZER_SHA256,
+    authenticate_tokenizer,
     argmax_first,
-    argmax_lowest,
     build_vector_artifacts,
-    canonical_json_bytes,
     expected_schedule,
     grouped_lm_head_interface,
+    host_generation_document,
+    indexed_layer_input_handoff_binding,
     kv_address,
     kv_owner,
     load_json_bytes,
     residual_handoffs,
+    reduced_token_label,
     require_provenance_commit,
-    reduced_execution_document,
-    reduced_tensor_inventory,
     sha256_bytes,
+    serialize_chat_prompt,
+    stable_top_k_f16,
     validate_execution_contract,
+    validate_decoder_snapshot,
     validate_trajectory,
     validate_vector_bindings,
 )
@@ -58,9 +72,6 @@ class Model24ExecutionTests(unittest.TestCase):
         ).read_bytes()
         cls.tensor_payload = (contracts / "model24_tensor_map.json").read_bytes()
         cls.control_payload = (contracts / "model24_control.json").read_bytes()
-        cls.oracle_source_payload = (
-            MODEL_DIR / "model24_execution_oracle.py"
-        ).read_bytes()
         cls.contract = load_json_bytes(cls.contract_payload, "execution contract")
         cls.bindings = load_json_bytes(cls.bindings_payload, "vector bindings")
 
@@ -73,10 +84,12 @@ class Model24ExecutionTests(unittest.TestCase):
         validate_vector_bindings(
             self.bindings,
             sha256_bytes(self.contract_payload),
-            self.oracle_source_payload,
         )
         self.assertEqual(self.contract["parent_commit"], "3cf65b762d928e02e2b64fbba4389e294e1aa2c5")
         self.assertEqual(len(self.contract["layers"]["bindings"]), 24)
+        checkpoint = self.contract["model_binding"]["checkpoint"]
+        self.assertEqual(checkpoint["sha256"], CHECKPOINT_SHA256)
+        self.assertEqual(checkpoint["bytes"], 730652248)
         self.assertEqual(
             [
                 binding["namespace"]
@@ -92,7 +105,45 @@ class Model24ExecutionTests(unittest.TestCase):
             LAYER_DESCRIPTOR_SHA256,
         )
         snapshot = self.contract["decoder_snapshot_compatibility"]
-        self.assertIn("not decoder acceptance", snapshot["status"])
+        self.assertIn("not 24-layer execution", snapshot["status"])
+        self.assertEqual(snapshot["source"]["sha256"], DECODER_SOURCE_SHA256)
+        self.assertEqual(snapshot["interface"]["sha256"], DECODER_INTERFACE_SHA256)
+        layer0 = self.contract["official_single_decoder_layer"]
+        self.assertEqual(layer0["prompt"]["token_ids"], [9707, 1879])
+        self.assertEqual(layer0["consumed_layer_tensor_count"], 26)
+        self.assertEqual(
+            layer0["independent_reference"]["sampled_projection_bit_oracle_outputs"],
+            42,
+        )
+        validate_decoder_snapshot(REPOSITORY_ROOT)
+
+    def test_decoder_snapshot_mutation_is_rejected(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary_directory:
+            root = Path(temporary_directory)
+            source = root / "ace3" / "rtl" / "ace3_decoder_layer0_token_engine.sv"
+            interface = root / "ace3" / "tb" / "ace3_decoder_width_boundary_tb.sv"
+            source.parent.mkdir(parents=True)
+            interface.parent.mkdir(parents=True)
+            source.write_bytes(
+                (
+                    REPOSITORY_ROOT
+                    / "ace3"
+                    / "rtl"
+                    / "ace3_decoder_layer0_token_engine.sv"
+                ).read_bytes()
+            )
+            interface.write_bytes(
+                (
+                    REPOSITORY_ROOT
+                    / "ace3"
+                    / "tb"
+                    / "ace3_decoder_width_boundary_tb.sv"
+                ).read_bytes()
+            )
+            validate_decoder_snapshot(root)
+            interface.write_bytes(interface.read_bytes() + b"\n")
+            with self.assertRaisesRegex(ContractError, "SHA256 mismatch"):
+                validate_decoder_snapshot(root)
 
     def test_provenance_accepts_additive_commits_and_fails_closed(
         self,
@@ -206,6 +257,137 @@ class Model24ExecutionTests(unittest.TestCase):
             )
         validate_trajectory(events)
 
+    def test_layer2_input_handoff_names_official_layer1_dependency(self) -> None:
+        self.assertEqual(
+            indexed_layer_input_handoff_binding(
+                2,
+                {
+                    "sha256": "a" * 64,
+                    "rows": 1792,
+                    "shape": [2, 896],
+                    "dtype": "F16",
+                },
+            ),
+            {
+                "sha256": "a" * 64,
+                "rows": 1792,
+                "shape": [2, 896],
+                "dtype": "F16",
+                "source": "authenticated decoder layer 1 raw final rows",
+                "source_layer_index": 1,
+                "consumer_layer_index": 2,
+                "byte_preserved_as": "inputs.hex",
+            },
+        )
+
+    def test_tokenizer_binding_prompt_serialization_and_decode(self) -> None:
+        tokenizer = authenticate_tokenizer(DEFAULT_OFFICIAL_TOKENIZER_DIR)
+        messages = [
+            {"role": role, "content": content}
+            for role, content in FIXED_CHAT_MESSAGES
+        ]
+        serialized = serialize_chat_prompt(messages)
+        self.assertEqual(serialized, FIXED_CHAT_SERIALIZATION)
+        encoded = tokenizer.encode(serialized, add_special_tokens=False).ids
+        self.assertEqual(encoded, list(FIXED_CHAT_TOKEN_IDS))
+        self.assertEqual(
+            tokenizer.decode(encoded, skip_special_tokens=False),
+            serialized,
+        )
+        self.assertEqual(
+            tokenizer.decode(
+                list(REDUCED_RESPONSE_TOKEN_IDS),
+                skip_special_tokens=False,
+            ),
+            "Hello world",
+        )
+        with tempfile.TemporaryDirectory() as temporary_directory:
+            tokenizer_dir = Path(temporary_directory)
+            for name in ("tokenizer.json", "tokenizer_config.json"):
+                (tokenizer_dir / name).write_bytes(
+                    (DEFAULT_OFFICIAL_TOKENIZER_DIR / name).read_bytes()
+                )
+            (tokenizer_dir / "tokenizer.json").write_bytes(
+                (tokenizer_dir / "tokenizer.json").read_bytes() + b"\n"
+            )
+            with self.assertRaisesRegex(ContractError, "tokenizer.json SHA256"):
+                authenticate_tokenizer(tokenizer_dir)
+        self.assertEqual(
+            sha256_bytes(
+                (DEFAULT_OFFICIAL_TOKENIZER_DIR / "tokenizer.json").read_bytes()
+            ),
+            TOKENIZER_SHA256,
+        )
+        self.assertEqual(
+            sha256_bytes(
+                (
+                    DEFAULT_OFFICIAL_TOKENIZER_DIR / "tokenizer_config.json"
+                ).read_bytes()
+            ),
+            TOKENIZER_CONFIG_SHA256,
+        )
+
+    def test_host_steps_prompt_and_generation_with_stop_and_slot_reuse(self) -> None:
+        document = host_generation_document(DEFAULT_OFFICIAL_TOKENIZER_DIR)
+        self.assertEqual(document["prompt"]["serialization"], FIXED_CHAT_SERIALIZATION)
+        self.assertEqual(document["prompt"]["decoded_roundtrip"], FIXED_CHAT_SERIALIZATION)
+        self.assertEqual(
+            document["output"]["generated_token_ids"],
+            [*REDUCED_RESPONSE_TOKEN_IDS, EOS_TOKEN_ID],
+        )
+        self.assertEqual(document["output"]["decoded_text"], "Hello world")
+        self.assertEqual(document["stop"]["reason"], "eos_token")
+        self.assertTrue(document["stop"]["eos_emitted"])
+        token_flow = document["token_flow"]
+        self.assertEqual(len(token_flow), len(FIXED_CHAT_TOKEN_IDS) + 3)
+        self.assertEqual(
+            [step["position"] for step in token_flow],
+            list(range(len(token_flow))),
+        )
+        self.assertFalse(token_flow[0]["cache_slot_reused"])
+        self.assertTrue(all(step["cache_slot_reused"] for step in token_flow[1:]))
+        self.assertTrue(all(step["cache_slot"] == 0 for step in token_flow))
+        self.assertTrue(
+            all(step["schedule_event_count"] == 483 for step in token_flow)
+        )
+        self.assertEqual(
+            document["cache_slot_flow"]["reuse_count"],
+            len(token_flow) - 1,
+        )
+        self.assertIn("official-geometry logits", document["claim_boundary"])
+        self.assertIn(
+            "readable official-checkpoint dialogue",
+            document["claim_boundary"],
+        )
+
+    def test_host_max_token_stop_and_outside_vocabulary_rejection(self) -> None:
+        document = host_generation_document(
+            DEFAULT_OFFICIAL_TOKENIZER_DIR,
+            max_new_tokens=2,
+            cache_slot=1,
+        )
+        self.assertEqual(document["stop"]["reason"], "max_new_tokens")
+        self.assertFalse(document["stop"]["eos_emitted"])
+        self.assertEqual(document["output"]["decoded_text"], "Hello world")
+        self.assertTrue(all(step["cache_slot"] == 1 for step in document["token_flow"]))
+        with self.assertRaisesRegex(
+            ContractError,
+            "outside_reduced_execution_vocabulary",
+        ):
+            reduced_token_label(42)
+        host = StructuralModel24Host()
+        with self.assertRaisesRegex(
+            ContractError,
+            "outside_reduced_execution_vocabulary",
+        ):
+            host.step(42, "prompt")
+        self.assertEqual(host.steps, [])
+        with self.assertRaisesRegex(ContractError, "positive integer"):
+            host_generation_document(
+                DEFAULT_OFFICIAL_TOKENIZER_DIR,
+                max_new_tokens=0,
+            )
+
     def test_official_kv_ownership_and_final_interfaces(self) -> None:
         addresses = {
             kv_address(1, layer_id, 37, 1, 63, kind)
@@ -219,11 +401,16 @@ class Model24ExecutionTests(unittest.TestCase):
         self.assertEqual(lm_head["output_logits"], 151936)
         self.assertEqual(argmax_first([5, 5, 4]), 0)
         self.assertEqual(argmax_first([-4, 9, 9]), 1)
-        self.assertEqual(argmax_lowest([5.0, 5.0, 4.0]), 0)
         with self.assertRaises(ContractError):
             argmax_first([])
         with self.assertRaises(ContractError):
             argmax_first([1, True])
+        logits = [0xBC00] * OFFICIAL_GEOMETRY.vocab_size
+        logits[7] = 0x3C00
+        logits[9] = 0x3C00
+        self.assertEqual(stable_top_k_f16(logits, 3), [7, 9, 0])
+        with self.assertRaisesRegex(ContractError, "exactly 151936"):
+            stable_top_k_f16(logits[:-1], 1)
 
     def test_small_geometries_exhaust_every_legal_address(self) -> None:
         for layers in (1, 2, 3):
@@ -290,110 +477,6 @@ class Model24ExecutionTests(unittest.TestCase):
         with self.assertRaisesRegex(ContractError, "completed"):
             machine.accept(events[-1])
 
-    def test_every_schedule_mutation_is_rejected(self) -> None:
-        geometry = ORACLE_GEOMETRY.schedule_geometry()
-        events = expected_schedule(geometry)
-        mutations = {
-            "missing": events[:10] + events[11:],
-            "duplicate": events[:11] + [events[10]] + events[11:],
-            "reordered": events[:10] + [events[11], events[10]] + events[12:],
-            "extra": events + [events[-1]],
-        }
-        for name, mutation in mutations.items():
-            with self.subTest(name=name):
-                with self.assertRaises(ContractError):
-                    validate_trajectory(mutation, geometry)
-
-    def test_reduced_oracle_executes_every_layer_tensor_and_transition(self) -> None:
-        document = reduced_execution_document()
-        inventory = reduced_tensor_inventory()
-        self.assertEqual(document["tensor_count"], 627)
-        self.assertEqual(len(inventory), 627)
-        self.assertEqual(len(document["executions"]), 2)
-        self.assertEqual(
-            document["consumed_tensor_names"],
-            [record["name"] for record in inventory],
-        )
-        fixture_hashes = {
-            record["name"]: record["fixture_descriptor_sha256"]
-            for record in inventory
-        }
-        self.assertEqual(
-            fixture_hashes["model.embed_tokens.weight"],
-            fixture_hashes["lm_head.weight"],
-        )
-        for execution_index, execution in enumerate(document["executions"]):
-            self.assertEqual(execution["control_event_count"], 483)
-            self.assertEqual(len(execution["events"]), 483)
-            self.assertEqual(
-                {event["layer_id"] for event in execution["events"] if event["layer_id"] is not None},
-                set(range(24)),
-            )
-            self.assertTrue(
-                all(event["output"]["dtype"] == "FP16" for event in execution["events"])
-            )
-            residuals = [
-                event["residual_transition"]
-                for event in execution["events"]
-                if "residual_transition" in event
-            ]
-            self.assertEqual(len(residuals), 48)
-            for layer_id in range(1, 24):
-                self.assertEqual(
-                    residuals[layer_id * 2]["input"],
-                    residuals[(layer_id - 1) * 2 + 1]["output"],
-                )
-            kv_transitions = [
-                event["kv_transition"]
-                for event in execution["events"]
-                if "kv_transition" in event
-            ]
-            self.assertEqual(len(kv_transitions), 48)
-            self.assertEqual(
-                {transition["layer_id"] for transition in kv_transitions},
-                set(range(24)),
-            )
-            self.assertTrue(
-                all(transition["format"] == "FP16" for transition in kv_transitions)
-            )
-            read_positions = [
-                transition["positions"]
-                for transition in kv_transitions
-                if transition["action"] == "read"
-            ]
-            self.assertEqual(
-                read_positions,
-                [list(range(execution_index + 1))] * 24,
-            )
-            self.assertEqual(execution["final_norm"]["dtype"], "FP16")
-            self.assertTrue(execution["lm_head"]["tied"])
-            self.assertEqual(execution["lm_head"]["group_size"], 128)
-            self.assertEqual(execution["lm_head"]["groups_per_logit"], 2)
-            self.assertEqual(
-                execution["output_token_id"],
-                argmax_lowest(
-                    [
-                        struct.unpack("<e", bits.to_bytes(2, "little"))[0]
-                        for bits in execution["lm_head"]["logit_bits"]
-                    ]
-                ),
-            )
-
-    def test_reduced_execution_is_byte_identical_and_tie_breaks_lowest(self) -> None:
-        first = canonical_json_bytes(reduced_execution_document())
-        second = canonical_json_bytes(reduced_execution_document())
-        self.assertEqual(first, second)
-        self.assertEqual(argmax_lowest([9.0, 9.0, -1.0]), 0)
-
-    def test_stale_kv_owner_and_untied_head_fail_closed(self) -> None:
-        cache = FP16KVCache()
-        cache._owners[(0, 0, "K")] = "kv.layer.23.K"
-        values = [0.0] * (ORACLE_GEOMETRY.kv_heads * ORACLE_GEOMETRY.head_dim)
-        with self.assertRaisesRegex(ContractError, "stale K KV ownership"):
-            cache.write(0, 0, 0, values, values)
-        with self.assertRaisesRegex(ContractError, "not tied"):
-            SoftwareOracleEngine(tied_head=False)
-
     def test_contract_and_reviewed_map_mutations_are_rejected(self) -> None:
         mutated = copy.deepcopy(self.contract)
         mutated["schedule"]["event_count"] = 482
@@ -414,44 +497,88 @@ class Model24ExecutionTests(unittest.TestCase):
                 mutated_tensor,
                 self.control_payload,
             )
-        with self.assertRaisesRegex(ContractError, "execution vector bindings"):
-            validate_vector_bindings(
-                self.bindings,
-                "0" * 64,
-                self.oracle_source_payload,
-            )
-        with self.assertRaisesRegex(ContractError, "oracle_source_sha256"):
-            validate_vector_bindings(
-                self.bindings,
-                sha256_bytes(self.contract_payload),
-                self.oracle_source_payload + b"\n# tampered\n",
-            )
 
     def test_vectors_are_byte_reproducible_and_validate(self) -> None:
         first = build_vector_artifacts(
             sha256_bytes(self.contract_payload),
             sha256_bytes(self.bindings_payload),
-            self.oracle_source_payload,
+            DEFAULT_OFFICIAL_TOKENIZER_DIR,
         )
         second = build_vector_artifacts(
             sha256_bytes(self.contract_payload),
             sha256_bytes(self.bindings_payload),
-            self.oracle_source_payload,
+            DEFAULT_OFFICIAL_TOKENIZER_DIR,
         )
         self.assertEqual(first, second)
+        official = load_json_bytes(
+            first["official_token_decision.json"],
+            "official token decision",
+        )
+        layer0 = load_json_bytes(
+            first["official_layer0_slice.json"],
+            "official layer-0 slice",
+        )
+        self.assertEqual(len(layer0["model_binding"]["consumed_tensors"]), 26)
+        self.assertEqual(len(layer0["intermediates"]), 20)
+        self.assertTrue(
+            all(
+                item["within_tolerance"]
+                for item in layer0["independent_reference"]["comparisons"].values()
+            )
+        )
+        self.assertEqual(
+            layer0["independent_reference"]["sampled_projection_bit_oracle_checks"],
+            42,
+        )
+        self.assertEqual(
+            len(layer0["final_token_decision_handoff"]["f16_bits"]),
+            OFFICIAL_GEOMETRY.hidden_size,
+        )
+        self.assertIn(
+            "layers 1 through 23 must execute",
+            layer0["final_token_decision_handoff"]["status"],
+        )
+        consumed = official["model_binding"]["consumed_tensors"]
+        self.assertEqual(consumed["lm_head.weight"]["sha256"], TIED_WEIGHT_SHA256)
+        self.assertEqual(
+            consumed["model.embed_tokens.weight"]["sha256"],
+            TIED_WEIGHT_SHA256,
+        )
+        self.assertEqual(consumed["model.norm.weight"]["sha256"], FINAL_NORM_SHA256)
+        self.assertNotEqual(
+            consumed["lm_head.weight"]["absolute_file_offsets"],
+            consumed["model.embed_tokens.weight"]["absolute_file_offsets"],
+        )
+        self.assertEqual(
+            official["terminal_hidden_state"]["sha256"],
+            FIXED_TERMINAL_HIDDEN_SHA256,
+        )
+        logits = official["lm_head"]["logits_f16_bits"]
+        self.assertEqual(official["lm_head"]["vocab_size"], 151936)
+        self.assertEqual(len(logits), 151936)
+        top_k = official["token_decision"]["top_k"]
+        self.assertEqual(len(top_k), 10)
+        self.assertEqual(
+            official["token_decision"]["argmax_token_id"],
+            stable_top_k_f16(logits, 1)[0],
+        )
+        self.assertEqual([record["rank"] for record in top_k], list(range(10)))
+        self.assertIn(
+            "no official 24-layer numerical execution",
+            official["claim_boundary"],
+        )
         with tempfile.TemporaryDirectory() as temporary_directory:
             output_dir = Path(temporary_directory) / "vectors"
             generated = generate(REPOSITORY_ROOT, output_dir)
             self.assertEqual(generated, first)
             summary = validate_vector_directory(REPOSITORY_ROOT, output_dir)
             self.assertEqual(summary["official_events"], 483)
-            self.assertEqual(summary["generated_token_count"], 2)
 
     def test_vector_mutations_missing_extra_and_duplicate_keys_are_rejected(self) -> None:
         artifacts = build_vector_artifacts(
             sha256_bytes(self.contract_payload),
             sha256_bytes(self.bindings_payload),
-            self.oracle_source_payload,
+            DEFAULT_OFFICIAL_TOKENIZER_DIR,
         )
         with tempfile.TemporaryDirectory() as temporary_directory:
             output_dir = Path(temporary_directory)

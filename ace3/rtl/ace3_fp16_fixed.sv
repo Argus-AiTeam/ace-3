@@ -123,5 +123,53 @@ module ace3_q24_to_fp16_rne #(
     assign saturation_o = converted_w[16];
 endmodule
 
+module ace3_fp16_add (
+    input  wire [15:0] a_f16_i,
+    input  wire [15:0] b_f16_i,
+    output wire [15:0] sum_f16_o,
+    output wire        invalid_operand_o,
+    output wire        saturation_o
+);
+    wire signed [40:0] a_q24_w;
+    wire signed [40:0] b_q24_w;
+    wire a_finite_w;
+    wire b_finite_w;
+    wire a_sign_w;
+    wire b_sign_w;
+    wire a_zero_w = a_f16_i[14:0] == 15'd0;
+    wire b_zero_w = b_f16_i[14:0] == 15'd0;
+    wire signed [41:0] sum_q24_w =
+        $signed({a_q24_w[40], a_q24_w}) +
+        $signed({b_q24_w[40], b_q24_w});
+    wire zero_sign_w = a_zero_w && b_zero_w && a_sign_w && b_sign_w;
+    wire [15:0] rounded_sum_w;
+    wire rounded_saturation_w;
+
+    ace3_fp16_to_q24 decode_a (
+        .f16_i(a_f16_i),
+        .q24_o(a_q24_w),
+        .finite_o(a_finite_w),
+        .sign_o(a_sign_w)
+    );
+    ace3_fp16_to_q24 decode_b (
+        .f16_i(b_f16_i),
+        .q24_o(b_q24_w),
+        .finite_o(b_finite_w),
+        .sign_o(b_sign_w)
+    );
+    ace3_q24_to_fp16_rne #(
+        .WIDTH(42)
+    ) round_sum (
+        .q24_i(sum_q24_w),
+        .zero_sign_i(zero_sign_w),
+        .f16_o(rounded_sum_w),
+        .saturation_o(rounded_saturation_w)
+    );
+
+    assign invalid_operand_o = !a_finite_w || !b_finite_w;
+    assign sum_f16_o = invalid_operand_o ? 16'h0000 : rounded_sum_w;
+    assign saturation_o = invalid_operand_o ? 1'b0 : rounded_saturation_w;
+endmodule
+
 /* verilator lint_on DECLFILENAME */
 `default_nettype wire
