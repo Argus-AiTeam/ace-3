@@ -37,7 +37,7 @@
         "state_out": "Verilator opaque --savable image committed only after a natural token terminal",
         "metadata_kind": "ace3_decoder_verilator_transaction"
       },
-      "lineage": "Every state image is SHA256-bound to its predecessor, compiled binary, fixed checkpoint, layer, and next causal position."
+      "lineage": "Every canonical exact-schema state envelope retains an immutable per-position opaque state record and is recursively authenticated through every predecessor envelope/state plus the retained transition activation and output, compiled binary, fixed checkpoint, layer, and next causal position before restore."
     },
     "execution_footprint": {
       "compiled_layers": "one stripped self-contained executable and one canonical authenticated manifest per indexed layer",

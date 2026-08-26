@@ -61,6 +61,25 @@ CONTRACT_RELATIVE_PATH = "ace3/contracts/model24_first_voice_hybrid.json"
 BUILD_MANIFEST_KIND = "ace3_model24_first_voice_verilator_build"
 COMPACT_LAYER_MANIFEST_KIND = "ace3_model24_first_voice_compact_layer"
 STATE_KIND = "ace3_model24_first_voice_layer_state"
+STATE_SCHEMA_VERSION = 2
+STATE_ENVELOPE_KEYS = frozenset(
+    {
+        "schema_version",
+        "kind",
+        "model_binding",
+        "build_manifest_sha256",
+        "binary_sha256",
+        "layer_index",
+        "cache_slot",
+        "next_position",
+        "parent_state_sha256",
+        "parent_envelope_sha256",
+        "input_activation_sha256",
+        "output_hidden_sha256",
+        "state",
+    }
+)
+STATE_HASH_RECORD_KEYS = frozenset({"bytes", "sha256"})
 MAX_POSITIONS = 128
 DEFAULT_MAX_NEW_TOKENS = 4
 MINIMUM_MAX_NEW_TOKENS = 2
@@ -650,18 +669,88 @@ def authenticate_build(
     return manifest, sha256_bytes(manifest_payload)
 
 
-def validate_state_envelope(
-    envelope_path: Path,
-    state_path: Path,
+def state_record_paths(
+    states_dir: Path,
+    layer_index: int,
+    next_position: int,
+) -> tuple[Path, Path]:
+    record_dir = (
+        states_dir
+        / f"layer{layer_index:02d}"
+        / f"position{next_position:03d}"
+    )
+    return record_dir / "state", record_dir / "envelope.json"
+
+
+def _retained_hidden_sha256(path: Path, label: str) -> str:
+    require(
+        path.is_file(),
+        "stale_rtl_state",
+        f"retained {label} is missing",
+        {"path": str(path)},
+    )
+    try:
+        lines = path.read_text(encoding="ascii").splitlines()
+    except (OSError, UnicodeDecodeError) as error:
+        raise HybridRtlError(
+            "stale_rtl_state",
+            f"retained {label} is unreadable: {error}",
+        ) from error
+    require(
+        len(lines) == HIDDEN_SIZE,
+        "stale_rtl_state",
+        f"retained {label} record count mismatch",
+    )
+    values = np.empty(HIDDEN_SIZE, dtype="<u2")
+    for expected_index, line in enumerate(lines):
+        try:
+            valid = (
+                len(line) == 10
+                and line[:2] == "00"
+                and int(line[2:6], 16) == expected_index
+            )
+            value = int(line[6:10], 16) if valid else 0
+        except ValueError:
+            valid = False
+            value = 0
+        require(
+            valid,
+            "stale_rtl_state",
+            f"retained {label} ordering mismatch",
+        )
+        values[expected_index] = value
+    return sha256_bytes(_canonical_bytes(values))
+
+
+def _validate_retained_state_record(
     *,
+    states_dir: Path,
+    runtime_dir: Path,
     layer_index: int,
     next_position: int,
     build_manifest_sha256: str,
     binary_sha256: str,
-) -> dict[str, Any]:
+) -> tuple[dict[str, Any], bytes]:
+    state_path, envelope_path = state_record_paths(
+        states_dir,
+        layer_index,
+        next_position,
+    )
+    require(
+        state_path.is_file() and envelope_path.is_file(),
+        "stale_rtl_state",
+        f"layer {layer_index} retained state position {next_position} is missing",
+    )
+    envelope_payload = envelope_path.read_bytes()
     envelope = load_json(envelope_path, f"layer {layer_index} state envelope")
     require(
-        envelope.get("schema_version") == 1
+        envelope_payload == canonical_json(envelope),
+        "stale_rtl_state",
+        f"layer {layer_index} state envelope is not canonical",
+    )
+    require(
+        set(envelope) == STATE_ENVELOPE_KEYS
+        and envelope.get("schema_version") == STATE_SCHEMA_VERSION
         and envelope.get("kind") == STATE_KIND,
         "stale_rtl_state",
         f"layer {layer_index} state envelope schema mismatch",
@@ -685,11 +774,96 @@ def validate_state_envelope(
         "stale_rtl_state",
         f"layer {layer_index} state owner or causal position mismatch",
     )
+    state_record = envelope.get("state")
     require(
-        state_path.is_file()
-        and envelope.get("state") == hash_file(state_path),
+        isinstance(state_record, dict)
+        and set(state_record) == STATE_HASH_RECORD_KEYS
+        and state_record == hash_file(state_path),
         "stale_rtl_state",
         f"layer {layer_index} opaque Verilator state hash mismatch",
+    )
+
+    transition_position = next_position - 1
+    require(
+        transition_position >= 0,
+        "stale_rtl_state",
+        f"layer {layer_index} state has no producing transition",
+    )
+    transaction_dir = (
+        runtime_dir
+        / f"position{transition_position:03d}"
+        / f"layer{layer_index:02d}"
+    )
+    require(
+        envelope.get("input_activation_sha256")
+        == _retained_hidden_sha256(
+            transaction_dir / "inputs.hex",
+            f"layer {layer_index} position {transition_position} activation",
+        )
+        and envelope.get("output_hidden_sha256")
+        == _retained_hidden_sha256(
+            transaction_dir / "raw" / "final.hex",
+            f"layer {layer_index} position {transition_position} output",
+        ),
+        "stale_rtl_state",
+        f"layer {layer_index} activation or output lineage mismatch",
+    )
+
+    if next_position == 1:
+        require(
+            envelope.get("parent_state_sha256") is None
+            and envelope.get("parent_envelope_sha256") is None,
+            "stale_rtl_state",
+            f"layer {layer_index} genesis state has a predecessor",
+        )
+    else:
+        parent, parent_payload = _validate_retained_state_record(
+            states_dir=states_dir,
+            runtime_dir=runtime_dir,
+            layer_index=layer_index,
+            next_position=next_position - 1,
+            build_manifest_sha256=build_manifest_sha256,
+            binary_sha256=binary_sha256,
+        )
+        require(
+            envelope.get("parent_state_sha256") == parent["state"]["sha256"]
+            and envelope.get("parent_envelope_sha256")
+            == sha256_bytes(parent_payload),
+            "stale_rtl_state",
+            f"layer {layer_index} predecessor lineage mismatch",
+        )
+    return envelope, envelope_payload
+
+
+def validate_state_envelope(
+    envelope_path: Path,
+    state_path: Path,
+    *,
+    states_dir: Path,
+    runtime_dir: Path,
+    layer_index: int,
+    next_position: int,
+    build_manifest_sha256: str,
+    binary_sha256: str,
+) -> dict[str, Any]:
+    expected_state_path, expected_envelope_path = state_record_paths(
+        states_dir,
+        layer_index,
+        next_position,
+    )
+    require(
+        state_path == expected_state_path
+        and envelope_path == expected_envelope_path,
+        "stale_rtl_state",
+        f"layer {layer_index} state record path mismatch",
+    )
+    envelope, _ = _validate_retained_state_record(
+        states_dir=states_dir,
+        runtime_dir=runtime_dir,
+        layer_index=layer_index,
+        next_position=next_position,
+        build_manifest_sha256=build_manifest_sha256,
+        binary_sha256=binary_sha256,
     )
     return envelope
 
@@ -898,13 +1072,18 @@ def _run_transaction(
     activation_path, rope_path = _write_transaction_inputs(
         transaction_dir, hidden_bits, position
     )
-    state_path = states_dir / f"layer{layer_index:02d}.state"
-    envelope_path = states_dir / f"layer{layer_index:02d}.json"
+    state_path, envelope_path = state_record_paths(
+        states_dir,
+        layer_index,
+        position,
+    )
     previous = None
     if position:
         previous = validate_state_envelope(
             envelope_path,
             state_path,
+            states_dir=states_dir,
+            runtime_dir=runtime_dir,
             layer_index=layer_index,
             next_position=position,
             build_manifest_sha256=build_manifest_sha256,
@@ -912,7 +1091,7 @@ def _run_transaction(
         )
     else:
         require(
-            not state_path.exists() and not envelope_path.exists(),
+            not (states_dir / f"layer{layer_index:02d}").exists(),
             "stale_rtl_state",
             f"unexpected initial state for layer {layer_index}",
         )
@@ -987,10 +1166,25 @@ def _run_transaction(
     )
     output_bits = _parse_final(raw_dir / "final.hex")
     state_record = hash_file(candidate)
-    states_dir.mkdir(parents=True, exist_ok=True)
-    os.replace(candidate, state_path)
+    next_state_path, next_envelope_path = state_record_paths(
+        states_dir,
+        layer_index,
+        position + 1,
+    )
+    record_dir = next_state_path.parent
+    staging_dir = record_dir.with_name(f".{record_dir.name}.partial")
+    require(
+        not record_dir.exists(),
+        "stale_rtl_state",
+        f"layer {layer_index} state position {position + 1} already exists",
+    )
+    shutil.rmtree(staging_dir, ignore_errors=True)
+    staging_state_path = staging_dir / next_state_path.name
+    staging_envelope_path = staging_dir / next_envelope_path.name
+    staging_dir.mkdir(parents=True)
+    os.replace(candidate, staging_state_path)
     envelope = {
-        "schema_version": 1,
+        "schema_version": STATE_SCHEMA_VERSION,
         "kind": STATE_KIND,
         "model_binding": {
             "repository": MODEL_REPOSITORY,
@@ -1012,7 +1206,12 @@ def _run_transaction(
         "output_hidden_sha256": sha256_bytes(_canonical_bytes(output_bits)),
         "state": state_record,
     }
-    write_json(envelope_path, envelope)
+    try:
+        write_json(staging_envelope_path, envelope)
+        os.replace(staging_dir, record_dir)
+    except Exception:
+        shutil.rmtree(staging_dir, ignore_errors=True)
+        raise
     record = {
         "layer_index": layer_index,
         "position": position,

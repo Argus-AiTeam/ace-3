@@ -12,6 +12,8 @@ import unittest
 from pathlib import Path
 from unittest import mock
 
+import numpy as np
+
 REPOSITORY_ROOT = Path(__file__).resolve().parents[3]
 MODEL_DIR = REPOSITORY_ROOT / "ace3" / "model"
 if str(MODEL_DIR) not in sys.path:
@@ -20,19 +22,25 @@ if str(MODEL_DIR) not in sys.path:
 from model24_execution_oracle import FIXED_CHAT_TOKEN_IDS  # noqa: E402
 from model24_first_voice_hybrid import (  # noqa: E402
     COMPACT_SELF_TEST_MARKER,
+    HIDDEN_SIZE,
     STATE_KIND,
+    STATE_SCHEMA_VERSION,
     HybridRtlError,
+    _canonical_bytes,
     authenticate_build,
     authenticate_compact_layer,
     authenticate_fixed_inputs,
     binary_path,
     blocker_document,
     build_compact_layer,
+    canonical_json,
     compact_layer_manifest_path,
     _compact_trace,
     contract_binding,
     hash_file,
     plan_execution,
+    sha256_bytes,
+    state_record_paths,
     validate_state_envelope,
     write_json,
 )
@@ -53,6 +61,107 @@ class Model24FirstVoiceHybridTests(unittest.TestCase):
         )
         shutil.rmtree(self.work, ignore_errors=True)
         self.work.mkdir(parents=True)
+
+    @staticmethod
+    def _write_hidden(path: Path, values: np.ndarray) -> None:
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_text(
+            "".join(
+                f"00{index:04x}{int(value):04x}\n"
+                for index, value in enumerate(values)
+            ),
+            encoding="ascii",
+        )
+
+    def _write_state_record(
+        self,
+        *,
+        layer_index: int,
+        next_position: int,
+        seed: int,
+    ) -> tuple[Path, Path]:
+        states_dir = self.work / "states"
+        runtime_dir = self.work / "transactions"
+        input_values = np.asarray(
+            [(index + seed) & 0xFFFF for index in range(HIDDEN_SIZE)],
+            dtype="<u2",
+        )
+        output_values = np.asarray(
+            [(index + seed + 1) & 0xFFFF for index in range(HIDDEN_SIZE)],
+            dtype="<u2",
+        )
+        transaction_dir = (
+            runtime_dir
+            / f"position{next_position - 1:03d}"
+            / f"layer{layer_index:02d}"
+        )
+        self._write_hidden(transaction_dir / "inputs.hex", input_values)
+        self._write_hidden(transaction_dir / "raw" / "final.hex", output_values)
+        state_path, envelope_path = state_record_paths(
+            states_dir,
+            layer_index,
+            next_position,
+        )
+        state_path.parent.mkdir(parents=True, exist_ok=True)
+        state_path.write_bytes(
+            f"opaque-layer-{layer_index}-position-{next_position}-seed-{seed}".encode()
+        )
+        parent_state_sha256 = None
+        parent_envelope_sha256 = None
+        if next_position > 1:
+            parent_state, parent_envelope = state_record_paths(
+                states_dir,
+                layer_index,
+                next_position - 1,
+            )
+            parent_state_sha256 = hash_file(parent_state)["sha256"]
+            parent_envelope_sha256 = hash_file(parent_envelope)["sha256"]
+        envelope = {
+            "schema_version": STATE_SCHEMA_VERSION,
+            "kind": STATE_KIND,
+            "model_binding": {
+                "repository": MODEL_REPOSITORY,
+                "revision": MODEL_REVISION,
+                "checkpoint_sha256": CHECKPOINT_SHA256,
+            },
+            "build_manifest_sha256": "1" * 64,
+            "binary_sha256": "2" * 64,
+            "layer_index": layer_index,
+            "cache_slot": 0,
+            "next_position": next_position,
+            "parent_state_sha256": parent_state_sha256,
+            "parent_envelope_sha256": parent_envelope_sha256,
+            "input_activation_sha256": sha256_bytes(_canonical_bytes(input_values)),
+            "output_hidden_sha256": sha256_bytes(_canonical_bytes(output_values)),
+            "state": hash_file(state_path),
+        }
+        write_json(envelope_path, envelope)
+        return state_path, envelope_path
+
+    def _write_two_record_chain(self) -> tuple[Path, Path]:
+        self._write_state_record(layer_index=7, next_position=1, seed=10)
+        return self._write_state_record(layer_index=7, next_position=2, seed=20)
+
+    def _validate_chain(self, next_position: int = 2) -> dict[str, object]:
+        state_path, envelope_path = state_record_paths(
+            self.work / "states", 7, next_position
+        )
+        return validate_state_envelope(
+            envelope_path,
+            state_path,
+            states_dir=self.work / "states",
+            runtime_dir=self.work / "transactions",
+            layer_index=7,
+            next_position=next_position,
+            build_manifest_sha256="1" * 64,
+            binary_sha256="2" * 64,
+        )
+
+    def _mutate_current_envelope(self, field: str, value: object) -> None:
+        _, envelope_path = state_record_paths(self.work / "states", 7, 2)
+        envelope = json.loads(envelope_path.read_text(encoding="ascii"))
+        envelope[field] = value
+        write_json(envelope_path, envelope)
 
     def tearDown(self) -> None:
         shutil.rmtree(self.work, ignore_errors=True)
@@ -230,74 +339,115 @@ class Model24FirstVoiceHybridTests(unittest.TestCase):
             str(self.work / "build_manifest.json"),
         )
 
-    def test_opaque_state_mutation_and_stale_position_are_rejected(self) -> None:
-        state = self.work / "layer07.state"
-        envelope_path = self.work / "layer07.json"
-        state.write_bytes(b"real-opaque-verilator-state-image")
-        envelope = {
-            "schema_version": 1,
-            "kind": STATE_KIND,
-            "model_binding": {
-                "repository": MODEL_REPOSITORY,
-                "revision": MODEL_REVISION,
-                "checkpoint_sha256": CHECKPOINT_SHA256,
-            },
-            "build_manifest_sha256": "1" * 64,
-            "binary_sha256": "2" * 64,
-            "layer_index": 7,
-            "cache_slot": 0,
-            "next_position": 3,
-            "parent_state_sha256": "3" * 64,
-            "parent_envelope_sha256": "4" * 64,
-            "input_activation_sha256": "5" * 64,
-            "output_hidden_sha256": "6" * 64,
-            "state": hash_file(state),
-        }
-        write_json(envelope_path, envelope)
-        accepted = validate_state_envelope(
-            envelope_path,
-            state,
-            layer_index=7,
-            next_position=3,
-            build_manifest_sha256="1" * 64,
-            binary_sha256="2" * 64,
-        )
+    def test_valid_retained_state_chain_is_accepted(self) -> None:
+        state, _ = self._write_two_record_chain()
+        accepted = self._validate_chain()
         self.assertEqual(accepted["state"], hash_file(state))
 
+    def test_opaque_state_mutation_and_stale_position_are_rejected(self) -> None:
+        state, _ = self._write_two_record_chain()
         with self.assertRaises(HybridRtlError) as raised:
+            self._validate_chain(next_position=3)
+        self.assertEqual(raised.exception.code, "stale_rtl_state")
+
+        with self.assertRaises(HybridRtlError) as raised:
+            state_path, envelope_path = state_record_paths(
+                self.work / "states", 7, 2
+            )
             validate_state_envelope(
                 envelope_path,
-                state,
+                state_path,
+                states_dir=self.work / "states",
+                runtime_dir=self.work / "transactions",
                 layer_index=7,
-                next_position=3,
+                next_position=2,
                 build_manifest_sha256="1" * 64,
                 binary_sha256="9" * 64,
             )
         self.assertEqual(raised.exception.code, "stale_rtl_state")
 
-        with self.assertRaises(HybridRtlError) as raised:
-            validate_state_envelope(
-                envelope_path,
-                state,
-                layer_index=7,
-                next_position=4,
-                build_manifest_sha256="1" * 64,
-                binary_sha256="2" * 64,
-            )
-        self.assertEqual(raised.exception.code, "stale_rtl_state")
-
         state.write_bytes(state.read_bytes() + b"-tampered")
         with self.assertRaises(HybridRtlError) as raised:
-            validate_state_envelope(
-                envelope_path,
-                state,
-                layer_index=7,
-                next_position=3,
-                build_manifest_sha256="1" * 64,
-                binary_sha256="2" * 64,
-            )
+            self._validate_chain()
         self.assertEqual(raised.exception.code, "stale_rtl_state")
         self.assertIn("state hash mismatch", str(raised.exception))
+
+    def test_modified_parent_state_hash_is_rejected(self) -> None:
+        self._write_two_record_chain()
+        self._mutate_current_envelope("parent_state_sha256", "9" * 64)
+        with self.assertRaises(HybridRtlError):
+            self._validate_chain()
+
+    def test_modified_parent_envelope_hash_is_rejected(self) -> None:
+        self._write_two_record_chain()
+        self._mutate_current_envelope("parent_envelope_sha256", "9" * 64)
+        with self.assertRaises(HybridRtlError):
+            self._validate_chain()
+
+    def test_modified_input_activation_hash_is_rejected(self) -> None:
+        self._write_two_record_chain()
+        self._mutate_current_envelope("input_activation_sha256", "9" * 64)
+        with self.assertRaises(HybridRtlError):
+            self._validate_chain()
+
+    def test_modified_output_hidden_hash_is_rejected(self) -> None:
+        self._write_two_record_chain()
+        self._mutate_current_envelope("output_hidden_sha256", "9" * 64)
+        with self.assertRaises(HybridRtlError):
+            self._validate_chain()
+
+    def test_wrong_predecessor_is_rejected(self) -> None:
+        self._write_two_record_chain()
+        wrong_state, wrong_envelope = self._write_state_record(
+            layer_index=8, next_position=1, seed=30
+        )
+        predecessor_state, predecessor_envelope = state_record_paths(
+            self.work / "states", 7, 1
+        )
+        shutil.copyfile(wrong_state, predecessor_state)
+        shutil.copyfile(wrong_envelope, predecessor_envelope)
+        self._mutate_current_envelope(
+            "parent_state_sha256", hash_file(predecessor_state)["sha256"]
+        )
+        self._mutate_current_envelope(
+            "parent_envelope_sha256", hash_file(predecessor_envelope)["sha256"]
+        )
+        with self.assertRaises(HybridRtlError):
+            self._validate_chain()
+
+    def test_missing_predecessor_is_rejected(self) -> None:
+        self._write_two_record_chain()
+        predecessor_state, _ = state_record_paths(self.work / "states", 7, 1)
+        shutil.rmtree(predecessor_state.parent)
+        with self.assertRaises(HybridRtlError):
+            self._validate_chain()
+
+    def test_noncanonical_envelope_is_rejected(self) -> None:
+        self._write_two_record_chain()
+        _, envelope_path = state_record_paths(self.work / "states", 7, 2)
+        envelope = json.loads(envelope_path.read_text(encoding="ascii"))
+        reordered = dict(reversed(list(envelope.items())))
+        envelope_path.write_bytes(
+            (json.dumps(reordered, separators=(",", ":")) + "\n").encode("ascii")
+        )
+        self.assertNotEqual(envelope_path.read_bytes(), canonical_json(envelope))
+        with self.assertRaises(HybridRtlError):
+            self._validate_chain()
+
+    def test_extra_state_envelope_field_is_rejected(self) -> None:
+        self._write_two_record_chain()
+        self._mutate_current_envelope("unexpected", True)
+        with self.assertRaises(HybridRtlError):
+            self._validate_chain()
+
+    def test_missing_state_envelope_field_is_rejected(self) -> None:
+        self._write_two_record_chain()
+        _, envelope_path = state_record_paths(self.work / "states", 7, 2)
+        envelope = json.loads(envelope_path.read_text(encoding="ascii"))
+        del envelope["output_hidden_sha256"]
+        write_json(envelope_path, envelope)
+        with self.assertRaises(HybridRtlError):
+            self._validate_chain()
 
     def test_contract_is_explicit_json_and_has_no_software_rtl_alias(self) -> None:
         contract_path = (
