@@ -1,0 +1,81 @@
+{
+  "schema_version": 1,
+  "kind": "ace3_model24_first_voice_hybrid_contract",
+  "model_binding": {
+    "repository": "Qwen/Qwen2.5-0.5B-Instruct-AWQ",
+    "revision": "db09cd27ead7fee40cdee309693cf83601b9c899",
+    "checkpoint_sha256": "c50d807b7bed7ff314308972e0f4bcf4e5a70bc60ad88fc7df53940831ed0c1b",
+    "checkpoint_bytes": 730652248
+  },
+  "numeric_profile": {
+    "weights": "native asymmetric packed INT4 AWQ",
+    "group_size": 128,
+    "qzero_adjustment": "none",
+    "activations": "FP16",
+    "kv": "FP16",
+    "projection_accumulation": "accepted signed Q53.48 complete projection with one FP16 rounding"
+  },
+  "rtl": {
+    "implementation": "ace3/rtl/ace3_decoder_layer0_token_engine.sv",
+    "indexed_layers": 24,
+    "required_verilator_option": "--savable",
+    "cache_slots": 2,
+    "used_cache_slot": 0,
+    "cache_positions": 128,
+    "position_min": 0,
+    "position_max": 127,
+    "position_acceptance": "strictly contiguous from zero; no masking, wrapping, clamping, or aliasing",
+    "state_owner": ["checkpoint_sha256", "build_manifest_sha256", "layer_index", "cache_slot"],
+    "transaction": {
+      "input": {
+        "activation": "896 indexed FP16 words",
+        "rope": "32 indexed FP16 cosine/sine pairs for the exact position",
+        "state_in": "required exactly when position is greater than zero"
+      },
+      "output": {
+        "hidden": "896 indexed FP16 words",
+        "state_out": "Verilator opaque --savable image committed only after a natural token terminal",
+        "metadata_kind": "ace3_decoder_verilator_transaction"
+      },
+      "lineage": "Every state image is SHA256-bound to its predecessor, compiled binary, fixed checkpoint, layer, and next causal position."
+    },
+    "execution_footprint": {
+      "tensor_workspace": "one layer of authenticated hex vectors, removed after each indexed RTL transaction",
+      "tensor_manifests": "compact per-layer manifests persist for checkpoint lineage",
+      "trace_storage": "each raw trace is SHA256-authenticated, deterministically gzip-compressed, restoration-verified, and then replaced by its archive"
+    }
+  },
+  "host": {
+    "included": [
+      "authenticated tokenizer",
+      "fixed Qwen chat template serialization",
+      "embedding lookup",
+      "final RMSNorm",
+      "authenticated tied lm_head",
+      "full-vocabulary greedy selection with lowest-token-ID tie break",
+      "generated-token feedback",
+      "independent PyTorch CPU float64 dequantized-AWQ comparison"
+    ],
+    "fixed_prompt_tokens": 25,
+    "default_max_new_tokens": 4,
+    "minimum_max_new_tokens": 2
+  },
+  "token0_disclosure": {
+    "definition": "Token-0 is the first generated token selected from the layer-23 output of the final prompt token.",
+    "selection_is_rtl_input": false,
+    "feedback_rule": "Token-0 is represented by every indexed RTL layer at the next position only when generation continues after its selection.",
+    "terminal_selection_rule": "The final selected token is reported but is not claimed as an RTL input unless another decision is requested."
+  },
+  "capability": {
+    "fixed_prompt_positions": 25,
+    "maximum_represented_positions": 128,
+    "maximum_requested_new_tokens_without_early_eos": 104,
+    "status": "representable_within_bound",
+    "overflow_blocker_code": "rtl_context_capacity_exceeded"
+  },
+  "claim_boundary": {
+    "hybrid_rtl_requires": "A successful document must contain one natural indexed Verilator transaction for every represented token and every layer.",
+    "software_only_prohibition": "Software/oracle Model24 execution must never be labeled RTL.",
+    "excluded": ["synthesis", "timing closure", "power", "area", "PPA", "FPGA", "silicon"]
+  }
+}

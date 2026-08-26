@@ -199,6 +199,18 @@ MODEL24_RTL_ACCURATE_SILU ?= 0
 MODEL24_RTL_LAYER_DIR := $(MODEL24_RTL_CASCADE_DIR)/compiled/layer$(MODEL24_RTL_LAYER_INDEX)
 MODEL24_RTL_LAYER_OBJ_DIR := $(MODEL24_RTL_LAYER_DIR)/obj_dir
 MODEL24_RTL_LAYER_BIN := $(MODEL24_RTL_LAYER_OBJ_DIR)/Vace3_decoder_layer0_token_engine
+FIRST_VOICE_DIR := $(BUILD_DIR)/model24_first_voice_hybrid
+FIRST_VOICE_CONTRACT := $(ROOT)/ace3/contracts/model24_first_voice_hybrid.json
+FIRST_VOICE_DRIVER := $(ROOT)/ace3/model/model24_first_voice_hybrid.py
+FIRST_VOICE_TEST := $(ROOT)/ace3/model/tests/test_model24_first_voice_hybrid.py
+FIRST_VOICE_MAX_NEW_TOKENS ?= 2
+FIRST_VOICE_RTL_LAYER_INDEX ?= 0
+FIRST_VOICE_RTL_LAYER_DIR := $(FIRST_VOICE_DIR)/compiled/layer$(FIRST_VOICE_RTL_LAYER_INDEX)
+FIRST_VOICE_RTL_LAYER_OBJ_DIR := $(FIRST_VOICE_RTL_LAYER_DIR)/obj_dir
+FIRST_VOICE_RTL_LAYER_BIN := $(FIRST_VOICE_RTL_LAYER_OBJ_DIR)/Vace3_decoder_layer0_token_engine
+FIRST_VOICE_SAVABLE_DIR := $(FIRST_VOICE_DIR)/savable_self_test
+FIRST_VOICE_SAVABLE_OBJ_DIR := $(FIRST_VOICE_SAVABLE_DIR)/obj_dir
+FIRST_VOICE_SAVABLE_BIN := $(FIRST_VOICE_SAVABLE_OBJ_DIR)/Vace3_decoder_layer0_token_engine
 VL15_LAYER0_HANDOFF ?= $(BUILD_DIR)/model24-prep-worktree/build/freshlayer0execute37-vl15/raw-final.rows
 OFFICIAL_MODEL24_VECTOR_DIR := $(BUILD_DIR)/official_model24_next_token
 OFFICIAL_MODEL24_EXECUTOR := $(ROOT)/ace3/model/official_model24_next_token.py
@@ -273,6 +285,9 @@ export PYTHONDONTWRITEBYTECODE := 1
 	model24-controller-cascade-comparison model24-controller-cascade-validation \
 	model24-controller-cascade-tests model24-controller-rtl-cascade \
 	model24-rtl-layer-compile model24-token0-diagnostic-tests \
+	model24-first-voice-hybrid model24-first-voice-hybrid-tests \
+	model24-first-voice-savable-compile model24-first-voice-savable-test \
+	model24-first-voice-layer-compile model24-first-voice-compile-all \
 	official-model24-next-token official-model24-next-token-vectors \
 	official-model24-next-token-validation official-model24-next-token-tests \
 	official-model24-dialogue official-model24-dialogue-vectors \
@@ -1229,7 +1244,7 @@ decoder-layer0-verilator-compile: decoder-layer0-json-validation
 	@mkdir -p "$(DECODER_VERILATOR_DIR)" "$(LOG_DIR)"
 	@set -eu; log="$(LOG_DIR)/decoder-layer0-verilator-compile.log"; \
 	printf '%s\n' '$ verilator --cc --exe --build --Wall -Wno-fatal --top-module ace3_decoder_layer0_token_engine --Mdir build/decoder_layer0_verilator/obj_dir ...' > "$$log"; \
-	if cd "$(ROOT)" && "$(VERILATOR)" --cc --exe --build --Wall -Wno-fatal \
+	if cd "$(ROOT)" && "$(VERILATOR)" --cc --exe --build --savable --Wall -Wno-fatal \
 	    --top-module ace3_decoder_layer0_token_engine \
 	    --Mdir "$(DECODER_VERILATOR_OBJ_DIR)" $(DECODER_RTL) \
 	    "$(DECODER_CPP_TB)" >> "$$log" 2>&1; then :; \
@@ -1313,7 +1328,7 @@ decoder-layer1-verilator-compile: decoder-layer1-vectors
 	@mkdir -p "$(DECODER_LAYER1_VERILATOR_DIR)" "$(LOG_DIR)"
 	@set -eu; log="$(LOG_DIR)/decoder-layer1-verilator-compile.log"; \
 	printf '%s\n' '$ verilator --cc --exe --build -GLAYER_INDEX=1 --top-module ace3_decoder_layer0_token_engine ...' > "$$log"; \
-	if cd "$(ROOT)" && "$(VERILATOR)" --cc --exe --build --Wall -Wno-fatal \
+	if cd "$(ROOT)" && "$(VERILATOR)" --cc --exe --build --savable --Wall -Wno-fatal \
 	    -GLAYER_INDEX=1 --top-module ace3_decoder_layer0_token_engine \
 	    --Mdir "$(DECODER_LAYER1_VERILATOR_OBJ_DIR)" $(DECODER_RTL) \
 	    "$(DECODER_CPP_TB)" >> "$$log" 2>&1; then :; \
@@ -1423,7 +1438,7 @@ decoder-layer2-verilator-compile: decoder-layer2-vectors
 	@mkdir -p "$(DECODER_LAYER2_VERILATOR_DIR)" "$(LOG_DIR)"
 	@set -eu; log="$(LOG_DIR)/decoder-layer2-verilator-compile.log"; \
 	printf '%s\n' '$ verilator --cc --exe --build -GLAYER_INDEX=2 --top-module ace3_decoder_layer0_token_engine ...' > "$$log"; \
-	if cd "$(ROOT)" && "$(VERILATOR)" --cc --exe --build --Wall -Wno-fatal \
+	if cd "$(ROOT)" && "$(VERILATOR)" --cc --exe --build --savable --Wall -Wno-fatal \
 	    -GLAYER_INDEX=2 --top-module ace3_decoder_layer0_token_engine \
 	    --Mdir "$(DECODER_LAYER2_VERILATOR_OBJ_DIR)" $(DECODER_RTL) \
 	    "$(DECODER_CPP_TB)" >> "$$log" 2>&1; then :; \
@@ -1667,13 +1682,72 @@ model24-rtl-layer-compile:
 	@test "$(MODEL24_RTL_LAYER_INDEX)" -ge 0 -a "$(MODEL24_RTL_LAYER_INDEX)" -le 23
 	@rm -rf "$(MODEL24_RTL_LAYER_OBJ_DIR)"
 	@mkdir -p "$(MODEL24_RTL_LAYER_DIR)"
-	@"$(VERILATOR)" --cc --exe --build --Wall -Wno-fatal \
+	@"$(VERILATOR)" --cc --exe --build --savable --Wall -Wno-fatal \
 	    -GLAYER_INDEX="$(MODEL24_RTL_LAYER_INDEX)" \
 	    -GACCURATE_SILU="$(MODEL24_RTL_ACCURATE_SILU)" \
 	    --top-module ace3_decoder_layer0_token_engine \
 	    --Mdir "$(MODEL24_RTL_LAYER_OBJ_DIR)" $(DECODER_RTL) \
 	    "$(DECODER_CPP_TB)"
 	@test -x "$(MODEL24_RTL_LAYER_BIN)"
+
+model24-first-voice-savable-compile:
+	@rm -rf "$(FIRST_VOICE_SAVABLE_OBJ_DIR)"
+	@mkdir -p "$(FIRST_VOICE_SAVABLE_DIR)"
+	@cd "$(ROOT)" && "$(VERILATOR)" --cc --exe --build --savable --Wall -Wno-fatal \
+	    --top-module ace3_decoder_layer0_token_engine \
+	    --Mdir "$(FIRST_VOICE_SAVABLE_OBJ_DIR)" $(DECODER_RTL) \
+	    "$(DECODER_CPP_TB)"
+	@test -x "$(FIRST_VOICE_SAVABLE_BIN)"
+
+model24-first-voice-savable-test: model24-first-voice-savable-compile
+	@rm -f "$(FIRST_VOICE_SAVABLE_DIR)/rtl.state" \
+	    "$(FIRST_VOICE_SAVABLE_DIR)/rtl.state.partial"
+	@"$(FIRST_VOICE_SAVABLE_BIN)" \
+	    --savable-self-test "$(FIRST_VOICE_SAVABLE_DIR)/rtl.state"
+	@test -s "$(FIRST_VOICE_SAVABLE_DIR)/rtl.state"
+
+model24-first-voice-layer-compile:
+	@test "$(FIRST_VOICE_RTL_LAYER_INDEX)" -ge 0 \
+	    -a "$(FIRST_VOICE_RTL_LAYER_INDEX)" -le 23
+	@rm -rf "$(FIRST_VOICE_RTL_LAYER_OBJ_DIR)"
+	@mkdir -p "$(FIRST_VOICE_RTL_LAYER_DIR)"
+	@cd "$(ROOT)" && "$(VERILATOR)" --cc --exe --build --savable --Wall -Wno-fatal \
+	    -GLAYER_INDEX="$(FIRST_VOICE_RTL_LAYER_INDEX)" \
+	    -GACCURATE_SILU="$$(test "$(FIRST_VOICE_RTL_LAYER_INDEX)" -ge 3 && echo 1 || echo 0)" \
+	    --top-module ace3_decoder_layer0_token_engine \
+	    --Mdir "$(FIRST_VOICE_RTL_LAYER_OBJ_DIR)" $(DECODER_RTL) \
+	    "$(DECODER_CPP_TB)"
+	@test -x "$(FIRST_VOICE_RTL_LAYER_BIN)"
+
+model24-first-voice-compile-all:
+	@set -eu; for layer in $$(seq 0 23); do \
+	    "$(MAKE)" --no-print-directory model24-first-voice-layer-compile \
+	        FIRST_VOICE_RTL_LAYER_INDEX="$$layer"; \
+	done
+	@cd "$(ROOT)" && "$(PYTHON)" "$(FIRST_VOICE_DRIVER)" \
+	    --repository-root "$(ROOT)" \
+	    --compiled-dir "$(FIRST_VOICE_DIR)/compiled" \
+	    --bind-compiled
+
+model24-first-voice-hybrid-tests: model24-first-voice-savable-test
+	@cd "$(ROOT)" && PYTHONPYCACHEPREFIX="$(FIRST_VOICE_DIR)/pycache" \
+	    "$(PYTHON)" -m py_compile \
+	    "$(FIRST_VOICE_DRIVER)" "$(FIRST_VOICE_TEST)"
+	@cd "$(ROOT)" && PYTHONPYCACHEPREFIX="$(FIRST_VOICE_DIR)/pycache" \
+	    "$(PYTHON)" -m unittest \
+	    ace3/model/tests/test_model24_first_voice_hybrid.py
+
+model24-first-voice-hybrid: model24-first-voice-compile-all \
+	model24-first-voice-hybrid-tests
+	@rm -rf "$(FIRST_VOICE_DIR)/execution"
+	@cd "$(ROOT)" && "$(PYTHON)" "$(FIRST_VOICE_DRIVER)" \
+	    --repository-root "$(ROOT)" \
+	    --checkpoint "$(OFFICIAL_MODEL24_CHECKPOINT)" \
+	    --tokenizer-dir "$(OFFICIAL_MODEL24_TOKENIZER_DIR)" \
+	    --tensor-map "$(MODEL24_TENSOR_MAP)" \
+	    --compiled-dir "$(FIRST_VOICE_DIR)/compiled" \
+	    --output-dir "$(FIRST_VOICE_DIR)/execution" \
+	    --max-new-tokens "$(FIRST_VOICE_MAX_NEW_TOKENS)"
 
 model24-controller-rtl-cascade: model24-controller-cascade-bindings \
 	model24-controller-cascade-tests
