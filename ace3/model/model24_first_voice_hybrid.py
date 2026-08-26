@@ -59,10 +59,14 @@ from qwen2_rope_oracle import qwen2_coefficient
 KIND = "ace3_model24_first_voice_hybrid_execution"
 CONTRACT_RELATIVE_PATH = "ace3/contracts/model24_first_voice_hybrid.json"
 BUILD_MANIFEST_KIND = "ace3_model24_first_voice_verilator_build"
+COMPACT_LAYER_MANIFEST_KIND = "ace3_model24_first_voice_compact_layer"
 STATE_KIND = "ace3_model24_first_voice_layer_state"
 MAX_POSITIONS = 128
 DEFAULT_MAX_NEW_TOKENS = 4
 MINIMUM_MAX_NEW_TOKENS = 2
+RTL_BINARY_NAME = "Vace3_decoder_layer0_token_engine"
+RTL_TOP_MODULE = "ace3_decoder_layer0_token_engine"
+COMPACT_SELF_TEST_MARKER = "DECODER_LAYER_TOKEN_ENGINE_COMPACT_BUILD_PASS"
 
 RTL_BUILD_SOURCES = (
     "ace3/rtl/ace3_fp16_fixed.sv",
@@ -254,13 +258,16 @@ def contract_binding(repository_root: Path) -> tuple[dict[str, Any], dict[str, A
     }
 
 
+def compact_layer_dir(compiled_dir: Path, layer_index: int) -> Path:
+    return compiled_dir / f"layer{layer_index}"
+
+
 def binary_path(compiled_dir: Path, layer_index: int) -> Path:
-    return (
-        compiled_dir
-        / f"layer{layer_index}"
-        / "obj_dir"
-        / "Vace3_decoder_layer0_token_engine"
-    )
+    return compact_layer_dir(compiled_dir, layer_index) / "bin" / RTL_BINARY_NAME
+
+
+def compact_layer_manifest_path(compiled_dir: Path, layer_index: int) -> Path:
+    return compact_layer_dir(compiled_dir, layer_index) / "layer_manifest.json"
 
 
 def source_hashes(repository_root: Path) -> dict[str, str]:
@@ -270,21 +277,302 @@ def source_hashes(repository_root: Path) -> dict[str, str]:
     }
 
 
+def compact_build_configuration(
+    layer_index: int,
+    verilator_version: str,
+) -> dict[str, Any]:
+    require(
+        type(layer_index) is int and 0 <= layer_index < LAYER_COUNT,
+        "invalid_layer_index",
+        f"compact RTL layer index must be in [0,{LAYER_COUNT - 1}]",
+    )
+    require(
+        isinstance(verilator_version, str) and bool(verilator_version.strip()),
+        "invalid_build_configuration",
+        "Verilator version binding must be non-empty",
+    )
+    source_arguments = [
+        relative
+        for relative in RTL_BUILD_SOURCES
+        if relative.endswith((".sv", ".cpp"))
+    ]
+    return {
+        "verilator_version": verilator_version.strip(),
+        "top_module": RTL_TOP_MODULE,
+        "options": ["--cc", "--exe", "--build", "--savable", "--Wall", "-Wno-fatal"],
+        "parameters": {
+            "LAYER_INDEX": layer_index,
+            "ACCURATE_SILU": int(layer_index >= 3),
+        },
+        "source_arguments": source_arguments,
+        "strip_arguments": ["--strip-all"],
+    }
+
+
+def _compact_layer_document(
+    repository_root: Path,
+    compiled_dir: Path,
+    layer_index: int,
+    verilator_version: str,
+    binary: Path,
+) -> dict[str, Any]:
+    _, contract_record = contract_binding(repository_root)
+    configuration = compact_build_configuration(layer_index, verilator_version)
+    return {
+        "schema_version": 1,
+        "kind": COMPACT_LAYER_MANIFEST_KIND,
+        "layer_index": layer_index,
+        "contract": contract_record,
+        "sources": source_hashes(repository_root),
+        "configuration": configuration,
+        "configuration_sha256": sha256_bytes(canonical_json(configuration)),
+        "binary": {
+            "path": str(binary_path(compiled_dir, layer_index).relative_to(compiled_dir)),
+            **hash_file(binary),
+        },
+    }
+
+
+def write_compact_layer_manifest(
+    repository_root: Path,
+    compiled_dir: Path,
+    layer_index: int,
+    verilator_version: str,
+) -> dict[str, Any]:
+    binary = binary_path(compiled_dir, layer_index)
+    require(
+        binary.is_file() and os.access(binary, os.X_OK),
+        "compiled_layer_missing",
+        f"compact indexed RTL layer {layer_index} binary is missing",
+    )
+    document = _compact_layer_document(
+        repository_root,
+        compiled_dir,
+        layer_index,
+        verilator_version,
+        binary,
+    )
+    write_json(compact_layer_manifest_path(compiled_dir, layer_index), document)
+    return document
+
+
+def authenticate_compact_layer(
+    repository_root: Path,
+    compiled_dir: Path,
+    layer_index: int,
+) -> tuple[dict[str, Any], str]:
+    manifest_path = compact_layer_manifest_path(compiled_dir, layer_index)
+    require(
+        manifest_path.is_file(),
+        "compiled_layer_missing",
+        f"compact indexed RTL layer {layer_index} manifest is missing",
+        {"path": str(manifest_path)},
+    )
+    payload = manifest_path.read_bytes()
+    manifest = load_json(manifest_path, "First Voice compact layer manifest")
+    require(
+        payload == canonical_json(manifest),
+        "stale_compiled_rtl",
+        f"compact RTL layer {layer_index} manifest is not canonical",
+    )
+    require(
+        manifest.get("schema_version") == 1
+        and manifest.get("kind") == COMPACT_LAYER_MANIFEST_KIND
+        and manifest.get("layer_index") == layer_index,
+        "stale_compiled_rtl",
+        f"compact RTL layer {layer_index} manifest identity mismatch",
+    )
+    _, contract_record = contract_binding(repository_root)
+    require(
+        manifest.get("contract") == contract_record
+        and manifest.get("sources") == source_hashes(repository_root),
+        "stale_compiled_rtl",
+        f"compact RTL layer {layer_index} source or contract binding is stale",
+    )
+    configuration = manifest.get("configuration")
+    require(
+        isinstance(configuration, dict)
+        and isinstance(configuration.get("verilator_version"), str),
+        "stale_compiled_rtl",
+        f"compact RTL layer {layer_index} configuration is missing",
+    )
+    require(
+        configuration
+        == compact_build_configuration(
+            layer_index,
+            configuration["verilator_version"],
+        )
+        and manifest.get("configuration_sha256")
+        == sha256_bytes(canonical_json(configuration)),
+        "stale_compiled_rtl",
+        f"compact RTL layer {layer_index} configuration hash mismatch",
+    )
+    binary = binary_path(compiled_dir, layer_index)
+    binary_record = manifest.get("binary")
+    require(
+        isinstance(binary_record, dict)
+        and binary_record.get("path") == str(binary.relative_to(compiled_dir))
+        and binary.is_file()
+        and os.access(binary, os.X_OK)
+        and hash_file(binary)
+        == {key: binary_record.get(key) for key in ("bytes", "sha256")},
+        "stale_compiled_rtl",
+        f"compact RTL layer {layer_index} binary hash mismatch",
+    )
+    return manifest, sha256_bytes(payload)
+
+
+def build_compact_layer(
+    repository_root: Path,
+    compiled_dir: Path,
+    layer_index: int,
+    temporary_mdir: Path,
+    *,
+    verilator: str,
+    strip: str,
+) -> dict[str, Any]:
+    require(
+        type(layer_index) is int and 0 <= layer_index < LAYER_COUNT,
+        "invalid_layer_index",
+        f"compact RTL layer index must be in [0,{LAYER_COUNT - 1}]",
+    )
+    repository_root = repository_root.resolve(strict=True)
+    compiled_dir = compiled_dir.resolve()
+    temporary_mdir = temporary_mdir.resolve()
+    require(
+        temporary_mdir.name == "compact_mdir"
+        and temporary_mdir not in (repository_root, compiled_dir)
+        and temporary_mdir not in repository_root.parents
+        and temporary_mdir not in compiled_dir.parents,
+        "invalid_temporary_mdir",
+        "temporary Mdir must be a dedicated compact_mdir path",
+    )
+    final_layer_dir = compact_layer_dir(compiled_dir, layer_index)
+    staging_layer_dir = compiled_dir / f".layer{layer_index}.partial"
+    staging_binary = staging_layer_dir / "bin" / RTL_BINARY_NAME
+    shutil.rmtree(staging_layer_dir, ignore_errors=True)
+    shutil.rmtree(temporary_mdir, ignore_errors=True)
+    compiled_dir.mkdir(parents=True, exist_ok=True)
+    temporary_mdir.mkdir(parents=True)
+    try:
+        try:
+            version_result = subprocess.run(
+                [verilator, "--version"],
+                check=True,
+                capture_output=True,
+                text=True,
+            )
+            verilator_version = (
+                version_result.stdout or version_result.stderr
+            ).strip()
+            configuration = compact_build_configuration(
+                layer_index,
+                verilator_version,
+            )
+            command = [verilator, *configuration["options"]]
+            command.extend(
+                [
+                    f"-GLAYER_INDEX={layer_index}",
+                    f"-GACCURATE_SILU={configuration['parameters']['ACCURATE_SILU']}",
+                    "--top-module",
+                    RTL_TOP_MODULE,
+                    "--Mdir",
+                    str(temporary_mdir),
+                ]
+            )
+            command.extend(
+                str(repository_root / relative)
+                for relative in configuration["source_arguments"]
+            )
+            subprocess.run(command, cwd=repository_root, check=True)
+            built_binary = temporary_mdir / RTL_BINARY_NAME
+            require(
+                built_binary.is_file() and os.access(built_binary, os.X_OK),
+                "compact_build_failed",
+                f"Verilator did not produce compact RTL layer {layer_index} executable",
+            )
+            staging_binary.parent.mkdir(parents=True)
+            shutil.copyfile(built_binary, staging_binary)
+            staging_binary.chmod(0o755)
+            subprocess.run(
+                [strip, *configuration["strip_arguments"], str(staging_binary)],
+                check=True,
+            )
+            document = _compact_layer_document(
+                repository_root,
+                compiled_dir,
+                layer_index,
+                verilator_version,
+                staging_binary,
+            )
+            write_json(staging_layer_dir / "layer_manifest.json", document)
+        finally:
+            shutil.rmtree(temporary_mdir, ignore_errors=True)
+
+        self_test = subprocess.run(
+            [
+                str(staging_binary),
+                "--compact-build-self-test",
+                "--layer-index",
+                str(layer_index),
+            ],
+            check=True,
+            capture_output=True,
+            text=True,
+        )
+        require(
+            f"{COMPACT_SELF_TEST_MARKER} layer_index={layer_index}"
+            in self_test.stdout,
+            "compact_build_failed",
+            f"compact RTL layer {layer_index} executable self-test marker is missing",
+        )
+        if final_layer_dir.exists():
+            shutil.rmtree(final_layer_dir)
+        os.replace(staging_layer_dir, final_layer_dir)
+        accepted, _ = authenticate_compact_layer(
+            repository_root,
+            compiled_dir,
+            layer_index,
+        )
+        return accepted
+    except HybridRtlError:
+        shutil.rmtree(staging_layer_dir, ignore_errors=True)
+        raise
+    except (OSError, subprocess.SubprocessError) as error:
+        shutil.rmtree(staging_layer_dir, ignore_errors=True)
+        raise HybridRtlError(
+            "compact_build_failed",
+            f"compact RTL layer {layer_index} build failed: {error}",
+        ) from error
+
+
 def bind_compiled(repository_root: Path, compiled_dir: Path) -> dict[str, Any]:
     _, contract_record = contract_binding(repository_root)
     layers = []
     for layer_index in range(LAYER_COUNT):
-        binary = binary_path(compiled_dir, layer_index)
-        require(
-            binary.is_file() and os.access(binary, os.X_OK),
-            "compiled_layer_missing",
-            f"compiled indexed RTL layer {layer_index} is missing",
+        layer_manifest, layer_manifest_sha256 = authenticate_compact_layer(
+            repository_root,
+            compiled_dir,
+            layer_index,
         )
-        layers.append({"layer_index": layer_index, **hash_file(binary)})
+        manifest_path = compact_layer_manifest_path(compiled_dir, layer_index)
+        layers.append(
+            {
+                "layer_index": layer_index,
+                "manifest": {
+                    "path": str(manifest_path.relative_to(compiled_dir)),
+                    **hash_file(manifest_path),
+                },
+                "manifest_sha256": layer_manifest_sha256,
+                "configuration_sha256": layer_manifest["configuration_sha256"],
+                "binary": layer_manifest["binary"],
+            }
+        )
     document = {
-        "schema_version": 1,
+        "schema_version": 2,
         "kind": BUILD_MANIFEST_KIND,
         "verilator_savable": True,
+        "compact_layout": True,
         "contract": contract_record,
         "sources": source_hashes(repository_root),
         "layers": layers,
@@ -305,13 +593,16 @@ def authenticate_build(
         "compiled RTL build manifest is missing",
         {"path": str(manifest_path)},
     )
+    manifest_payload = manifest_path.read_bytes()
     manifest = load_json(manifest_path, "First Voice build manifest")
     require(
-        manifest.get("schema_version") == 1
+        manifest_payload == canonical_json(manifest)
+        and manifest.get("schema_version") == 2
         and manifest.get("kind") == BUILD_MANIFEST_KIND
-        and manifest.get("verilator_savable") is True,
+        and manifest.get("verilator_savable") is True
+        and manifest.get("compact_layout") is True,
         "stale_compiled_rtl",
-        "compiled RTL build manifest schema or --savable binding mismatch",
+        "compiled RTL build manifest schema, layout, or --savable binding mismatch",
     )
     require(
         manifest.get("contract") == dict(contract_record)
@@ -329,14 +620,34 @@ def authenticate_build(
     )
     for record in layers:
         layer_index = record["layer_index"]
-        require(
-            hash_file(binary_path(compiled_dir, layer_index))
-            == {key: record[key] for key in ("bytes", "sha256")},
-            "stale_compiled_rtl",
-            f"compiled RTL layer {layer_index} binary mismatch",
+        layer_manifest_path = compact_layer_manifest_path(
+            compiled_dir,
+            layer_index,
         )
-    payload = manifest_path.read_bytes()
-    return manifest, sha256_bytes(payload)
+        require(
+            layer_manifest_path.is_file()
+            and record.get("manifest")
+            == {
+                "path": str(layer_manifest_path.relative_to(compiled_dir)),
+                **hash_file(layer_manifest_path),
+            },
+            "stale_compiled_rtl",
+            f"compiled RTL layer {layer_index} manifest hash mismatch",
+        )
+        layer_manifest, layer_manifest_sha256 = authenticate_compact_layer(
+            repository_root,
+            compiled_dir,
+            layer_index,
+        )
+        require(
+            record.get("manifest_sha256") == layer_manifest_sha256
+            and record.get("configuration_sha256")
+            == layer_manifest["configuration_sha256"]
+            and record.get("binary") == layer_manifest["binary"],
+            "stale_compiled_rtl",
+            f"compiled RTL layer {layer_index} binding mismatch",
+        )
+    return manifest, sha256_bytes(manifest_payload)
 
 
 def validate_state_envelope(
@@ -1171,6 +1482,11 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--repository-root", required=True, type=Path)
     parser.add_argument("--compiled-dir", required=True, type=Path)
     parser.add_argument("--bind-compiled", action="store_true")
+    parser.add_argument("--build-compact-layer", action="store_true")
+    parser.add_argument("--layer-index", type=int)
+    parser.add_argument("--temporary-mdir", type=Path)
+    parser.add_argument("--verilator", default="verilator")
+    parser.add_argument("--strip", default="strip")
     parser.add_argument("--checkpoint", type=Path)
     parser.add_argument("--tokenizer-dir", type=Path)
     parser.add_argument("--tensor-map", type=Path)
@@ -1182,7 +1498,32 @@ def parse_args() -> argparse.Namespace:
 def main() -> None:
     args = parse_args()
     repository_root = args.repository_root.resolve(strict=True)
-    compiled_dir = args.compiled_dir.resolve(strict=True)
+    compiled_dir = args.compiled_dir.resolve()
+    if args.build_compact_layer:
+        if args.layer_index is None or args.temporary_mdir is None:
+            raise SystemExit(
+                "layer-index and temporary-mdir are required for compact build"
+            )
+        try:
+            document = build_compact_layer(
+                repository_root,
+                compiled_dir,
+                args.layer_index,
+                args.temporary_mdir,
+                verilator=args.verilator,
+                strip=args.strip,
+            )
+        except HybridRtlError as error:
+            raise SystemExit(
+                f"MODEL24_FIRST_VOICE_COMPACT_BUILD_BLOCKED code={error.code} {error}"
+            ) from error
+        print(
+            "MODEL24_FIRST_VOICE_COMPACT_BUILD_PASS "
+            f"layer={document['layer_index']} "
+            f"binary_sha256={document['binary']['sha256']}"
+        )
+        return
+    compiled_dir = compiled_dir.resolve(strict=True)
     if args.bind_compiled:
         document = bind_compiled(repository_root, compiled_dir)
         print(

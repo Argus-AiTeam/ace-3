@@ -456,6 +456,29 @@ static std::array<uint64_t, 16> savable_observation(
     };
 }
 
+static void run_compact_build_self_test(unsigned expected_layer_index) {
+    Vace3_decoder_layer0_token_engine top;
+    savable_idle(top);
+    top.rst_ni=0; top.clk_i=0; top.eval();
+    savable_tick(top); savable_tick(top);
+    top.rst_ni=1; savable_tick(top);
+    if (unsigned(top.layer_index_o) != expected_layer_index)
+        throw std::runtime_error("compact build layer parameter mismatch");
+    if (top.busy_o || top.done_valid_o || top.phase_o != 0)
+        throw std::runtime_error("compact build reset did not reach idle");
+    top.load_kind_i=0; top.load_index_i=0; top.load_f16_i=0x3c00;
+    top.load_valid_i=1; top.clk_i=0; top.eval();
+    if (!top.load_ready_o)
+        throw std::runtime_error("compact build load handshake rejected");
+    top.clk_i=1; top.eval(); top.load_valid_i=0;
+    savable_tick(top);
+    if (unsigned(top.layer_index_o) != expected_layer_index || top.busy_o)
+        throw std::runtime_error("compact build RTL observation mismatch");
+    top.final();
+    std::cout << "DECODER_LAYER_TOKEN_ENGINE_COMPACT_BUILD_PASS layer_index="
+              << expected_layer_index << " load_words=1\n";
+}
+
 static void run_savable_self_test(const std::string& state_path) {
     Vace3_decoder_layer0_token_engine original;
     savable_idle(original);
@@ -546,6 +569,7 @@ int main(int argc, char** argv) {
         active_layer_index=0;
         bool fail_after_raw=false;
         bool transaction=false;
+        bool compact_build_self_test=false;
         unsigned transaction_position=0;
         std::string transaction_input, transaction_rope, state_in, state_out;
         std::string transaction_metadata, savable_self_test;
@@ -577,6 +601,14 @@ int main(int argc, char** argv) {
                 transaction_metadata=argv[++i];
             else if(argument=="--savable-self-test" && i+1<argc)
                 savable_self_test=argv[++i];
+            else if(argument=="--compact-build-self-test")
+                compact_build_self_test=true;
+        }
+        if(compact_build_self_test) {
+            if(active_layer_index>23)
+                throw std::runtime_error("layer index must be in [0,23]");
+            run_compact_build_self_test(active_layer_index);
+            return 0;
         }
         if(!savable_self_test.empty()) {
             run_savable_self_test(savable_self_test);

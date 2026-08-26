@@ -40,6 +40,9 @@
       "lineage": "Every state image is SHA256-bound to its predecessor, compiled binary, fixed checkpoint, layer, and next causal position."
     },
     "execution_footprint": {
+      "compiled_layers": "one stripped self-contained executable and one canonical authenticated manifest per indexed layer",
+      "compiled_manifest_binding": "layer index, contract, source SHA256 values, exact Verilator configuration SHA256, and stripped executable SHA256",
+      "temporary_build": "one reusable external Mdir is removed after every success or failure before the retained executable is self-tested",
       "tensor_workspace": "one layer of authenticated hex vectors, removed after each indexed RTL transaction",
       "tensor_manifests": "compact per-layer manifests persist for checkpoint lineage",
       "trace_storage": "each raw trace is SHA256-authenticated, deterministically gzip-compressed, restoration-verified, and then replaced by its archive"

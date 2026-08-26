@@ -6,9 +6,11 @@ from __future__ import annotations
 import json
 import gzip
 import shutil
+import subprocess
 import sys
 import unittest
 from pathlib import Path
+from unittest import mock
 
 REPOSITORY_ROOT = Path(__file__).resolve().parents[3]
 MODEL_DIR = REPOSITORY_ROOT / "ace3" / "model"
@@ -17,11 +19,16 @@ if str(MODEL_DIR) not in sys.path:
 
 from model24_execution_oracle import FIXED_CHAT_TOKEN_IDS  # noqa: E402
 from model24_first_voice_hybrid import (  # noqa: E402
+    COMPACT_SELF_TEST_MARKER,
     STATE_KIND,
     HybridRtlError,
     authenticate_build,
+    authenticate_compact_layer,
     authenticate_fixed_inputs,
+    binary_path,
     blocker_document,
+    build_compact_layer,
+    compact_layer_manifest_path,
     _compact_trace,
     contract_binding,
     hash_file,
@@ -49,6 +56,129 @@ class Model24FirstVoiceHybridTests(unittest.TestCase):
 
     def tearDown(self) -> None:
         shutil.rmtree(self.work, ignore_errors=True)
+
+    def _fake_compact_build(self, layer_index: int = 3) -> tuple[Path, Path]:
+        compiled_dir = self.work / "compiled"
+        temporary_mdir = self.work / "compact_mdir"
+
+        def fake_run(command: list[str], **kwargs: object) -> subprocess.CompletedProcess[str]:
+            arguments = [str(value) for value in command]
+            if arguments == ["verilator", "--version"]:
+                return subprocess.CompletedProcess(
+                    arguments, 0, stdout="Verilator test-version\n", stderr=""
+                )
+            if "--Mdir" in arguments:
+                mdir = Path(arguments[arguments.index("--Mdir") + 1])
+                built_binary = mdir / "Vace3_decoder_layer0_token_engine"
+                built_binary.write_bytes(b"fake-self-contained-executable")
+                built_binary.chmod(0o755)
+                return subprocess.CompletedProcess(arguments, 0)
+            if arguments[0] == "strip":
+                return subprocess.CompletedProcess(arguments, 0)
+            if "--compact-build-self-test" in arguments:
+                self.assertFalse(temporary_mdir.exists())
+                return subprocess.CompletedProcess(
+                    arguments,
+                    0,
+                    stdout=f"{COMPACT_SELF_TEST_MARKER} layer_index={layer_index}\n",
+                    stderr="",
+                )
+            raise AssertionError(f"unexpected command: {arguments}")
+
+        with mock.patch(
+            "model24_first_voice_hybrid.subprocess.run", side_effect=fake_run
+        ):
+            build_compact_layer(
+                REPOSITORY_ROOT,
+                compiled_dir,
+                layer_index,
+                temporary_mdir,
+                verilator="verilator",
+                strip="strip",
+            )
+        return compiled_dir, temporary_mdir
+
+    def test_compact_builder_removes_mdir_and_keeps_only_binary_manifest(self) -> None:
+        compiled_dir, temporary_mdir = self._fake_compact_build()
+        layer_dir = compiled_dir / "layer3"
+        self.assertFalse(temporary_mdir.exists())
+        self.assertEqual(
+            sorted(
+                str(path.relative_to(layer_dir))
+                for path in layer_dir.rglob("*")
+                if path.is_file()
+            ),
+            ["bin/Vace3_decoder_layer0_token_engine", "layer_manifest.json"],
+        )
+        accepted, _ = authenticate_compact_layer(REPOSITORY_ROOT, compiled_dir, 3)
+        self.assertEqual(accepted["layer_index"], 3)
+
+    def test_compact_builder_removes_mdir_after_build_failure(self) -> None:
+        compiled_dir = self.work / "compiled"
+        temporary_mdir = self.work / "compact_mdir"
+
+        def fail_compile(command: list[str], **kwargs: object) -> subprocess.CompletedProcess[str]:
+            arguments = [str(value) for value in command]
+            if arguments == ["verilator", "--version"]:
+                return subprocess.CompletedProcess(
+                    arguments, 0, stdout="Verilator test-version\n", stderr=""
+                )
+            raise subprocess.CalledProcessError(2, arguments)
+
+        with mock.patch(
+            "model24_first_voice_hybrid.subprocess.run", side_effect=fail_compile
+        ):
+            with self.assertRaises(HybridRtlError) as raised:
+                build_compact_layer(
+                    REPOSITORY_ROOT,
+                    compiled_dir,
+                    3,
+                    temporary_mdir,
+                    verilator="verilator",
+                    strip="strip",
+                )
+        self.assertEqual(raised.exception.code, "compact_build_failed")
+        self.assertFalse(temporary_mdir.exists())
+        self.assertFalse((compiled_dir / ".layer3.partial").exists())
+
+    def test_compact_manifest_and_binary_tampering_are_rejected(self) -> None:
+        compiled_dir, _ = self._fake_compact_build()
+        manifest_path = compact_layer_manifest_path(compiled_dir, 3)
+        compact_binary = binary_path(compiled_dir, 3)
+        original_manifest = manifest_path.read_bytes()
+        original_binary = compact_binary.read_bytes()
+        for case in (
+            "layer", "source", "configuration", "configuration_hash",
+            "binary_hash", "manifest_bytes", "binary_bytes",
+        ):
+            with self.subTest(case=case):
+                compact_binary.write_bytes(original_binary)
+                compact_binary.chmod(0o755)
+                manifest_path.write_bytes(original_manifest)
+                document = json.loads(original_manifest)
+                if case == "layer":
+                    document["layer_index"] = 4
+                    write_json(manifest_path, document)
+                elif case == "source":
+                    source = next(iter(document["sources"]))
+                    document["sources"][source] = "0" * 64
+                    write_json(manifest_path, document)
+                elif case == "configuration":
+                    document["configuration"]["top_module"] = "tampered"
+                    write_json(manifest_path, document)
+                elif case == "configuration_hash":
+                    document["configuration_sha256"] = "0" * 64
+                    write_json(manifest_path, document)
+                elif case == "binary_hash":
+                    document["binary"]["sha256"] = "0" * 64
+                    write_json(manifest_path, document)
+                elif case == "manifest_bytes":
+                    manifest_path.write_bytes(original_manifest + b" ")
+                elif case == "binary_bytes":
+                    compact_binary.write_bytes(original_binary + b"tampered")
+                with self.assertRaises(HybridRtlError) as raised:
+                    authenticate_compact_layer(REPOSITORY_ROOT, compiled_dir, 3)
+                self.assertEqual(raised.exception.code, "stale_compiled_rtl")
 
     def test_fixed_prompt_and_multiple_generation_fit_real_rtl_depth(self) -> None:
         plan = plan_execution(FIXED_CHAT_TOKEN_IDS, 4)

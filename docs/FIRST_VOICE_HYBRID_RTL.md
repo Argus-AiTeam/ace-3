@@ -28,6 +28,15 @@ hashed, deterministically gzip-compressed, restored and hash-checked, then
 replaced by its archive. This preserves per-token/per-layer lineage without
 requiring the 422,896,896-byte all-layer expanded-vector footprint.
 
+Compiled RTL uses the same bounded layout. `model24-first-voice-layer-compile`
+builds one selected compile-time layer in the reusable
+`build/model24_first_voice_hybrid/compact_mdir`, copies and strips only the
+self-contained executable into `compiled/layerN/bin/`, writes a canonical
+manifest binding the layer, contract, source hashes, exact Verilator
+configuration hash, and executable hash, removes the Mdir, and then runs the
+retained executable's RTL load-handshake self-test. Success and failure both
+remove the reusable Mdir.
+
 Token-0 means the first generated selection. It is selected from the final
 prompt token's layer-23 output, so selection itself is not an RTL input. If
 generation continues, Token-0 is fed back through every RTL layer at the next
@@ -38,6 +47,8 @@ Focused validation:
 
 ```sh
 make model24-first-voice-hybrid-tests
+make model24-first-voice-compact-builder-tests
+make model24-first-voice-layer-compile FIRST_VOICE_RTL_LAYER_INDEX=3
 ```
 
 The target compiles the existing indexed decoder with `--savable`, serializes a
@@ -45,6 +56,11 @@ live partially executing RTL model, restores it into a fresh model, and compares
 1,024 subsequent cycles. Python tests cover capacity and negative checkpoint,
 stale-position, and state-hash rejection. Full execution additionally requires
 the authenticated checkpoint/tokenizer and all 24 compiled indexed binaries:
+
+The compact-builder test target proves success/failure Mdir cleanup and rejects
+layer, source, configuration, manifest, and stripped-binary tampering. The
+selected-layer command is the bounded real-build check. Building all 24 layers
+is reserved for a later disk-authorized mission.
 
 ```sh
 make model24-first-voice-hybrid

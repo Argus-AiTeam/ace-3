@@ -17,6 +17,7 @@ PYTHON ?= python3
 IVERILOG ?= iverilog
 VVP ?= vvp
 VERILATOR ?= verilator
+STRIP ?= strip
 STRACE ?= strace
 OFFICIAL_TENSOR_DIR ?= $(ROOT)/ace3/fixtures/qwen2.5-0.5b-instruct-awq/layer0-q-proj
 
@@ -205,9 +206,7 @@ FIRST_VOICE_DRIVER := $(ROOT)/ace3/model/model24_first_voice_hybrid.py
 FIRST_VOICE_TEST := $(ROOT)/ace3/model/tests/test_model24_first_voice_hybrid.py
 FIRST_VOICE_MAX_NEW_TOKENS ?= 2
 FIRST_VOICE_RTL_LAYER_INDEX ?= 0
-FIRST_VOICE_RTL_LAYER_DIR := $(FIRST_VOICE_DIR)/compiled/layer$(FIRST_VOICE_RTL_LAYER_INDEX)
-FIRST_VOICE_RTL_LAYER_OBJ_DIR := $(FIRST_VOICE_RTL_LAYER_DIR)/obj_dir
-FIRST_VOICE_RTL_LAYER_BIN := $(FIRST_VOICE_RTL_LAYER_OBJ_DIR)/Vace3_decoder_layer0_token_engine
+FIRST_VOICE_RTL_TEMP_MDIR := $(FIRST_VOICE_DIR)/compact_mdir
 FIRST_VOICE_SAVABLE_DIR := $(FIRST_VOICE_DIR)/savable_self_test
 FIRST_VOICE_SAVABLE_OBJ_DIR := $(FIRST_VOICE_SAVABLE_DIR)/obj_dir
 FIRST_VOICE_SAVABLE_BIN := $(FIRST_VOICE_SAVABLE_OBJ_DIR)/Vace3_decoder_layer0_token_engine
@@ -286,6 +285,7 @@ export PYTHONDONTWRITEBYTECODE := 1
 	model24-controller-cascade-tests model24-controller-rtl-cascade \
 	model24-rtl-layer-compile model24-token0-diagnostic-tests \
 	model24-first-voice-hybrid model24-first-voice-hybrid-tests \
+	model24-first-voice-compact-builder-tests \
 	model24-first-voice-savable-compile model24-first-voice-savable-test \
 	model24-first-voice-layer-compile model24-first-voice-compile-all \
 	official-model24-next-token official-model24-next-token-vectors \
@@ -1709,15 +1709,15 @@ model24-first-voice-savable-test: model24-first-voice-savable-compile
 model24-first-voice-layer-compile:
 	@test "$(FIRST_VOICE_RTL_LAYER_INDEX)" -ge 0 \
 	    -a "$(FIRST_VOICE_RTL_LAYER_INDEX)" -le 23
-	@rm -rf "$(FIRST_VOICE_RTL_LAYER_OBJ_DIR)"
-	@mkdir -p "$(FIRST_VOICE_RTL_LAYER_DIR)"
-	@cd "$(ROOT)" && "$(VERILATOR)" --cc --exe --build --savable --Wall -Wno-fatal \
-	    -GLAYER_INDEX="$(FIRST_VOICE_RTL_LAYER_INDEX)" \
-	    -GACCURATE_SILU="$$(test "$(FIRST_VOICE_RTL_LAYER_INDEX)" -ge 3 && echo 1 || echo 0)" \
-	    --top-module ace3_decoder_layer0_token_engine \
-	    --Mdir "$(FIRST_VOICE_RTL_LAYER_OBJ_DIR)" $(DECODER_RTL) \
-	    "$(DECODER_CPP_TB)"
-	@test -x "$(FIRST_VOICE_RTL_LAYER_BIN)"
+	@cd "$(ROOT)" && "$(PYTHON)" "$(FIRST_VOICE_DRIVER)" \
+	    --repository-root "$(ROOT)" \
+	    --compiled-dir "$(FIRST_VOICE_DIR)/compiled" \
+	    --build-compact-layer \
+	    --layer-index "$(FIRST_VOICE_RTL_LAYER_INDEX)" \
+	    --temporary-mdir "$(FIRST_VOICE_RTL_TEMP_MDIR)" \
+	    --verilator "$(VERILATOR)" \
+	    --strip "$(STRIP)"
+	@test ! -e "$(FIRST_VOICE_RTL_TEMP_MDIR)"
 
 model24-first-voice-compile-all:
 	@set -eu; for layer in $$(seq 0 23); do \
@@ -1735,6 +1735,10 @@ model24-first-voice-hybrid-tests: model24-first-voice-savable-test
 	    "$(FIRST_VOICE_DRIVER)" "$(FIRST_VOICE_TEST)"
 	@cd "$(ROOT)" && PYTHONPYCACHEPREFIX="$(FIRST_VOICE_DIR)/pycache" \
 	    "$(PYTHON)" -m unittest \
+	    ace3/model/tests/test_model24_first_voice_hybrid.py
+
+model24-first-voice-compact-builder-tests:
+	@cd "$(ROOT)" && PYTHONDONTWRITEBYTECODE=1 "$(PYTHON)" -m unittest \
 	    ace3/model/tests/test_model24_first_voice_hybrid.py
 
 model24-first-voice-hybrid: model24-first-voice-compile-all \
