@@ -7,7 +7,8 @@
  * every request describes precisely one word of one tensor.
  */
 module ace3_decoder_layer0_token_engine #(
-    parameter integer LAYER_INDEX = 0
+    parameter integer LAYER_INDEX = 0,
+    parameter integer ACCURATE_SILU = (LAYER_INDEX >= 3)
 ) (
     input  wire clk_i, input wire rst_ni, input wire clear_i,
 
@@ -434,7 +435,10 @@ module ace3_decoder_layer0_token_engine #(
         (si_idx_w == si_output_count_q) &&
         (si_last_w == (si_idx_w == 13'd4863)) &&
         !si_invalid_w && !si_saturation_w && si_busy_w;
-    ace3_fp16_silu_gate_core #(.INTERMEDIATE_SIZE(4864)) silu (
+    ace3_fp16_silu_gate_core #(
+      .INTERMEDIATE_SIZE(4864),
+      .ACCURATE_SIGMOID(ACCURATE_SILU)
+    ) silu (
       .clk_i(clk_i),.rst_ni(rst_ni),.clear_i(clear_i),.start_valid_i(state_q==S_SI_START),.start_ready_o(si_start_ready_w),.element_count_i(13'd4864),
       .in_valid_i(state_q==S_SI_IN),.in_ready_o(si_in_ready_w),.gate_f16_i(gate_mem[intermediate_index_q]),.up_f16_i(up_mem[intermediate_index_q]),
       .out_valid_o(si_out_valid_w),.out_ready_i(controller_healthy_w&&((state_q==S_SI_IN)||(state_q==S_SI_OUT))&&trace_free_w&&(!si_out_valid_w||si_result_ok_w)),.out_f16_o(si_out_w),.out_index_o(si_idx_w),.out_last_o(si_last_w),.invalid_operand_o(si_invalid_w),.saturation_o(si_saturation_w),.busy_o(si_busy_w));

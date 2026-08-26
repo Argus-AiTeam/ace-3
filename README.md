@@ -27,11 +27,12 @@ measured-hardware results are reported separately.
 | QKV path | Q/K/V projection geometry, Qwen2 RoPE, and indexed FP16 K/V cache; bounded simulation |
 | Attention | Scaled QK score, causal softmax approximation, and cached-FP16 value composition; bounded simulation |
 | Model24 software schedule | Deterministic reduced-geometry 24-layer software/oracle execution |
+| Host top-K | Authenticated final RMSNorm and tied-head top-10/argmax over the bounded structural fixture |
+| Model24 controller | Arithmetic-free 24-layer RTL scheduler plus a controller-driven, layer-indexed Verilator cascade |
 
 Not yet published as accepted hardware evidence:
 
-- an integrated decoder-layer RTL result;
-- all 24 decoder layers and the tied language-model head in RTL;
+- a monolithic all-24-layer decoder and tied language-model head in RTL;
 - RTL-backed readable multi-token dialogue;
 - synthesis, timing closure, PPA, FPGA deployment, or hardware performance.
 
@@ -82,10 +83,10 @@ Run the standalone arithmetic oracle:
 make oracle
 ```
 
-The complete RTL regression uses small, hash-authenticated samples extracted
-from the official checkpoint. Model files are intentionally not redistributed.
-Place the required files in `official_tensors/`, or point
-`OFFICIAL_TENSOR_DIR` at your read-only fixture directory:
+The complete RTL regression defaults to the source-controlled, hash-authenticated
+ACE-3 fixture under
+`ace3/fixtures/qwen2.5-0.5b-instruct-awq/layer0-q-proj`. Override
+`OFFICIAL_TENSOR_DIR` only when validating an equivalent read-only fixture:
 
 ```sh
 make OFFICIAL_TENSOR_DIR="$PWD/official_tensors" test
@@ -96,6 +97,29 @@ rejection, recompiles Icarus and Verilator, executes both simulators, and checks
 that the source tree remains unchanged. See
 [Getting started](docs/GETTING_STARTED.md) for the expected fixture names and
 target-specific commands.
+
+## Model24 controller and cascade boundary
+
+`make model24-publication-tests` regenerates and authenticates the 24-entry
+controller schedule, runs it under Icarus and Verilator, and executes focused
+cascade and Token 0 diagnostic unit tests. It does not rerun the sealed
+full-24 decoder cascade.
+
+The accepted controller-driven run launches separately compiled decoder RTL for
+layers 0 through 23, consumes all 624 bound decoder tensors, and compares the
+post-layer-23 two-token hidden state to an independent PyTorch CPU float64
+dequantized-AWQ reference. Layers 0 through 2 retain the reviewed rational SiLU
+profile; layers 3 through 23 use the range-reduced exponential SiLU profile.
+The sealed checkpoint, layer bindings, controller events, terminal hidden state,
+and execution hashes are documented in
+[RTL traceability](design/RTL_TRACEABILITY.md).
+
+The layer-3 diagnostic discloses that Token 0 first exceeds 0.1 absolute error
+at down-projection dimension 62. The final outlier remains within one FP16 ULP
+and below 0.001 relative error; Token 1 remains below 0.01 and its two-position
+K/V causality checks pass. This is a bounded two-token simulation result, not a
+monolithic full-model RTL image or a synthesis, timing, PPA, FPGA, latency,
+throughput, or silicon claim.
 
 ## Implemented projection geometry
 

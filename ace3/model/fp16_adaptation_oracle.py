@@ -7,6 +7,7 @@ import math
 
 Q24_ONE = 1 << 24
 Q24_HALF = 1 << 23
+LN2_Q24 = 11_629_080
 EPSILON_Q48 = 281_474_977
 MAX_FINITE_F16 = 0x7BFF
 
@@ -101,6 +102,48 @@ def silu_gate(gate_f16: int, up_f16: int) -> tuple[int, bool, bool]:
         return 0, True, False
     product_q72 = gate * up * sigmoid_q24(gate)
     result_q24 = round_shift_even_signed(product_q72, 48)
+    result, saturated = q24_to_f16(
+        result_q24, zero_sign=gate_sign ^ up_sign
+    )
+    return result, False, saturated
+
+
+def _exp_negative_q24(magnitude_q24: int) -> int:
+    quotient, remainder = divmod(magnitude_q24, LN2_Q24)
+    coefficients = (
+        Q24_ONE,
+        -Q24_ONE,
+        Q24_ONE // 2,
+        -2_796_203,
+        699_051,
+        -139_810,
+        23_302,
+        -3_329,
+    )
+    polynomial = coefficients[-1]
+    for coefficient in reversed(coefficients[1:-1]):
+        polynomial = coefficient + round_shift_even_signed(
+            remainder * polynomial, 24
+        )
+    exponential = coefficients[0] + round_shift_even_signed(
+        remainder * polynomial, 24
+    )
+    if quotient >= 63:
+        return 0
+    return round_shift_even_signed(exponential, quotient)
+
+
+def silu_gate_exp(gate_f16: int, up_f16: int) -> tuple[int, bool, bool]:
+    gate, gate_finite, _, gate_sign = decode_f16_q24(gate_f16)
+    up, up_finite, _, up_sign = decode_f16_q24(up_f16)
+    if not gate_finite or not up_finite:
+        return 0, True, False
+    exponential = _exp_negative_q24(abs(gate))
+    negative_sigmoid = round_div_even_unsigned(
+        exponential << 24, Q24_ONE + exponential
+    )
+    sigmoid = negative_sigmoid if gate < 0 else Q24_ONE - negative_sigmoid
+    result_q24 = round_shift_even_signed(gate * up * sigmoid, 48)
     result, saturated = q24_to_f16(
         result_q24, zero_sign=gate_sign ^ up_sign
     )

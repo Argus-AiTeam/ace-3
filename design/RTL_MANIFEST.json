@@ -700,7 +700,7 @@
     },
     {
       "path": "ace3/rtl/ace3_fp16_silu_gate_core.sv",
-      "sha256": "528b931da1f201c941e7f713a6ba0418f950bd44b64fbf10d92cb5a80f386997",
+      "sha256": "c5f26b50ba2396852e966a430719a6170df9adf5546903ec018049e9e084cf43",
       "provenance": {
         "classification": "first_party_ace3_rtl",
         "copied_from_ace2": false,
@@ -1219,7 +1219,7 @@
       },
       "independent_bit_level_oracle": {
         "path": "ace3/model/decoder_layer0_oracle.py",
-        "sha256": "5c775a363d73b8dc551a7362519d70b293eb08cf600b21af08157b24a1992d13"
+        "sha256": "33ff7d93ecad077d4d6f88442f70ccc52450892dc65a976b17de882bce953128"
       },
       "official_checkpoint_vector_generator": {
         "path": "ace3/model/generate_decoder_layer0_vectors.py",
@@ -1231,7 +1231,7 @@
       },
       "integrated_rtl": {
         "path": "ace3/rtl/ace3_decoder_layer0_token_engine.sv",
-        "sha256": "d33868936bf97e76dc9a4420803f1c221127b83ddd94c43d9e844b2af152aed8"
+        "sha256": "34ba6fdf14079dba327cadab708f8102881551c202fbca1f9d1e233c2f43b986"
       },
       "qzeros_address_rtl": {
         "path": "ace3/rtl/ace3_decoder_qzeros_address.sv",
@@ -1281,11 +1281,11 @@
       },
       "independent_bit_level_oracle": {
         "path": "ace3/model/model24_execution_oracle.py",
-        "sha256": "777b91ed3a566a2dd66edd5feb87faff1d0b47e0d7b2c10d7f1f73181cccaf1f"
+        "sha256": "d452dfbd10a6694cd183750bfadd22511097f50a2aec7c6d9f79117394ade55b"
       },
       "parameterized_rtl": {
         "path": "ace3/rtl/ace3_decoder_layer0_token_engine.sv",
-        "sha256": "d33868936bf97e76dc9a4420803f1c221127b83ddd94c43d9e844b2af152aed8",
+        "sha256": "34ba6fdf14079dba327cadab708f8102881551c202fbca1f9d1e233c2f43b986",
         "layer_parameter": "LAYER_INDEX"
       },
       "four_state_icarus_testbench": {
@@ -1331,11 +1331,11 @@
       },
       "independent_bit_level_oracle": {
         "path": "ace3/model/model24_execution_oracle.py",
-        "sha256": "777b91ed3a566a2dd66edd5feb87faff1d0b47e0d7b2c10d7f1f73181cccaf1f"
+        "sha256": "d452dfbd10a6694cd183750bfadd22511097f50a2aec7c6d9f79117394ade55b"
       },
       "parameterized_rtl": {
         "path": "ace3/rtl/ace3_decoder_layer0_token_engine.sv",
-        "sha256": "d33868936bf97e76dc9a4420803f1c221127b83ddd94c43d9e844b2af152aed8",
+        "sha256": "34ba6fdf14079dba327cadab708f8102881551c202fbca1f9d1e233c2f43b986",
         "layer_parameter": "LAYER_INDEX"
       },
       "four_state_icarus_testbench": {
@@ -1359,6 +1359,56 @@
         "A tampered layer-1 handoff must be rejected before layer-2 vector output exists; injected layer-2 simulator failure must not open Oracle outputs or create comparison evidence.",
         "Focused Icarus coverage is required for the changed layer identity/vector/reset boundary; no full Icarus layer-2 numerical pass is claimed.",
         "No claim is made for layers 3 through 23, the tied language-model head, full-model execution, dialogue, synthesis, PPA, FPGA deployment, latency, throughput, or other performance."
+      ]
+    },
+    "model24_controller_cascade": {
+      "contract": {
+        "path": "ace3/contracts/model24_layer_controller.json",
+        "sha256": "025baa5d312a70a961d19119e92d221af79e4d9539fc3c60552b1187ef81e75d"
+      },
+      "controller_rtl": {
+        "path": "ace3/rtl/ace3_model24_layer_controller.sv",
+        "sha256": "251e25b18a1b35039f0f97d133e40c4b03979abfa5e2f3c7e9f8013799db4615"
+      },
+      "controller_testbenches": [
+        {
+          "path": "ace3/tb/ace3_model24_layer_controller_tb.sv",
+          "sha256": "57a4c488d155ea518f313db13b2adec0e80efd6e1f4ca5df38fab9e4db0e1c77"
+        },
+        {
+          "path": "ace3/tb/ace3_model24_layer_controller_main.cpp",
+          "sha256": "d6193c6b3727150ca2a51f0ffaed4c783121e2ba1f201d4d1a67c6f9cb7809f7"
+        }
+      ],
+      "controller_cascade": {
+        "path": "ace3/model/controller_model24_cascade.py",
+        "sha256": "dc118bf1f18241ea9366f0f0370cd1d1cec7ab61cebf2bdbae0dbeb6b96403d8"
+      },
+      "rtl_cascade": {
+        "path": "ace3/model/controller_model24_rtl_cascade.py",
+        "sha256": "5578f67cde1130ea0c2e08e4f799c6fc78fe7e88303d0e249fe3d36b52bcaaea"
+      },
+      "token0_diagnostic": {
+        "path": "ace3/model/layer3_token0_diagnostic.py",
+        "sha256": "3895008de5e22c4b8e36f64bb48fff8f3d9fcdd24a69b44ef24c5ef62ac67b3e"
+      },
+      "sealed_execution": {
+        "layers": 24,
+        "consumed_tensors": 624,
+        "checkpoint_sha256": "c50d807b7bed7ff314308972e0f4bcf4e5a70bc60ad88fc7df53940831ed0c1b",
+        "bindings_sha256": "95a46cfb25d8479a9d9921da9b78e581b1c3746c2645574880dac7ea6825ede0",
+        "controller_events_sha256": "fcb4c9a6458fa141b143d9a4c7dfd10b2d15e703257067d935f635dc1bf9dbf1",
+        "post_layer23_hidden_sha256": "97e729f6f905ecb62f498a6a144beecf6b695465d84fdbaf1de777ce9f5a39b6",
+        "execution_sha256": "9d4e048d1316252d67d7e288fd4de0a2a6360f53ff49854c1127b7462578a5c1"
+      },
+      "targets": [
+        "make model24-publication-tests",
+        "make model24-controller-rtl-cascade"
+      ],
+      "coverage_obligations": [
+        "Focused publication tests regenerate and authenticate the controller vectors, run the controller under Icarus and Verilator, and exercise fail-closed cascade and Token 0 diagnostic units.",
+        "The sealed full-24 run is authenticated by its accepted hashes and is not regenerated by the publication test target.",
+        "The claim excludes a monolithic full-model RTL image, tokenizer and tied-head execution, synthesis, timing, PPA, FPGA, latency, throughput, and silicon."
       ]
     },
     "aggregate_regression": {

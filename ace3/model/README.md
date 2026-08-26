@@ -65,6 +65,16 @@ token-decision slice only: the fixture is not an official numerical layer-23
 output, and full-model numerical execution and readable dialogue remain
 unclaimed.
 
+`controller_model24_cascade.py` authenticates the controller launch transcript
+and all 624 per-layer tensor bindings before applying the accepted decoder
+arithmetic in controller order. `controller_model24_rtl_cascade.py` applies the
+same gates to separately compiled, layer-indexed Verilator decoder instances.
+Layers 0 through 2 preserve the reviewed rational SiLU profile; layers 3 through
+23 select the range-reduced exponential profile in both the oracle and RTL.
+`layer3_token0_diagnostic.py` binds the same layer-2 handoff and classifies the
+single Token 0 final outlier at dimension 62 as a bounded FP16 reference
+boundary while independently checking Token 1 and K/V causality.
+
 `official_single_decoder_layer.py` authenticates all 26 consumed layer-0 tensors
 and two official embedding rows directly from the pinned checkpoint. It executes
 the two-token `Hello world` slice through native-AWQ projections, accepted

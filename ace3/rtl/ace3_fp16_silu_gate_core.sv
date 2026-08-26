@@ -2,7 +2,8 @@
 `default_nettype none
 
 module ace3_fp16_silu_gate_core #(
-    parameter integer INTERMEDIATE_SIZE = 4864
+    parameter integer INTERMEDIATE_SIZE = 4864,
+    parameter integer ACCURATE_SIGMOID = 0
 ) (
     input  wire         clk_i,
     input  wire         rst_ni,
@@ -72,9 +73,12 @@ module ace3_fp16_silu_gate_core #(
     wire [24:0] sigmoid_q24_w = gate_q24_w[40]
         ? HALF_Q24 - sigmoid_term_w
         : HALF_Q24 + sigmoid_term_w;
+    wire [24:0] accurate_sigmoid_q24_w;
     wire signed [81:0] gate_up_product_w = gate_q24_w * up_q24_w;
     wire signed [107:0] gated_product_w =
-        gate_up_product_w * $signed({1'b0, sigmoid_q24_w});
+        gate_up_product_w * $signed(
+            {1'b0, ACCURATE_SIGMOID ? accurate_sigmoid_q24_w : sigmoid_q24_w}
+        );
     wire signed [63:0] gated_q24_w;
     wire invalid_w = !gate_finite_w || !up_finite_w;
     wire [15:0] rounded_f16_w;
@@ -106,6 +110,93 @@ module ace3_fp16_silu_gate_core #(
                 : $signed({3'd0, rounded});
         end
     endfunction
+
+    function automatic signed [63:0] round_shift_q24;
+        input signed [127:0] value;
+        reg value_sign;
+        reg [127:0] magnitude;
+        reg [103:0] retained;
+        reg guard_bit;
+        reg sticky_bit;
+        begin
+            value_sign = value[127];
+            magnitude = value_sign ? (~value + 128'd1) : value;
+            retained = magnitude[127:24];
+            guard_bit = magnitude[23];
+            sticky_bit = |magnitude[22:0];
+            if (guard_bit && (sticky_bit || retained[0]))
+                retained = retained + 104'd1;
+            round_shift_q24 = value_sign
+                ? -$signed(retained[63:0]) : $signed(retained[63:0]);
+        end
+    endfunction
+
+    function automatic [24:0] exp_sigmoid_q24;
+        input signed [40:0] gate;
+        reg [40:0] magnitude;
+        reg [40:0] remainder;
+        reg [16:0] exponent;
+        reg signed [63:0] polynomial;
+        reg signed [127:0] product;
+        reg signed [63:0] exponential;
+        reg signed [63:0] shifted_exponential;
+        reg signed [63:0] discarded_exponential;
+        reg [88:0] division_numerator;
+        reg [88:0] quotient;
+        reg [64:0] division_remainder;
+        reg [24:0] negative_sigmoid;
+        begin
+            magnitude = gate[40] ? (~gate + 41'd1) : gate;
+            exponent = magnitude / 41'd11629080;
+            remainder = magnitude % 41'd11629080;
+            polynomial = -64'sd3329;
+            product = $signed({1'b0, remainder}) * polynomial;
+            polynomial = 64'sd23302 +
+                round_shift_q24(product);
+            product = $signed({1'b0, remainder}) * polynomial;
+            polynomial = -64'sd139810 + round_shift_q24(product);
+            product = $signed({1'b0, remainder}) * polynomial;
+            polynomial = 64'sd699051 + round_shift_q24(product);
+            product = $signed({1'b0, remainder}) * polynomial;
+            polynomial = -64'sd2796203 + round_shift_q24(product);
+            product = $signed({1'b0, remainder}) * polynomial;
+            polynomial = 64'sd8388608 + round_shift_q24(product);
+            product = $signed({1'b0, remainder}) * polynomial;
+            polynomial = -64'sd16777216 + round_shift_q24(product);
+            product = $signed({1'b0, remainder}) * polynomial;
+            exponential = 64'sd16777216 + round_shift_q24(product);
+            if (exponent >= 17'd63)
+                exponential = 64'sd0;
+            else if (exponent != 0) begin
+                shifted_exponential = exponential >>> exponent;
+                discarded_exponential = exponential -
+                    (shifted_exponential <<< exponent);
+                if ((discarded_exponential <<< 1) >
+                        (64'sd1 <<< exponent) ||
+                    (((discarded_exponential <<< 1) ==
+                        (64'sd1 <<< exponent)) &&
+                     shifted_exponential[0]))
+                    shifted_exponential = shifted_exponential + 64'sd1;
+                exponential = shifted_exponential;
+            end
+            division_numerator = {1'b0, exponential[63:0]} << 24;
+            quotient = division_numerator /
+                (65'd16777216 + {1'b0, exponential[63:0]});
+            division_remainder = division_numerator %
+                (65'd16777216 + {1'b0, exponential[63:0]});
+            if ((division_remainder << 1) >
+                    (65'd16777216 + {1'b0, exponential[63:0]}) ||
+                (((division_remainder << 1) ==
+                    (65'd16777216 + {1'b0, exponential[63:0]})) &&
+                 quotient[0]))
+                quotient = quotient + 89'd1;
+            negative_sigmoid = quotient[24:0];
+            exp_sigmoid_q24 = gate[40]
+                ? negative_sigmoid : 25'd16777216 - negative_sigmoid;
+        end
+    endfunction
+
+    assign accurate_sigmoid_q24_w = exp_sigmoid_q24(gate_q24_w);
 
     assign gated_q24_w = round_q72_to_q24(gated_product_w);
 

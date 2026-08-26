@@ -18,7 +18,7 @@ IVERILOG ?= iverilog
 VVP ?= vvp
 VERILATOR ?= verilator
 STRACE ?= strace
-OFFICIAL_TENSOR_DIR ?= $(ROOT)/official_tensors
+OFFICIAL_TENSOR_DIR ?= $(ROOT)/ace3/fixtures/qwen2.5-0.5b-instruct-awq/layer0-q-proj
 
 RTL := $(ROOT)/ace3/rtl/ace3_awq_w4a16_g128_dot_lane.sv
 PROJECTION_ROUNDER_RTL := $(ROOT)/ace3/rtl/ace3_q47_48_to_f16_rne.sv
@@ -173,6 +173,32 @@ MODEL24_VALIDATOR := $(ROOT)/ace3/model/validate_model24_execution_vectors.py
 MODEL24_TEST := $(ROOT)/ace3/model/tests/test_model24_execution.py
 MODEL24_LAYER_HANDOFF_TEST := $(ROOT)/ace3/tb/test_model24_layer_indexed_handoff.py
 MODEL24_TENSOR_MAP := $(ROOT)/ace3/contracts/model24_tensor_map.json
+MODEL24_LAYER_CONTROLLER_DIR := $(BUILD_DIR)/model24_layer_controller
+MODEL24_LAYER_CONTROLLER_BIN := $(MODEL24_LAYER_CONTROLLER_DIR)/ace3_model24_layer_controller.vvp
+MODEL24_LAYER_CONTROLLER_RTL := $(ROOT)/ace3/rtl/ace3_model24_layer_controller.sv
+MODEL24_LAYER_CONTROLLER_TB := $(ROOT)/ace3/tb/ace3_model24_layer_controller_tb.sv
+MODEL24_LAYER_CONTROLLER_CPP_TB := $(ROOT)/ace3/tb/ace3_model24_layer_controller_main.cpp
+MODEL24_LAYER_CONTROLLER_CONTRACT := $(ROOT)/ace3/contracts/model24_layer_controller.json
+MODEL24_LAYER_CONTROLLER_GENERATOR := $(ROOT)/ace3/model/generate_model24_layer_controller_vectors.py
+MODEL24_LAYER_CONTROLLER_VALIDATOR := $(ROOT)/ace3/model/validate_model24_layer_controller_vectors.py
+MODEL24_LAYER_CONTROLLER_IVERILOG_RAW_DIR := $(MODEL24_LAYER_CONTROLLER_DIR)/iverilog-raw
+MODEL24_LAYER_CONTROLLER_VERILATOR_RAW_DIR := $(MODEL24_LAYER_CONTROLLER_DIR)/verilator-raw
+MODEL24_LAYER_CONTROLLER_FAILURE_RAW_DIR := $(MODEL24_LAYER_CONTROLLER_DIR)/failure-raw
+MODEL24_LAYER_CONTROLLER_VERILATOR_DIR := $(MODEL24_LAYER_CONTROLLER_DIR)/verilator
+MODEL24_LAYER_CONTROLLER_VERILATOR_BIN := $(MODEL24_LAYER_CONTROLLER_VERILATOR_DIR)/Vace3_model24_layer_controller
+MODEL24_CONTROLLER_CASCADE_DIR := $(BUILD_DIR)/model24_controller_cascade
+MODEL24_CONTROLLER_CASCADE_BINDINGS := $(MODEL24_CONTROLLER_CASCADE_DIR)/bindings.json
+MODEL24_CONTROLLER_CASCADE_EXECUTOR := $(ROOT)/ace3/model/controller_model24_cascade.py
+MODEL24_CONTROLLER_CASCADE_TEST := $(ROOT)/ace3/model/tests/test_controller_model24_cascade.py
+MODEL24_RTL_CASCADE_DIR := $(BUILD_DIR)/model24_rtl_cascade
+MODEL24_RTL_CASCADE_EXECUTOR := $(ROOT)/ace3/model/controller_model24_rtl_cascade.py
+MODEL24_TOKEN0_DIAGNOSTIC := $(ROOT)/ace3/model/layer3_token0_diagnostic.py
+MODEL24_TOKEN0_DIAGNOSTIC_TEST := $(ROOT)/ace3/model/tests/test_layer3_token0_diagnostic.py
+MODEL24_RTL_LAYER_INDEX ?= 0
+MODEL24_RTL_ACCURATE_SILU ?= 0
+MODEL24_RTL_LAYER_DIR := $(MODEL24_RTL_CASCADE_DIR)/compiled/layer$(MODEL24_RTL_LAYER_INDEX)
+MODEL24_RTL_LAYER_OBJ_DIR := $(MODEL24_RTL_LAYER_DIR)/obj_dir
+MODEL24_RTL_LAYER_BIN := $(MODEL24_RTL_LAYER_OBJ_DIR)/Vace3_decoder_layer0_token_engine
 VL15_LAYER0_HANDOFF ?= $(BUILD_DIR)/model24-prep-worktree/build/freshlayer0execute37-vl15/raw-final.rows
 OFFICIAL_MODEL24_VECTOR_DIR := $(BUILD_DIR)/official_model24_next_token
 OFFICIAL_MODEL24_EXECUTOR := $(ROOT)/ace3/model/official_model24_next_token.py
@@ -199,7 +225,7 @@ PROJECTION_VERILATOR_BIN := $(PROJECTION_VERILATOR_OBJ_DIR)/Vace3_awq_w4a16_proj
 export PYTHONDONTWRITEBYTECODE := 1
 
 .PHONY: \
-	test _validate oracle vectors json-validation tamper-rejection \
+	test tracked-source-path-regression _validate oracle vectors json-validation tamper-rejection \
 	iverilog iverilog-compile iverilog-simulation \
 	iverilog-protocol-compile iverilog-protocol-simulation \
 	verilator verilator-compile verilator-simulation \
@@ -238,7 +264,15 @@ export PYTHONDONTWRITEBYTECODE := 1
 	decoder-layer2-verilator-compile decoder-layer012-verilator-cascade \
 	model24-execution model24-execution-vectors \
 	model24-execution-validation model24-execution-tests \
-	model24-layer-indexed-handoff \
+	model24-layer-indexed-handoff model24-publication-tests \
+	model24-layer-controller model24-layer-controller-vectors \
+	model24-layer-controller-validation model24-layer-controller-iverilog \
+	model24-layer-controller-verilator model24-layer-controller-simulations \
+	model24-layer-controller-failure-gate model24-controller-cascade \
+	model24-controller-cascade-bindings model24-controller-cascade-execution \
+	model24-controller-cascade-comparison model24-controller-cascade-validation \
+	model24-controller-cascade-tests model24-controller-rtl-cascade \
+	model24-rtl-layer-compile model24-token0-diagnostic-tests \
 	official-model24-next-token official-model24-next-token-vectors \
 	official-model24-next-token-validation official-model24-next-token-tests \
 	official-model24-dialogue official-model24-dialogue-vectors \
@@ -250,7 +284,10 @@ export PYTHONDONTWRITEBYTECODE := 1
 	official-model24-systematic-continuations-validation \
 	official-model24-systematic-continuations-tests clean
 
-test:
+tracked-source-path-regression:
+	@cd "$(ROOT)" && "$(PYTHON)" ace3/model/tests/test_tracked_source_paths.py
+
+test: tracked-source-path-regression
 	@mkdir -p "$(LOG_DIR)"
 	@{ \
 	  "$(PYTHON)" --version; \
@@ -1488,6 +1525,165 @@ model24-layer-indexed-handoff:
 	    --checkpoint "$(OFFICIAL_MODEL24_CHECKPOINT)" \
 	    --tensor-map "$(MODEL24_TENSOR_MAP)" \
 	    --handoff "$(VL15_LAYER0_HANDOFF)"
+
+model24-publication-tests: model24-layer-controller \
+	model24-controller-cascade-tests model24-token0-diagnostic-tests
+	@printf '%s\n' 'MODEL24_PUBLICATION_TESTS_PASS controller=pass cascade_units=pass token0_units=pass full24_rerun=not_run'
+
+model24-layer-controller: model24-layer-controller-simulations
+	@printf '%s\n' 'MODEL24_LAYER_CONTROLLER_PASS simulators=iverilog,verilator layers=24 checkpoints=24 strict_order=pass reset=pass fault=pass backpressure=pass numerical_rtl=not_claimed'
+
+model24-layer-controller-vectors:
+	@rm -rf "$(MODEL24_LAYER_CONTROLLER_DIR)"
+	@mkdir -p "$(MODEL24_LAYER_CONTROLLER_DIR)"
+	@cd "$(ROOT)" && "$(PYTHON)" "$(MODEL24_LAYER_CONTROLLER_GENERATOR)" \
+	    --contract "$(MODEL24_LAYER_CONTROLLER_CONTRACT)" \
+	    --output-dir "$(MODEL24_LAYER_CONTROLLER_DIR)"
+
+model24-layer-controller-validation: model24-layer-controller-vectors
+	@cd "$(ROOT)" && "$(PYTHON)" "$(MODEL24_LAYER_CONTROLLER_VALIDATOR)" \
+	    --contract "$(MODEL24_LAYER_CONTROLLER_CONTRACT)" \
+	    --generated-dir "$(MODEL24_LAYER_CONTROLLER_DIR)"
+
+model24-layer-controller-iverilog: model24-layer-controller-validation
+	@rm -rf "$(MODEL24_LAYER_CONTROLLER_IVERILOG_RAW_DIR)"
+	@mkdir -p "$(MODEL24_LAYER_CONTROLLER_IVERILOG_RAW_DIR)"
+	@"$(IVERILOG)" -g2012 -Wall -s ace3_model24_layer_controller_tb \
+	    -o "$(MODEL24_LAYER_CONTROLLER_BIN)" \
+	    "$(MODEL24_LAYER_CONTROLLER_RTL)" "$(MODEL24_LAYER_CONTROLLER_TB)"
+	@cd "$(ROOT)" && "$(VVP)" "$(MODEL24_LAYER_CONTROLLER_BIN)" \
+	    +VECTOR_DIR="$(MODEL24_LAYER_CONTROLLER_DIR)" \
+	    +RAW_DIR="$(MODEL24_LAYER_CONTROLLER_IVERILOG_RAW_DIR)"
+
+model24-layer-controller-verilator: model24-layer-controller-validation
+	@rm -rf "$(MODEL24_LAYER_CONTROLLER_VERILATOR_DIR)" \
+	    "$(MODEL24_LAYER_CONTROLLER_VERILATOR_RAW_DIR)"
+	@mkdir -p "$(MODEL24_LAYER_CONTROLLER_VERILATOR_DIR)" \
+	    "$(MODEL24_LAYER_CONTROLLER_VERILATOR_RAW_DIR)"
+	@"$(VERILATOR)" --cc --exe --build -Wall \
+	    --top-module ace3_model24_layer_controller \
+	    --Mdir "$(MODEL24_LAYER_CONTROLLER_VERILATOR_DIR)" \
+	    "$(MODEL24_LAYER_CONTROLLER_RTL)" "$(MODEL24_LAYER_CONTROLLER_CPP_TB)"
+	@cd "$(ROOT)" && "$(MODEL24_LAYER_CONTROLLER_VERILATOR_BIN)" \
+	    +VECTOR_DIR="$(MODEL24_LAYER_CONTROLLER_DIR)" \
+	    +RAW_DIR="$(MODEL24_LAYER_CONTROLLER_VERILATOR_RAW_DIR)"
+
+model24-layer-controller-simulations: model24-layer-controller-iverilog \
+	model24-layer-controller-verilator
+	@cmp "$(MODEL24_LAYER_CONTROLLER_IVERILOG_RAW_DIR)/controller_events.hex" \
+	    "$(MODEL24_LAYER_CONTROLLER_VERILATOR_RAW_DIR)/controller_events.hex"
+	@cmp "$(MODEL24_LAYER_CONTROLLER_IVERILOG_RAW_DIR)/terminal.txt" \
+	    "$(MODEL24_LAYER_CONTROLLER_VERILATOR_RAW_DIR)/terminal.txt"
+
+model24-controller-cascade-bindings: model24-layer-controller-simulations
+	@rm -rf "$(MODEL24_CONTROLLER_CASCADE_DIR)"
+	@mkdir -p "$(MODEL24_CONTROLLER_CASCADE_DIR)"
+	@cd "$(ROOT)" && "$(PYTHON)" "$(MODEL24_CONTROLLER_CASCADE_EXECUTOR)" bindings \
+	    --repository-root "$(ROOT)" \
+	    --checkpoint "$(OFFICIAL_MODEL24_CHECKPOINT)" \
+	    --tensor-map "$(MODEL24_TENSOR_MAP)" \
+	    --bindings "$(MODEL24_CONTROLLER_CASCADE_BINDINGS)"
+
+model24-controller-cascade-execution: model24-controller-cascade-bindings
+	@cd "$(ROOT)" && "$(PYTHON)" "$(MODEL24_CONTROLLER_CASCADE_EXECUTOR)" execute \
+	    --repository-root "$(ROOT)" \
+	    --checkpoint "$(OFFICIAL_MODEL24_CHECKPOINT)" \
+	    --tensor-map "$(MODEL24_TENSOR_MAP)" \
+	    --bindings "$(MODEL24_CONTROLLER_CASCADE_BINDINGS)" \
+	    --simulation-dir "$(MODEL24_LAYER_CONTROLLER_IVERILOG_RAW_DIR)" \
+	    --output-dir "$(MODEL24_CONTROLLER_CASCADE_DIR)"
+
+model24-controller-cascade-comparison: model24-controller-cascade-execution
+	@cd "$(ROOT)" && "$(PYTHON)" "$(MODEL24_CONTROLLER_CASCADE_EXECUTOR)" compare \
+	    --repository-root "$(ROOT)" \
+	    --checkpoint "$(OFFICIAL_MODEL24_CHECKPOINT)" \
+	    --tensor-map "$(MODEL24_TENSOR_MAP)" \
+	    --bindings "$(MODEL24_CONTROLLER_CASCADE_BINDINGS)" \
+	    --simulation-dir "$(MODEL24_LAYER_CONTROLLER_IVERILOG_RAW_DIR)" \
+	    --output-dir "$(MODEL24_CONTROLLER_CASCADE_DIR)"
+
+model24-controller-cascade-validation: model24-controller-cascade-comparison
+	@cd "$(ROOT)" && "$(PYTHON)" "$(MODEL24_CONTROLLER_CASCADE_EXECUTOR)" validate \
+	    --repository-root "$(ROOT)" \
+	    --tensor-map "$(MODEL24_TENSOR_MAP)" \
+	    --bindings "$(MODEL24_CONTROLLER_CASCADE_BINDINGS)" \
+	    --simulation-dir "$(MODEL24_LAYER_CONTROLLER_IVERILOG_RAW_DIR)" \
+	    --output-dir "$(MODEL24_CONTROLLER_CASCADE_DIR)"
+
+model24-controller-cascade-tests:
+	@cd "$(ROOT)" && "$(PYTHON)" -m py_compile \
+	    "$(MODEL24_CONTROLLER_CASCADE_EXECUTOR)" \
+	    "$(MODEL24_RTL_CASCADE_EXECUTOR)" \
+	    "$(MODEL24_CONTROLLER_CASCADE_TEST)"
+	@cd "$(ROOT)" && "$(PYTHON)" -m unittest \
+	    ace3/model/tests/test_controller_model24_cascade.py
+
+model24-token0-diagnostic-tests:
+	@cd "$(ROOT)" && "$(PYTHON)" -m py_compile \
+	    "$(MODEL24_TOKEN0_DIAGNOSTIC)" \
+	    "$(MODEL24_TOKEN0_DIAGNOSTIC_TEST)"
+	@cd "$(ROOT)" && "$(PYTHON)" -m unittest \
+	    ace3/model/tests/test_layer3_token0_diagnostic.py
+
+model24-layer-controller-failure-gate: model24-layer-controller-validation \
+	model24-controller-cascade-bindings
+	@rm -rf "$(MODEL24_LAYER_CONTROLLER_FAILURE_RAW_DIR)" \
+	    "$(MODEL24_CONTROLLER_CASCADE_DIR)/failure"
+	@mkdir -p "$(MODEL24_LAYER_CONTROLLER_FAILURE_RAW_DIR)" \
+	    "$(MODEL24_CONTROLLER_CASCADE_DIR)/failure"
+	@set -eu; \
+	if cd "$(ROOT)" && "$(VVP)" "$(MODEL24_LAYER_CONTROLLER_BIN)" \
+	    +VECTOR_DIR="$(MODEL24_LAYER_CONTROLLER_DIR)" \
+	    +RAW_DIR="$(MODEL24_LAYER_CONTROLLER_FAILURE_RAW_DIR)" \
+	    +INJECT_FAILURE_AFTER_LAUNCH=1 >/dev/null 2>&1; then \
+	    echo "injected controller failure unexpectedly passed"; exit 1; \
+	fi; \
+	test "$$(cat "$(MODEL24_LAYER_CONTROLLER_FAILURE_RAW_DIR)/terminal.txt")" = \
+	    'schema=ace3_model24_controller_raw_v1 natural_terminal=0 exit_code=2 launches=1 checkpoints=0 done=0 terminal_layer=none'; \
+	if cd "$(ROOT)" && "$(STRACE)" -f -e trace=openat \
+	    -o "$(MODEL24_CONTROLLER_CASCADE_DIR)/failure/opens.log" \
+	    "$(PYTHON)" "$(MODEL24_CONTROLLER_CASCADE_EXECUTOR)" execute \
+	    --repository-root "$(ROOT)" \
+	    --checkpoint "$(OFFICIAL_MODEL24_CHECKPOINT)" \
+	    --tensor-map "$(MODEL24_TENSOR_MAP)" \
+	    --bindings "$(MODEL24_CONTROLLER_CASCADE_BINDINGS)" \
+	    --simulation-dir "$(MODEL24_LAYER_CONTROLLER_FAILURE_RAW_DIR)" \
+	    --output-dir "$(MODEL24_CONTROLLER_CASCADE_DIR)/failure" \
+	    >/dev/null 2>&1; then \
+	    echo "failed simulation reached cascade execution"; exit 1; \
+	fi; \
+	! grep -F 'model.safetensors' \
+	    "$(MODEL24_CONTROLLER_CASCADE_DIR)/failure/opens.log"; \
+	test "$$(cat "$(MODEL24_CONTROLLER_CASCADE_DIR)/failure/terminal.txt")" = \
+	    'schema=ace3_controller_model24_execution_v1 natural_terminal=0 exit_code=2 completed_layers=0 final_records=0'; \
+	test ! -e "$(MODEL24_CONTROLLER_CASCADE_DIR)/failure/comparison.json"; \
+	printf '%s\n' 'MODEL24_CONTROLLER_FAILURE_GATE_PASS partial_raw=1 natural_terminal=0 checkpoint_opened=0 comparison_created=0'
+
+model24-controller-cascade: model24-controller-cascade-validation \
+	model24-controller-cascade-tests model24-layer-controller-failure-gate
+	@cd "$(ROOT)" && "$(PYTHON)" -c 'import json; from pathlib import Path; s=json.loads(Path("build/model24_controller_cascade/manifest.json").read_text())["summary"]; print(f"MODEL24_CONTROLLER_CASCADE_PASS layers={s['\''layers'\'']} checkpoints={s['\''checkpoints'\'']} tensors={s['\''consumed_tensors'\'']} terminal_layer={s['\''terminal_layer'\'']} tolerance={s['\''absolute_tolerance'\'']} max_abs_error={s['\''max_abs_error'\'']} tokenizer_dialogue=not_produced tied_lm_head=not_executed synthesis=not_run ppa=not_measured fpga=not_run latency=not_measured throughput=not_measured")'
+
+model24-rtl-layer-compile:
+	@test "$(MODEL24_RTL_LAYER_INDEX)" -ge 0 -a "$(MODEL24_RTL_LAYER_INDEX)" -le 23
+	@rm -rf "$(MODEL24_RTL_LAYER_OBJ_DIR)"
+	@mkdir -p "$(MODEL24_RTL_LAYER_DIR)"
+	@"$(VERILATOR)" --cc --exe --build --Wall -Wno-fatal \
+	    -GLAYER_INDEX="$(MODEL24_RTL_LAYER_INDEX)" \
+	    -GACCURATE_SILU="$(MODEL24_RTL_ACCURATE_SILU)" \
+	    --top-module ace3_decoder_layer0_token_engine \
+	    --Mdir "$(MODEL24_RTL_LAYER_OBJ_DIR)" $(DECODER_RTL) \
+	    "$(DECODER_CPP_TB)"
+	@test -x "$(MODEL24_RTL_LAYER_BIN)"
+
+model24-controller-rtl-cascade: model24-controller-cascade-bindings \
+	model24-controller-cascade-tests
+	@cd "$(ROOT)" && "$(PYTHON)" "$(MODEL24_RTL_CASCADE_EXECUTOR)" \
+	    --repository-root "$(ROOT)" \
+	    --checkpoint "$(OFFICIAL_MODEL24_CHECKPOINT)" \
+	    --tensor-map "$(MODEL24_TENSOR_MAP)" \
+	    --bindings "$(MODEL24_CONTROLLER_CASCADE_BINDINGS)" \
+	    --simulation-dir "$(MODEL24_LAYER_CONTROLLER_IVERILOG_RAW_DIR)" \
+	    --output-dir "$(MODEL24_RTL_CASCADE_DIR)"
 
 official-model24-next-token: official-model24-next-token-validation \
 	official-model24-next-token-tests

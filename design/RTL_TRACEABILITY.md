@@ -35,7 +35,7 @@ reference/test hashes for the adaptation baseline remain recorded under
 | `ace3/rtl/ace3_fp16_fixed.sv` | `ace3_q24_to_fp16_rne` | `e7f38a3434b60849896a0a5bab549bd6d4b6a4908280a2860a33fc8e839c86c8` | Replaces requantization and INT8 saturation with the frozen binary16 RNE/saturation boundary. |
 | `ace3/rtl/ace3_fp16_residual_add_core.sv` | `ace3_fp16_residual_add_core` | `335954e0bf6909f3aa27330c241cc002f777e6eb5ef483e0b1f684c2fe35ba89` | Re-expresses ready-valid, handshake-gated advancement, retained output, reset, and clear structure; replaces Scale32 and INT8 residual arithmetic. |
 | `ace3/rtl/ace3_fp16_rmsnorm_core.sv` | `ace3_fp16_rmsnorm_core` | `f302975fa91aefc20bb48f768fc08ffbddc088e83ca9cdb23b219c2f70d9fc2a` | Re-expresses two-pass scheduling and stream control; adapts sum/square-root dataflow to the frozen Q24/Q48 contract. |
-| `ace3/rtl/ace3_fp16_silu_gate_core.sv` | `ace3_fp16_silu_gate_core` | `528b931da1f201c941e7f713a6ba0418f950bd44b64fbf10d92cb5a80f386997` | Re-expresses stream scheduling and retained output; replaces LUT/clipping and fixed INT8-domain arithmetic with the frozen rational sigmoid and wide product. |
+| `ace3/rtl/ace3_fp16_silu_gate_core.sv` | `ace3_fp16_silu_gate_core` | `c5f26b50ba2396852e966a430719a6170df9adf5546903ec018049e9e084cf43` | Re-expresses stream scheduling and retained output; supports the reviewed rational sigmoid and the range-reduced exponential profile with the same wide gate product. |
 | `ace3/rtl/ace3_qkv_projection_cluster.sv` | `ace3_qkv_projection_cluster` | `a02880cc69110b226f0121053b3bad72355e33c1e576f7c749f9daf034305de1` | First-party fixed-checkpoint wrapper around three unchanged accepted ACE-3 projection engines; no ACE-2 source is copied. |
 | `ace3/rtl/ace3_qwen2_rope_pair.sv` | `ace3_qwen2_rope_pair` | `d6da922485f1f9818a08e604b3559d56fe407ad42fc2f7605d3bfdded3ee36b8` | First-party half-split Qwen2.5 rotary arithmetic using accepted ACE-3 FP16 converters; no ACE-2 W4A8 path is used. |
 | `ace3/rtl/ace3_fp16_kv_cache.sv` | `ace3_fp16_kv_cache` | `fa2b30ca6f22fcc0e2f1fb7ac91761c1aa3d2440d3b9abed28bb76a0569ed179` | First-party SRAM-oriented indexed FP16 K/V storage; no ACE-2 source or cache format is copied. |
@@ -426,10 +426,10 @@ Decoder references are JSON Pointers into
 | Frozen contract | `ace3/contracts/decoder_layer0_token_engine.json` (`7026c694baf8c45ea3808cb10582bdd6884bb85de5c3e1c6e8b5553f1751cf99`) |
 | Serialized bindings | `ace3/contracts/decoder_layer0_vector_bindings.json` (`12c433d7d3999d2afdcf9f3424a1340c3ada1ccf1a7983e66f23b2d736769040`) |
 | Generated boundary manifest | `build/decoder_layer0_vectors/boundary_manifest.json` (`c0e77c256b5c4ae68de55a8102a949835508f46ab0515d9edd0d9c48739b4089`, regenerated and ignored) |
-| Independent oracle | `ace3/model/decoder_layer0_oracle.py` (`5c775a363d73b8dc551a7362519d70b293eb08cf600b21af08157b24a1992d13`) |
+| Independent oracle | `ace3/model/decoder_layer0_oracle.py` (`33ff7d93ecad077d4d6f88442f70ccc52450892dc65a976b17de882bce953128`) |
 | Official vector generator | `ace3/model/generate_decoder_layer0_vectors.py` (`2cbc91f71b56bbf2c1f819642cca02249df3f48d17ac4d05c384692cc0e0bda8`) |
 | Authenticated validator | `ace3/model/validate_decoder_layer0_vectors.py` (`851cccaf713029781e9703547d9d9224b81dc3248293574e0235f69eb888701e`) |
-| Integrated RTL | `ace3/rtl/ace3_decoder_layer0_token_engine.sv` (`d33868936bf97e76dc9a4420803f1c221127b83ddd94c43d9e844b2af152aed8`) |
+| Integrated RTL | `ace3/rtl/ace3_decoder_layer0_token_engine.sv` (`34ba6fdf14079dba327cadab708f8102881551c202fbca1f9d1e233c2f43b986`) |
 | Qzeros address RTL | `ace3/rtl/ace3_decoder_qzeros_address.sv` (`cf5f8e9d41cc82eb5082046566665cbd14be48e3c2e7ae60b4753ae9409ec344`) |
 | Icarus testbench | `ace3/tb/ace3_decoder_layer0_token_engine_tb.sv` (`5440f1084a54be331713721c57cd696587b4a1e3e6522a6c0169f11be608629c`) |
 | Verilator harness | `ace3/tb/ace3_decoder_layer0_token_engine_main.cpp` (`31f312030712b2e30e08baa426a835e74d70d14f577ae4a318cf869301652a22`) |
@@ -457,7 +457,7 @@ from the fixed official checkpoint. Layer 1 is compiled separately with
 | Official layer-1 descriptor | `model.layers.1.` (`c8a037c0043ededc764f02b14671781ceeb1fb5be3fa6b7f8e114d75a98ad8f4`) |
 | Layer-0 handoff | 1,792 rows, SHA256 `22768ac6b337f920faac7de59b4eb43a203e1db45cdf688820fcbb35cdfe3446` |
 | Layer-1 vector generator | `ace3/model/generate_decoder_layer1_vectors.py` (`879976cc1465537b98a6b37b40bbfcd74f88ec8450a922252e42cfd1c99f23d7`) |
-| Independent indexed oracle | `ace3/model/model24_execution_oracle.py` (`777b91ed3a566a2dd66edd5feb87faff1d0b47e0d7b2c10d7f1f73181cccaf1f`) |
+| Independent indexed oracle | `ace3/model/model24_execution_oracle.py` (`d452dfbd10a6694cd183750bfadd22511097f50a2aec7c6d9f79117394ade55b`) |
 | Post-layer-1 oracle | 1,792 rows, SHA256 `2324470c304f23a372378af6f9f65cc7a646fbaa614882c4ced44110b99dca85` |
 | Focused four-state check | `make decoder-layer1-iverilog-boundary` |
 | Complete numerical check | `make decoder-layer01-verilator-cascade` |
@@ -491,8 +491,8 @@ Layer 2 is compiled separately with `LAYER_INDEX=2`.
 | Official layer-2 descriptor | `model.layers.2.` (`07b907a2f7a800af011b630ce2a026593f05fbd9447e3f106e8970be7888d916`) |
 | Layer-1 handoff | 1,792 rows, SHA256 `2324470c304f23a372378af6f9f65cc7a646fbaa614882c4ced44110b99dca85` |
 | Layer-2 vector generator | `ace3/model/generate_decoder_layer2_vectors.py` (`86eb43c07fe6972c6544274fd5d88385043dd90a801d7ba0091a18d6444fc418`) |
-| Independent indexed Oracle | `ace3/model/model24_execution_oracle.py` (`777b91ed3a566a2dd66edd5feb87faff1d0b47e0d7b2c10d7f1f73181cccaf1f`) |
-| Parameterized RTL | `ace3/rtl/ace3_decoder_layer0_token_engine.sv` (`d33868936bf97e76dc9a4420803f1c221127b83ddd94c43d9e844b2af152aed8`) |
+| Independent indexed Oracle | `ace3/model/model24_execution_oracle.py` (`d452dfbd10a6694cd183750bfadd22511097f50a2aec7c6d9f79117394ade55b`) |
+| Parameterized RTL | `ace3/rtl/ace3_decoder_layer0_token_engine.sv` (`34ba6fdf14079dba327cadab708f8102881551c202fbca1f9d1e233c2f43b986`) |
 | Focused four-state testbench | `ace3/tb/ace3_decoder_layer0_token_engine_tb.sv` (`5440f1084a54be331713721c57cd696587b4a1e3e6522a6c0169f11be608629c`) |
 | Two-state harness | `ace3/tb/ace3_decoder_layer0_token_engine_main.cpp` (`31f312030712b2e30e08baa426a835e74d70d14f577ae4a318cf869301652a22`) |
 | Post-layer-2 Oracle | 1,792 rows, SHA256 `244c9d1d52923ecfff743c165da563468746f47557284865a4b22910a967c511` |
@@ -513,3 +513,35 @@ This evidence is limited to two tokens through official decoder layers 0, 1,
 and 2. It excludes layers 3 through 23, the tied language-model head,
 full-model execution, readable dialogue, formal proof, synthesis, timing,
 area, power, FPGA deployment, latency, throughput, and other performance.
+
+## Model24 checkpointed controller and full-24 RTL cascade
+
+The arithmetic-free controller accepts one start, launches layers 0 through 23
+in strict order, retains every checkpoint under backpressure, and permits a
+natural terminal only after the layer-23 checkpoint. The numerical harness
+authenticates that event stream before launching one separately compiled,
+layer-indexed Verilator decoder instance for each accepted layer.
+
+| Sealed surface | SHA256 |
+| --- | --- |
+| Official checkpoint | `c50d807b7bed7ff314308972e0f4bcf4e5a70bc60ad88fc7df53940831ed0c1b` |
+| Per-layer binding document | `95a46cfb25d8479a9d9921da9b78e581b1c3746c2645574880dac7ea6825ede0` |
+| Ordered controller event stream | `fcb4c9a6458fa141b143d9a4c7dfd10b2d15e703257067d935f635dc1bf9dbf1` |
+| Post-layer-23 hidden state | `97e729f6f905ecb62f498a6a144beecf6b695465d84fdbaf1de777ce9f5a39b6` |
+| Complete execution document | `9d4e048d1316252d67d7e288fd4de0a2a6360f53ff49854c1127b7462578a5c1` |
+
+The run consumes all 624 decoder tensors. Layers 0 through 2 preserve the
+reviewed rational SiLU profile and layers 3 through 23 use the range-reduced
+degree-7 Q24 exponential profile. The post-layer-23 decision-token maximum
+absolute error is `0.08988498970425507`, below the fixed `0.125` bound.
+
+The layer-3 Token 0 diagnostic binds the same layer-2 handoff and discloses one
+material final outlier at down-projection dimension 62. It remains within one
+FP16 ULP and below 0.001 relative error after the final residual. Token 1 remains
+below 0.01 and preserves two-position K/V causality. The RTL remains bit-exact
+to its integer oracle at every retained row.
+
+This is a controller-driven, two-token, layer-indexed RTL simulation result. It
+does not execute the tokenizer or tied language-model head and does not
+establish a monolithic full-model RTL image, formal proof, synthesis, timing,
+area, power, PPA, FPGA execution, latency, throughput, or silicon behavior.

@@ -23,6 +23,13 @@ Qwen2.5 geometry. The bounded evidence includes a complete two-token Verilator
 comparison of 46,676 intermediate rows and 1,792 post-layer hidden rows plus
 focused Icarus width, reset, clear, fail-closed, preload, streaming, and qzeros
 address checks. A fault-free full Icarus trace exceeded the 5,400-second bound
-after 7,000,000 controller cycles and is not claimed. All 24 layers, the tied
-language-model head, dialogue, synthesis, PPA, and FPGA behavior remain outside
-this claim.
+after 7,000,000 controller cycles and is not claimed.
+
+The arithmetic-free `ace3_model24_layer_controller` launches one reusable layer
+boundary in strict index order from 0 through 23, retaining every checkpoint
+until acceptance and allowing terminal completion only after layer 23. The
+controller-driven cascade uses separately compiled decoder instances; it is not
+a monolithic controller-plus-decoder RTL image. Layers 3 through 23 select the
+range-reduced exponential SiLU profile while layers 0 through 2 preserve their
+reviewed rational-profile hashes. The tied language-model head, dialogue,
+synthesis, PPA, and FPGA behavior remain outside this claim.

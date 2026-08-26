@@ -10,7 +10,7 @@ from pathlib import Path
 from typing import Any
 
 from attention_oracle import attention_score, attention_softmax, attention_value
-from fp16_adaptation_oracle import residual_add, rmsnorm, silu_gate
+from fp16_adaptation_oracle import residual_add, rmsnorm, silu_gate, silu_gate_exp
 from projection_oracle import complete_projection_output
 from qwen2_rope_oracle import qwen2_coefficient, rotate_pair
 
@@ -94,7 +94,8 @@ def _expect_finite(outputs: list[tuple[int, bool, bool]], name: str) -> list[int
 
 
 def run_token(values: dict[str, list[int]], activation: list[int], position: int,
-              cache_k: list[list[int]], cache_v: list[list[int]]) -> tuple[list[int], list[tuple[int, int, int, int]]]:
+              cache_k: list[list[int]], cache_v: list[list[int]],
+              accurate_silu: bool = False) -> tuple[list[int], list[tuple[int, int, int, int]]]:
     """Run one token and return final vector plus (stage,index,f16,position) trace."""
     trace: list[tuple[int, int, int, int]] = []
     n1 = _expect_finite(rmsnorm(activation, values["model.layers.0.input_layernorm.weight:"])[0], "norm1")
@@ -172,7 +173,10 @@ def run_token(values: dict[str, list[int]], activation: list[int], position: int
     trace.extend((15, i, item, position) for i, item in enumerate(up))
     silu = []
     for gate_item, up_item in zip(gate, up, strict=True):
-        value, invalid, _ = silu_gate(gate_item, up_item)
+        value, invalid, _ = (
+            silu_gate_exp(gate_item, up_item)
+            if accurate_silu else silu_gate(gate_item, up_item)
+        )
         if invalid:
             raise ArithmeticError("SiLU invalid")
         silu.append(value)
