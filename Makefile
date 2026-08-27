@@ -21,6 +21,20 @@ IVERILOG ?= iverilog
 VVP ?= vvp
 VERILATOR ?= verilator
 
+STREAMING_LM_HEAD_CHECKPOINT ?=
+STREAMING_LM_HEAD_DIR := $(BUILD_DIR)/streaming_lm_head
+STREAMING_LM_HEAD_VECTOR_DIR := $(STREAMING_LM_HEAD_DIR)/official_vectors
+STREAMING_LM_HEAD_IVERILOG_DIR := $(STREAMING_LM_HEAD_DIR)/iverilog
+STREAMING_LM_HEAD_IVERILOG_BIN := $(STREAMING_LM_HEAD_IVERILOG_DIR)/protocol.vvp
+STREAMING_LM_HEAD_VERILATOR_DIR := $(STREAMING_LM_HEAD_DIR)/verilator
+STREAMING_LM_HEAD_VERILATOR_BIN := $(STREAMING_LM_HEAD_VERILATOR_DIR)/Vace3_streaming_tied_lm_head_topk
+STREAMING_LM_HEAD_FIXED_RTL := $(ROOT)/ace3/rtl/ace3_fp16_fixed.sv
+STREAMING_LM_HEAD_ROUNDER_RTL := $(ROOT)/ace3/rtl/ace3_q47_48_to_f16_rne.sv
+STREAMING_LM_HEAD_RTL := $(ROOT)/ace3/rtl/ace3_streaming_tied_lm_head_topk.sv
+STREAMING_LM_HEAD_TB := $(ROOT)/ace3/tb/ace3_streaming_tied_lm_head_topk_tb.sv
+STREAMING_LM_HEAD_CPP_TB := $(ROOT)/ace3/tb/ace3_streaming_tied_lm_head_topk_main.cpp
+STREAMING_LM_HEAD_REFERENCE := $(ROOT)/ace3/model/streaming_lm_head_reference.py
+
 .PHONY: final-rmsnorm-contract final-rmsnorm-acceptance
 
 final-rmsnorm-contract:
@@ -1972,6 +1986,93 @@ official-model24-systematic-continuations-tests: \
 	    >> "$$log" 2>&1; then :; \
 	else status=$$?; cat "$$log"; exit $$status; fi; \
 	cat "$$log"
+
+.PHONY: streaming-lm-head streaming-lm-head-json-validation \
+	streaming-lm-head-iverilog streaming-lm-head-official-vectors \
+	streaming-lm-head-verilator-compile streaming-lm-head-official-verilator
+
+streaming-lm-head: streaming-lm-head-json-validation streaming-lm-head-iverilog \
+	streaming-lm-head-official-verilator
+
+streaming-lm-head-json-validation:
+	@$(PYTHON) -m json.tool $(ROOT)/ace3/contracts/streaming_tied_lm_head_topk.json >/dev/null
+	@$(PYTHON) -m py_compile $(STREAMING_LM_HEAD_REFERENCE)
+
+streaming-lm-head-iverilog: streaming-lm-head-json-validation
+	@$(RM) -r $(STREAMING_LM_HEAD_IVERILOG_DIR)
+	@mkdir -p $(STREAMING_LM_HEAD_IVERILOG_DIR)
+	@printf '%s\n' '$(IVERILOG) -g2012 -Wall -s ace3_streaming_tied_lm_head_topk_tb -o $(STREAMING_LM_HEAD_IVERILOG_BIN) $(STREAMING_LM_HEAD_FIXED_RTL) $(STREAMING_LM_HEAD_ROUNDER_RTL) $(STREAMING_LM_HEAD_RTL) $(STREAMING_LM_HEAD_TB)' > $(STREAMING_LM_HEAD_IVERILOG_DIR)/compile.command
+	@$(IVERILOG) -g2012 -Wall -s ace3_streaming_tied_lm_head_topk_tb \
+		-o $(STREAMING_LM_HEAD_IVERILOG_BIN) \
+		$(STREAMING_LM_HEAD_FIXED_RTL) $(STREAMING_LM_HEAD_ROUNDER_RTL) \
+		$(STREAMING_LM_HEAD_RTL) $(STREAMING_LM_HEAD_TB) \
+		>$(STREAMING_LM_HEAD_IVERILOG_DIR)/compile.stdout \
+		2>$(STREAMING_LM_HEAD_IVERILOG_DIR)/compile.stderr
+	@printf '%s\n' '$(VVP) $(STREAMING_LM_HEAD_IVERILOG_BIN)' > $(STREAMING_LM_HEAD_IVERILOG_DIR)/run.command
+	@set -eu; status=0; \
+		$(VVP) $(STREAMING_LM_HEAD_IVERILOG_BIN) \
+			>$(STREAMING_LM_HEAD_IVERILOG_DIR)/run.stdout \
+			2>$(STREAMING_LM_HEAD_IVERILOG_DIR)/run.stderr || status=$$?; \
+		printf '%s\n' "$$status" > $(STREAMING_LM_HEAD_IVERILOG_DIR)/exit_code; \
+		test "$$status" -eq 0; \
+		test ! -s $(STREAMING_LM_HEAD_IVERILOG_DIR)/run.stderr; \
+		grep -F 'STREAMING_LM_HEAD_PROTOCOL_PASS logits=5 top_k=3 four_state=2' \
+			$(STREAMING_LM_HEAD_IVERILOG_DIR)/run.stdout; \
+		cat $(STREAMING_LM_HEAD_IVERILOG_DIR)/run.stdout
+
+streaming-lm-head-official-vectors: streaming-lm-head-json-validation
+	@test -n "$(STREAMING_LM_HEAD_CHECKPOINT)" || \
+		{ echo "STREAMING_LM_HEAD_CHECKPOINT is required" >&2; exit 2; }
+	@$(RM) -r $(STREAMING_LM_HEAD_VECTOR_DIR)
+	@mkdir -p $(STREAMING_LM_HEAD_VECTOR_DIR)
+	@printf '%s\n' '$(PYTHON) $(STREAMING_LM_HEAD_REFERENCE) --checkpoint $(STREAMING_LM_HEAD_CHECKPOINT) --output-dir $(STREAMING_LM_HEAD_VECTOR_DIR)' > $(STREAMING_LM_HEAD_VECTOR_DIR)/reference.command
+	@set -eu; status=0; \
+		$(PYTHON) $(STREAMING_LM_HEAD_REFERENCE) \
+			--checkpoint $(STREAMING_LM_HEAD_CHECKPOINT) \
+			--output-dir $(STREAMING_LM_HEAD_VECTOR_DIR) \
+			>$(STREAMING_LM_HEAD_VECTOR_DIR)/reference.stdout \
+			2>$(STREAMING_LM_HEAD_VECTOR_DIR)/reference.stderr || status=$$?; \
+		printf '%s\n' "$$status" > $(STREAMING_LM_HEAD_VECTOR_DIR)/reference.exit_code; \
+		test "$$status" -eq 0; \
+		test ! -s $(STREAMING_LM_HEAD_VECTOR_DIR)/reference.stderr; \
+		grep -F 'LM_HEAD_REFERENCE_PASS vocab=151936 hidden=896 top_token=2114 checks=12' \
+			$(STREAMING_LM_HEAD_VECTOR_DIR)/reference.stdout; \
+		cat $(STREAMING_LM_HEAD_VECTOR_DIR)/reference.stdout
+
+streaming-lm-head-verilator-compile: streaming-lm-head-json-validation
+	@$(RM) -r $(STREAMING_LM_HEAD_VERILATOR_DIR)
+	@mkdir -p $(STREAMING_LM_HEAD_VERILATOR_DIR)
+	@$(VERILATOR) --cc --exe --build --Wall -Wno-fatal \
+		--top-module ace3_streaming_tied_lm_head_topk \
+		--Mdir $(STREAMING_LM_HEAD_VERILATOR_DIR) \
+		$(STREAMING_LM_HEAD_FIXED_RTL) $(STREAMING_LM_HEAD_ROUNDER_RTL) \
+		$(STREAMING_LM_HEAD_RTL) $(STREAMING_LM_HEAD_CPP_TB) \
+		>$(STREAMING_LM_HEAD_DIR)/verilator-compile.stdout \
+		2>$(STREAMING_LM_HEAD_DIR)/verilator-compile.stderr
+	@test -x $(STREAMING_LM_HEAD_VERILATOR_BIN)
+
+streaming-lm-head-official-verilator: streaming-lm-head-official-vectors \
+	streaming-lm-head-verilator-compile
+	@printf '%s\n' '$(STREAMING_LM_HEAD_VERILATOR_BIN) --checkpoint $(STREAMING_LM_HEAD_CHECKPOINT) --config $(STREAMING_LM_HEAD_VECTOR_DIR)/run.cfg --hidden $(STREAMING_LM_HEAD_VECTOR_DIR)/hidden.hex --checks $(STREAMING_LM_HEAD_VECTOR_DIR)/checks.txt --topk $(STREAMING_LM_HEAD_VECTOR_DIR)/topk.txt' > $(STREAMING_LM_HEAD_DIR)/official.command
+	@set -eu; status=0; \
+		$(STREAMING_LM_HEAD_VERILATOR_BIN) \
+			--checkpoint $(STREAMING_LM_HEAD_CHECKPOINT) \
+			--config $(STREAMING_LM_HEAD_VECTOR_DIR)/run.cfg \
+			--hidden $(STREAMING_LM_HEAD_VECTOR_DIR)/hidden.hex \
+			--checks $(STREAMING_LM_HEAD_VECTOR_DIR)/checks.txt \
+			--topk $(STREAMING_LM_HEAD_VECTOR_DIR)/topk.txt \
+			>$(STREAMING_LM_HEAD_DIR)/official.stdout \
+			2>$(STREAMING_LM_HEAD_DIR)/official.stderr || status=$$?; \
+		printf '%s\n' "$$status" > $(STREAMING_LM_HEAD_DIR)/official.exit_code; \
+		test "$$status" -eq 0; \
+		test ! -s $(STREAMING_LM_HEAD_DIR)/official.stderr; \
+		grep -F 'STREAMING_LM_HEAD_OFFICIAL_PASS hidden=896 vocab=151936 weights=136134656 top_token=2114 checks=12 ' \
+			$(STREAMING_LM_HEAD_DIR)/official.stdout; \
+		printf '%s\n' 'schema=ace3-streaming-lm-head-terminal-v1' \
+			'natural_terminal=1' 'exit_code=0' 'hidden=896' 'vocab=151936' \
+			'weights=136134656' 'logits=151936' 'checks=12' 'top_token=2114' \
+			> $(STREAMING_LM_HEAD_DIR)/official.terminal; \
+		cat $(STREAMING_LM_HEAD_DIR)/official.stdout
 
 clean:
 	rm -rf "$(BUILD_DIR)"

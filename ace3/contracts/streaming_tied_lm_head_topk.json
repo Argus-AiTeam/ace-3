@@ -1,0 +1,70 @@
+{
+  "schema_version": 1,
+  "conclusion": "STANDALONE_STREAMING_TIED_LM_HEAD_WITH_DETERMINISTIC_TOP_K",
+  "implementation": "ace3/rtl/ace3_streaming_tied_lm_head_topk.sv",
+  "model_binding": {
+    "repository": "Qwen/Qwen2.5-0.5B-Instruct-AWQ",
+    "revision": "db09cd27ead7fee40cdee309693cf83601b9c899",
+    "checkpoint_filename": "model.safetensors",
+    "checkpoint_sha256": "c50d807b7bed7ff314308972e0f4bcf4e5a70bc60ad88fc7df53940831ed0c1b",
+    "checkpoint_bytes": 730652248,
+    "streamed_tensor": "model.embed_tokens.weight",
+    "tied_peer": "lm_head.weight",
+    "tied_value_sha256": "d74257dc547b48be5ae7b93f1c9af072c0c42dbbb85503078e25c59cd09e68d0",
+    "tracked_absolute_paths": false,
+    "ace2_runtime_dependency": false
+  },
+  "geometry": {
+    "hidden_size": 896,
+    "vocab_size": 151936,
+    "top_k": 10,
+    "weight_order": "model.embed_tokens.weight[token_id][feature_id], token-major and feature-minor",
+    "on_chip_state": "896 decoded hidden values, one signed 96-bit accumulator, one held logit, and 10 winners; no full-logit vector"
+  },
+  "numeric_semantics": {
+    "inputs": "finite IEEE-754 binary16 bit patterns",
+    "decode": "exact signed Q16.24 integer value",
+    "product": "exact signed Q32.48",
+    "accumulator": "signed 96-bit Q47.48, no intermediate rounding",
+    "row_rounding": "one IEEE-754 binary16 round-to-nearest-ties-to-even conversion",
+    "overflow": "binary16 result saturates to signed max finite and sets saturation",
+    "nonfinite": "NaN or infinity on hidden or weight input rejects the transaction and sets invalid_operand",
+    "zero": "exact zero rounds to positive zero"
+  },
+  "protocol": {
+    "reset": "active-low asynchronous abort and state clear",
+    "clear": "active-high synchronous abort and state clear",
+    "start": "one accepted start opens exactly one hidden vector and one complete vocabulary traversal",
+    "hidden": "indices 0 through 895 exactly once; hidden_last and hidden_end are asserted only on index 895",
+    "weights": "token IDs 0 through 151935 and features 0 through 895 exactly once in order",
+    "weight_framing": "weight_last_feature marks every feature 895; weight_last_token and weight_end mark only token 151935 feature 895",
+    "truncation": "an early explicit hidden_end or weight_end is rejected; silence without an end marker has no timeout semantics",
+    "backpressure": "logit and Top-K payloads remain stable while valid is asserted and ready is not exactly one",
+    "completion": "Top-K ranks 0 through 9 are accepted before done is exposed",
+    "error_recovery": "error is sticky and accepts no new transaction until clear or reset"
+  },
+  "top_k": {
+    "comparison_domain": "rounded finite binary16 logits",
+    "ordering": "descending numeric logit",
+    "equal_logit_tie_break": "ascending token ID",
+    "rank_zero": "selected token",
+    "materialization": "insertion into 10 retained winners as each logit is accepted"
+  },
+  "error_codes": {
+    "1": "unknown accepted payload or framing bit",
+    "2": "nonfinite FP16 operand",
+    "3": "token or feature order mismatch",
+    "4": "last/end framing mismatch or explicit early truncation"
+  },
+  "claim_boundary": {
+    "demonstrated_by_required_evidence": "standalone final-RMSNorm FP16 hidden to authenticated tied lm_head and deterministic Top-K",
+    "excluded": [
+      "integrated dialogue",
+      "decoder-to-lm_head wiring",
+      "synthesis",
+      "PPA",
+      "FPGA",
+      "latency or throughput"
+    ]
+  }
+}
