@@ -236,7 +236,7 @@ PROJECTION_VERILATOR_BIN := $(PROJECTION_VERILATOR_OBJ_DIR)/Vace3_awq_w4a16_proj
 export PYTHONDONTWRITEBYTECODE := 1
 
 .PHONY: \
-	test tracked-source-path-regression _validate oracle vectors json-validation tamper-rejection \
+	help test tracked-source-path-regression _validate oracle vectors json-validation tamper-rejection \
 	iverilog iverilog-compile iverilog-simulation \
 	iverilog-protocol-compile iverilog-protocol-simulation \
 	verilator verilator-compile verilator-simulation \
@@ -298,6 +298,24 @@ export PYTHONDONTWRITEBYTECODE := 1
 	official-model24-systematic-continuations-vectors \
 	official-model24-systematic-continuations-validation \
 	official-model24-systematic-continuations-tests clean
+
+help:
+	@printf '%s\n' \
+	  'ACE-3 validation targets:' \
+	  '  make test                                      Full standalone RTL regression' \
+	  '  make oracle                                    Native AWQ arithmetic oracle' \
+	  '  make projection                                Full-input projection regression' \
+	  '  make fp16-adaptation                           FP16 residual/RMSNorm/SiLU regression' \
+	  '  make qkv-rope-cache                            QKV, RoPE, and K/V cache regression' \
+	  '  make attention                                 Attention regression' \
+	  '  make decoder-layer0                            Integrated indexed decoder regression' \
+	  '  make model24-publication-tests                 Model24 controller/publication checks' \
+	  '  make model24-controller-rtl-cascade            Checkpoint-bound full-24 RTL cascade' \
+	  '  make model24-first-voice-hybrid-tests          First Voice state-lineage checks' \
+	  '  make model24-first-voice-compact-builder-tests Compact indexed-layer build checks' \
+	  '' \
+	  'Model-bound targets require the official checkpoint/tokenizer paths documented in' \
+	  'docs/GETTING_STARTED.md. Generated outputs remain under ignored build directories.'
 
 tracked-source-path-regression:
 	@cd "$(ROOT)" && "$(PYTHON)" ace3/model/tests/test_tracked_source_paths.py

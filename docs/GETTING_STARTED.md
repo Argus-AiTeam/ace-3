@@ -36,12 +36,6 @@ The arithmetic oracle:
 make oracle
 ```
 
-The deterministic reduced-geometry, 24-layer Model24 software/oracle schedule:
-
-```sh
-make model24-smoke
-```
-
 Outputs are written below ignored `build/` directories.
 
 ## 3. Prepare official checkpoint samples
@@ -66,11 +60,12 @@ The generators contain the accepted SHA-256 for every consumed file and fail
 before vector generation if any file differs. Keep this directory read-only;
 the build never writes to it.
 
-By default, Make looks in `official_tensors/` at the repository root. Override
-the location explicitly when needed:
+By default, Make uses the source-controlled, hash-authenticated fixture under
+`ace3/fixtures/qwen2.5-0.5b-instruct-awq/layer0-q-proj`. Override the location
+explicitly when validating an equivalent read-only fixture:
 
 ```sh
-make OFFICIAL_TENSOR_DIR=/path/to/official_tensors check-official-tensors
+make OFFICIAL_TENSOR_DIR=/path/to/official_tensors projection
 ```
 
 ## 4. Run targeted RTL regressions
@@ -100,7 +95,41 @@ The aggregate target:
 
 No semantic test is accepted from a previous stamp or cached build.
 
-## 5. Read results correctly
+## 5. Run model-bound checks
+
+Model24 targets require the official checkpoint and tokenizer. The defaults are
+repository-relative ignored paths:
+
+```text
+model24_execution_vectors/model.safetensors
+model24_execution_vectors/tokenizer/
+```
+
+The publication checks validate the controller and source/unit evidence without
+rerunning the sealed full-24 numerical cascade:
+
+```sh
+make model24-publication-tests
+```
+
+To rerun the checkpoint-bound full-24 RTL cascade, provide the model assets
+explicitly:
+
+```sh
+make \
+  OFFICIAL_MODEL24_CHECKPOINT=/path/to/model.safetensors \
+  OFFICIAL_MODEL24_TOKENIZER_DIR=/path/to/tokenizer \
+  model24-controller-rtl-cascade
+```
+
+Focused First Voice infrastructure checks:
+
+```sh
+make model24-first-voice-hybrid-tests
+make model24-first-voice-compact-builder-tests
+```
+
+## 6. Read results correctly
 
 The result vocabulary is intentionally strict:
 

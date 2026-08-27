@@ -1,57 +1,94 @@
-# ACE-3 MP
+# ACE-3 MP：ARGUS Mixed-Precision Engine
 
-[English](README.md) · [快速上手](docs/GETTING_STARTED.md) ·
-[架构](docs/ARCHITECTURE.md) · [路线图](docs/ROADMAP.md) ·
-[贡献指南](CONTRIBUTING.md)
+[English](README.md) · [文档导航](docs/INDEX.md) ·
+[当前状态](docs/STATUS.md) · [快速上手](docs/GETTING_STARTED.md) ·
+[架构](docs/ARCHITECTURE.md) · [路线图](docs/ROADMAP.md)
 
-ACE-3 MP 是一个面向混合精度 Transformer 推理的开源研究型 RTL 项目。首个配置
-针对
+ACE-3 MP 是一个独立、证据优先的混合精度 Transformer 推理 RTL 项目。首个实现
+配置面向官方
 [`Qwen/Qwen2.5-0.5B-Instruct-AWQ`](https://huggingface.co/Qwen/Qwen2.5-0.5B-Instruct-AWQ)
-的原生 AWQ W4A16 执行：打包 INT4 权重、128 group size 和 FP16 激活。
+checkpoint 的原生 AWQ W4A16 执行：非对称打包 INT4 权重、128 group size，以及
+FP16 激活、残差和 K/V 状态。
 
-本仓库遵循一条基本原则：**每项结果都必须明确执行边界**。软件 oracle、RTL 仿真、
-综合、FPGA 和真实硬件测量结果分别报告，不能相互替代。
+本仓库遵循一条基本原则：**结果的可信度不能超过它实际执行的边界**。软件 oracle、
+RTL 仿真、综合、FPGA 和真实硬件测量必须分别报告。
 
-> **研究预览版：** 当前公开源码包含经过验证的算术和 decoder 构建模块，
-> 但还不是完整加速器。目前没有综合、时序、PPA、FPGA bitstream 或真实硬件性能声明。
+ACE-3 由开源长期运行 agent harness
+**[Argus](https://github.com/lbx154/Argus)** 持续规划、执行、独立审核和保存证据。
 
-## 当前公开内容
+> **研究预览版：** 当前仓库包含经过验证的 RTL 模块、controller 驱动的 24 层
+> RTL cascade，以及支持持久状态 Hybrid RTL 生成的基础设施。目前尚未发布验收通过
+> 的可读 RTL 对话、综合/PPA、FPGA bitstream、时序收敛或真实硬件性能结果。
 
-| 领域 | 已公开的验证边界 |
+## 项目 Contract
+
+| 项目 | 目标 |
 | --- | --- |
-| 原生 AWQ G128 dot lane | 可综合 RTL、独立 bit oracle、Icarus 和 Verilator 仿真 |
-| 完整输入 AWQ projection | 参数化 896/128/4864 几何、完整 896 输入官方 `q_proj` reduction、有界仿真 |
-| FP16 adaptation | Residual、RMSNorm、SiLU/gate 算子及有界仿真 |
-| QKV 路径 | Q/K/V projection 几何、Qwen2 RoPE、indexed FP16 K/V cache |
-| Attention | Scaled QK、causal softmax 近似、cached-FP16 value composition |
-| Model24 软件 schedule | 确定性的 reduced-geometry 24 层软件/oracle 执行 |
+| 模型 | 官方 Qwen2.5-0.5B-Instruct-AWQ，batch 1 |
+| 首个精度 | 原生非对称 AWQ W4A16，G128 |
+| Decoder 形状 | 24 层，hidden size 896，intermediate size 4,864 |
+| 执行规则 | 每个 represented token 必须经过 indexed RTL layers 0–23 |
+| Host 边界 | Tokenizer、embedding、final RMSNorm、tied `lm_head`、greedy selection、decode |
+| 验证 | 独立 oracle、认证输入、Icarus 和 Verilator |
+| 交付等级 | 先完成可复现 RTL 仿真，再声明综合/PPA/FPGA |
 
-尚未作为验收硬件证据公开的内容：
+## 当前状态
 
-- 集成 decoder layer RTL 结果；
-- RTL 中的完整 24 层和 tied language-model head；
-- RTL 支撑的可读多 token 对话；
-- 综合、时序、PPA、FPGA 部署或硬件性能。
+| 层级 | 已公开边界 | 状态 |
+| --- | --- | --- |
+| 原生 AWQ 算术 | G128 W4A16 dot lane、准确 packing 与 FP16 舍入 | RTL 仿真已验收 |
+| Projection | 896/128/4864 几何和完整 896 输入官方 `q_proj` reduction | RTL 仿真已验收 |
+| FP16 adaptation | Residual、RMSNorm、SiLU/gate、RoPE 和 FP16 K/V 状态 | 有界 RTL 仿真已验收 |
+| Attention | Scaled QK、causal softmax 近似和 cached-value composition | 有界 RTL 仿真已验收 |
+| Decoder | Indexed decoder 执行及独立参考对照 | 有界 RTL 仿真已验收 |
+| Model24 | 无算术的 24 层 controller 和 layer-indexed Verilator cascade | 有界 RTL 仿真已验收 |
+| Host decision | accepted fixture 上的 final RMSNorm 与 tied-head top-10/argmax | Host/oracle 边界已验收 |
+| First Voice | 可保存 RTL 状态、认证 lineage、trusted tips 和紧凑 indexed-layer builder | 基础设施已验收；全层 runtime evidence 与完整 traversal 进行中 |
+| Implementation | 综合、时序、PPA、FPGA 和真实性能 | 尚未声明 |
+
+完整 claim 边界和当前 milestone 见[当前状态](docs/STATUS.md)。
+
+## 执行边界
+
+```text
+Host
+  chat template → tokenizer → embedding lookup
+                         │
+                         ▼
+RTL
+  layer 0 → layer 1 → ... → layer 23
+     │          │                  │
+     └── 持久、经过认证的 FP16 K/V 状态 ──┘
+                         │
+                         ▼
+Host
+  final RMSNorm → tied lm_head → greedy token → feedback
+```
+
+在 First Voice 配置中，每个 prompt token 和每个反馈生成 token 都必须通过全部 24 个
+indexed RTL decoder layers。Host 只负责序列化、tokenization、embedding、最终
+normalization、tied-head 选择、解码和反馈。纯软件 hidden-state 路径不能被描述为
+RTL 对话。
 
 ## 仓库结构
 
 ```text
 ace3/
-  contracts/   机器可读的算术、接口和证据 contract
-  model/       独立 bit-level oracle 与确定性向量工具
-  rtl/         可综合 SystemVerilog 模块
-  tb/          Icarus 与 Verilator testbench
+  contracts/   算术、接口、lineage 和证据的机器可读 contract
+  model/       独立 bit-level oracle、向量工具和 Host/runtime driver
+  rtl/         可综合 SystemVerilog
+  tb/          Icarus 和 Verilator testbench
 design/        RTL manifest 与 requirement-to-evidence traceability
 docs/
-  results/     经过审核且范围明确的结果说明
-  ARCHITECTURE.md
-  GETTING_STARTED.md
-  ROADMAP.md
+  results/     经审核、范围明确的结果说明
+  INDEX.md     文档导航
+  STATUS.md    当前验收边界与进行中工作
+  ROADMAP.md   有序开发计划
 ```
 
-生成向量、日志、仿真对象、模型文件和本地状态应放在被忽略的目录中，不属于源码。
+生成向量、仿真对象、trace、模型权重和本地 agent 状态不属于源码。
 
-## 快速上手
+## 可复现入口
 
 依赖：
 
@@ -60,69 +97,68 @@ docs/
 - Icarus Verilog；
 - Verilator 和 C++ 编译器。
 
-查看所有常用入口：
-
 ```sh
 make help
-```
-
-运行不需要模型权重、可独立执行的 Model24 reduced-geometry 软件/oracle smoke：
-
-```sh
-make model24-smoke
-```
-
-运行独立算术 oracle：
-
-```sh
 make oracle
+make test
+make model24-publication-tests
+make model24-first-voice-hybrid-tests
+make model24-first-voice-compact-builder-tests
 ```
 
-完整 RTL regression 使用从官方 checkpoint 提取并经过哈希认证的小型样本。
-本仓库不会重新分发模型文件。请将所需文件放入 `official_tensors/`，或将
-`OFFICIAL_TENSOR_DIR` 指向只读 fixture 目录：
+`model24-publication-tests` 验证公开 controller 和 source/unit evidence，不会重跑
+sealed full-24 numerical cascade。准备好官方模型资产后，完整 checkpoint-bound RTL
+cascade 使用：
 
 ```sh
-make OFFICIAL_TENSOR_DIR="$PWD/official_tensors" test
+make model24-controller-rtl-cascade
 ```
 
-该命令会重新生成向量、验证全部序列化输入、执行篡改拒绝测试、重新编译并运行
-Icarus 和 Verilator，并确认源码树没有变化。所需 fixture 文件名及分目标命令见
-[快速上手](docs/GETTING_STARTED.md)。
+完整模型执行还需要官方 checkpoint 和 tokenizer。本仓库不重新分发这些资产。路径、
+环境变量和分目标依赖见[快速上手](docs/GETTING_STARTED.md)。
 
-## 已实现的 projection 几何
+## 验证体系
 
-`ace3_awq_w4a16_projection_engine` 会消费每个输出通道的全部 AWQ group，
-并且只在完整 reduction 完成后舍入。
+1. **Contract：** packing、位宽、舍入、reset、stream 行为和 claim scope 均有机器可读定义。
+2. **独立 oracle：** Python 参考结果不从 DUT 实现逻辑自动生成。
+3. **认证输入：** checkpoint revision、tensor、向量、二进制和状态转换均由 SHA-256 绑定。
+4. **独立 simulator：** Icarus 负责有界四态检查，Verilator 负责文档明确范围内的完整二态数值执行。
+5. **Fail-closed lineage：** 恢复持久 RTL 状态时必须匹配 caller-held trusted commitment。
+6. **明确 non-claim：** 仿真周期不是硬件延迟，软件执行也不是 RTL、FPGA 或 silicon 证据。
 
-| Qwen2.5 projection | 输入特征 | 输出特征 | AWQ group |
-| --- | ---: | ---: | ---: |
-| Q / O | 896 | 896 | 7 |
-| K / V | 896 | 128 | 7 |
-| Gate / Up | 896 | 4864 | 7 |
-| Down | 4864 | 896 | 38 |
+固定模型 revision：
+`db09cd27ead7fee40cdee309693cf83601b9c899`。
 
-公开的官方 tensor 数值证据覆盖 layer-0 `q_proj` 的 8 个输出，每个输出都使用全部
-896 个输入。其他几何具备 elaboration 和有界接口覆盖，但不宣称已经完成全部官方
-tensor 数值匹配。
+## 精度路线
 
-当前有意采用串行实现的 reference engine，每个 896 输入输出需要 910 个仿真周期；
-每个 synthetic-zero 4,864 输入输出需要 4,940 个仿真周期，另加一个输出接受周期。
-这些是 RTL 仿真周期数，不是综合频率、真实延迟或吞吐率。
+1. 原生 AWQ W4A16；
+2. W8A16；
+3. BF16/FP16；
+4. 1.5B 和 3B 模型尺寸；
+5. 可复现的综合、PPA 和 FPGA 证据。
 
-## 验证方法
+只有在真实 datapath 和验证 contract 存在后才会加入新的精度模式。
 
-- Arithmetic contract 明确定义 packing、位宽、舍入、reset 和 stream 行为；
-- Python oracle 是独立可执行规范，不从 RTL 自动生成；
-- 序列化向量由 SHA-256 绑定，并在仿真前验证；
-- Icarus 提供四态 X/Z 检查，Verilator 提供独立二态执行；
-- 软件 fallback 永远不能作为 RTL 或硬件完成结果。
+## 文档
 
-模型相关 artifact 绑定官方 checkpoint revision
-`db09cd27ead7fee40cdee309693cf83601b9c899`。使用者应按上游模型许可证和条款自行
-获得模型资产。
+- [文档导航](docs/INDEX.md)
+- [当前状态与 claim matrix](docs/STATUS.md)
+- [架构](docs/ARCHITECTURE.md)
+- [快速上手](docs/GETTING_STARTED.md)
+- [First Voice Hybrid RTL](docs/FIRST_VOICE_HYBRID_RTL.md)
+- [RTL traceability](design/RTL_TRACEABILITY.md)
+- [路线图](docs/ROADMAP.md)
+- [贡献指南](CONTRIBUTING.md)
+
+## Argus
+
+Argus 为 ACE-3 提供长期工程循环：backlog 与预算监督、skill 匹配、engineer 执行、
+独立 reviewer、checkpoint 和基于证据的重新规划。
+
+- 源码：<https://github.com/lbx154/Argus>
+- ACE-3 是独立硬件项目；Argus 是用于研发和监督它的通用 agent harness。
 
 ## 许可证
 
-ACE-3 源码采用 [Apache License 2.0](LICENSE)。Qwen 模型及从 checkpoint 提取的
-样本属于独立的上游资产，不包含在本仓库中。
+ACE-3 源码采用 [Apache License 2.0](LICENSE)。Qwen 模型资产遵循上游许可证，
+不包含在本仓库中。

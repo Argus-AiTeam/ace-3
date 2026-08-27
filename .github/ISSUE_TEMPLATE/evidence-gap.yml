@@ -1,0 +1,50 @@
+name: Evidence gap
+description: Track a missing validation, claim boundary, or reproducibility artifact.
+title: "[Evidence] "
+labels:
+  - evidence
+body:
+  - type: textarea
+    id: claim
+    attributes:
+      label: Proposed or existing claim
+      description: State the exact claim whose support is incomplete.
+    validations:
+      required: true
+  - type: dropdown
+    id: level
+    attributes:
+      label: Required evidence level
+      options:
+        - Contract
+        - Independent oracle
+        - Authenticated vectors
+        - Primitive RTL simulation
+        - Integrated RTL simulation
+        - Full model/runtime acceptance
+        - Synthesis and timing
+        - FPGA deployment
+        - Measured hardware
+    validations:
+      required: true
+  - type: textarea
+    id: missing
+    attributes:
+      label: Missing evidence
+      description: Identify the exact artifact, test, comparison, or review that is absent.
+    validations:
+      required: true
+  - type: textarea
+    id: acceptance
+    attributes:
+      label: Acceptance condition
+      description: Define a reproducible condition that would close this gap.
+    validations:
+      required: true
+  - type: textarea
+    id: nonclaims
+    attributes:
+      label: Non-claims until closure
+      description: State what must not be reported before the gap is closed.
+    validations:
+      required: true

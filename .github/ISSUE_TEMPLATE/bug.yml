@@ -1,0 +1,54 @@
+name: Reproducible bug
+description: Report a source, RTL, oracle, or validation defect.
+title: "[Bug] "
+labels:
+  - bug
+body:
+  - type: dropdown
+    id: boundary
+    attributes:
+      label: Execution boundary
+      options:
+        - Contract or manifest
+        - Python oracle or vector generation
+        - Icarus RTL simulation
+        - Verilator RTL simulation
+        - Host/runtime integration
+        - Documentation or reproducibility
+        - Other
+    validations:
+      required: true
+  - type: textarea
+    id: summary
+    attributes:
+      label: Problem
+      description: Describe the observed and expected behavior.
+    validations:
+      required: true
+  - type: textarea
+    id: reproduce
+    attributes:
+      label: Reproduction
+      description: Provide the smallest command and required inputs.
+      render: shell
+    validations:
+      required: true
+  - type: input
+    id: revision
+    attributes:
+      label: ACE-3 revision
+      placeholder: Full Git commit SHA
+    validations:
+      required: true
+  - type: textarea
+    id: evidence
+    attributes:
+      label: Logs and evidence
+      description: Include relevant errors or hashes, but no credentials or model weights.
+  - type: checkboxes
+    id: hygiene
+    attributes:
+      label: Public data check
+      options:
+        - label: I removed credentials, private paths, model weights, and sensitive artifacts.
+          required: true

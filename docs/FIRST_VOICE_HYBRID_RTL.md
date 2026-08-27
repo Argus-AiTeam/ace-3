@@ -6,8 +6,8 @@ the fixed `Qwen/Qwen2.5-0.5B-Instruct-AWQ` revision
 `ace3/contracts/model24_first_voice_hybrid.json`.
 
 The accepted indexed decoder has two cache slots and exactly 128 causal
-positions. The authenticated chat template is 25 tokens, so the default four
-new-token request needs at most 28 represented positions and fits. A request
+positions. The authenticated chat template is 25 tokens, so the bounded
+generation request fits within the declared capacity. A request
 that could require more than 128 positions fails with
 `rtl_context_capacity_exceeded`; it does not run a software fallback or emit an
 RTL claim.
@@ -68,13 +68,17 @@ the authenticated checkpoint/tokenizer and all 24 compiled indexed binaries:
 
 The compact-builder test target proves success/failure Mdir cleanup and rejects
 layer, source, configuration, manifest, and stripped-binary tampering. The
-selected-layer command is the bounded real-build check. Building all 24 layers
-is reserved for a later disk-authorized mission.
+selected-layer command is the bounded real-build check. All 24 compile-time
+indexed layers have been built in the compact layout and independently
+reauthenticated operationally. The binaries are generated artifacts and are
+not committed to source control.
 
 ```sh
 make model24-first-voice-hybrid
 ```
 
 Runtime evidence stays under ignored
-`build/model24_first_voice_hybrid/`. No synthesis, FPGA, PPA, latency, or
-throughput claim is made.
+`build/model24_first_voice_hybrid/` by default, or under an explicitly selected
+external output root. The first complete readable traversal remains an active
+milestone rather than an accepted repository claim. No synthesis, FPGA, PPA,
+latency, or throughput claim is made.
