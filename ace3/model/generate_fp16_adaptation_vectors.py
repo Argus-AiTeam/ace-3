@@ -180,6 +180,12 @@ def main() -> None:
             "directed",
         ),
         (
+            "q26-sensitive",
+            [0xBC00, 0x1000, 0x2800, 0xB800, 0xC000, 0x3A00, 0x3800, 0xC000],
+            [0x3A00, 0xBC00, 0x3800, 0x3E00, 0x3C00, 0x3A00, 0x3800, 0x3800],
+            "directed_q26_distinguishing",
+        ),
+        (
             "official-scale-window",
             scales[16:24],
             scales[912:920],
@@ -246,6 +252,7 @@ def main() -> None:
         "intermediate_size": 4864,
         "rms_epsilon": "1e-6",
         "rms_epsilon_q48": 281_474_977,
+        "rms_sqrt_fraction_bits": 26,
         "rms_test_size": RMS_SIZE,
         "residual_cases": residual_cases,
         "silu_cases": silu_cases,

@@ -705,10 +705,13 @@ fp16-json-validation: fp16-vectors
 	cat "$$log"
 
 fp16-tamper-rejection: fp16-json-validation
-	@rm -rf "$(FP16_TAMPER_DIR)"
+	@rm -rf "$(FP16_TAMPER_DIR)" "$(FP16_TAMPER_DIR)-rms"
 	@cp -a "$(FP16_VECTOR_DIR)" "$(FP16_TAMPER_DIR)"
+	@cp -a "$(FP16_VECTOR_DIR)" "$(FP16_TAMPER_DIR)-rms"
 	@printf '0' >> "$(FP16_TAMPER_DIR)/residual_cases.hex"
+	@printf '0' >> "$(FP16_TAMPER_DIR)-rms/rms_meta.hex"
 	@set -eu; attempt="$(LOG_DIR)/fp16-adaptation-tamper-attempt.log"; \
+	rms_attempt="$(LOG_DIR)/fp16-adaptation-rms-tamper-attempt.log"; \
 	log="$(LOG_DIR)/fp16-adaptation-tamper-rejection.log"; \
 	printf '%s\n' '$ printf 0 >> build/tamper-fp16-adaptation-vectors/residual_cases.hex' > "$$attempt"; \
 	if cd "$(ROOT)" && "$(PYTHON)" "$(FP16_VALIDATOR)" \
@@ -720,7 +723,17 @@ fp16-tamper-rejection: fp16-json-validation
 	if ! grep -Fq 'residual_cases.hex SHA256 mismatch' "$$attempt"; then \
 	  cat "$$attempt"; exit 1; \
 	fi; \
-	printf '%s\n' 'FP16_ADAPTATION_TAMPER_REJECTION_PASS artifact=residual_cases.hex validator_exit=nonzero reason=sha256_mismatch originals=untouched' > "$$log"; \
+	printf '%s\n' '$ printf 0 >> build/tamper-fp16-adaptation-vectors-rms/rms_meta.hex' > "$$rms_attempt"; \
+	if cd "$(ROOT)" && "$(PYTHON)" "$(FP16_VALIDATOR)" \
+	    --generated-dir "$(FP16_TAMPER_DIR)-rms" \
+	    --contract "$(FP16_CONTRACT)" \
+	    --bindings "$(FP16_BINDINGS)" >> "$$rms_attempt" 2>&1; then \
+	  cat "$$rms_attempt"; exit 1; \
+	fi; \
+	if ! grep -Fq 'rms_meta.hex SHA256 mismatch' "$$rms_attempt"; then \
+	  cat "$$rms_attempt"; exit 1; \
+	fi; \
+	printf '%s\n' 'FP16_ADAPTATION_TAMPER_REJECTION_PASS artifacts=residual_cases.hex,rms_meta.hex validator_exit=nonzero reason=sha256_mismatch originals=untouched' > "$$log"; \
 	cat "$$log"
 
 fp16-geometry: fp16-json-validation

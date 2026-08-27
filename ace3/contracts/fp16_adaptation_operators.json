@@ -17,15 +17,15 @@
   "numerical_contract": {
     "decode": "Every finite binary16 input is decoded exactly as a signed Q40.24 integer; subnormals are preserved exactly.",
     "nonfinite": "Any NaN or infinity input marks the affected residual/SiLU output invalid, or the complete RMSNorm transaction invalid; invalid outputs are positive zero and never saturated.",
-    "rounding": "Round-to-nearest, ties-to-even is used for the SiLU sigmoid quotient, SiLU Q72-to-Q24 boundary, RMS mean division, RMS output division, and all Q24-to-binary16 conversions.",
+    "rounding": "Round-to-nearest, ties-to-even is used for the SiLU sigmoid quotient, SiLU Q72-to-Q24 boundary, RMS mean division, RMS Q26 output division, RMS Q26-to-Q24 diagnostic conversion, and all Q24-to-binary16 conversions.",
     "finite_overflow": "Binary16 finite overflow saturates to signed maximum finite 0x7bff/0xfbff and raises saturation.",
     "signed_zero": "Exact cancellation produces +0. Residual -0 plus -0 produces -0. SiLU/gate and RMSNorm exact zero carry the XOR of multiplicand signs.",
     "rmsnorm": {
-      "equation": "y_i = x_i * weight_i / floor_sqrt(RNE((sum(x_j_q24^2) + N*epsilon_q48)/N)), followed by RNE binary16 conversion",
+      "equation": "rms_q26 = nearest_sqrt(RNE((sum(x_j_q24^2) + N*epsilon_q48)/N) << 4); y_i_q24 = RNE((x_i_q24 * weight_i_q24 << 2) / rms_q26), followed by RNE binary16 conversion",
       "epsilon": "1e-6",
       "epsilon_q48": 281474977,
       "sum_workspace": "unsigned 92-bit Q44.48",
-      "sqrt": "46-cycle most-significant-bit-first integer floor square root producing unsigned Q22.24",
+      "sqrt": "48-cycle most-significant-bit-first integer square root with nearest-integer final selection, producing an unsigned Q22.26 internal divisor; rms_q24_o is its RNE Q22.24 diagnostic projection",
       "storage": "two synthesizable HIDDEN_SIZE-entry signed Q40.24 arrays plus one sign bit per element"
     },
     "silu_gate": {
@@ -45,7 +45,7 @@
   "cycle_boundaries": {
     "residual_add": "one cycle from accepted input beat to visible out_valid",
     "silu_gate": "one cycle from accepted input beat to visible out_valid",
-    "rmsnorm": "after accepted start and HIDDEN_SIZE accepted inputs, 46 unstalled square-root cycles precede the first visible output; each accepted output advances one element"
+    "rmsnorm": "after accepted start and HIDDEN_SIZE accepted inputs, 48 unstalled square-root cycles precede the first visible output; each accepted output advances one element"
   },
   "ace2_reuse_audit": {
     "ace2_head_observed": "765d61e4516c4cdaace8eef11f00c5bcad33d01e",
@@ -80,7 +80,7 @@
     ],
     "adapted": [
       "ACE-2 fixed hidden/intermediate dimensions remain parameter defaults while scalar FP16 streams replace packed INT8 lanes",
-      "ACE-2 sum-of-squares and integer square-root dataflow becomes exact Q24 decode, 92-bit Q48 sum, fixed epsilon, and a bounded 46-cycle integer square root",
+      "ACE-2 sum-of-squares and integer square-root dataflow becomes exact Q24 decode, 92-bit Q48 sum, fixed epsilon, and a bounded 48-cycle Q26 integer square root",
       "ACE-2 SiLU lookup scheduling becomes an explicit Q0.24 rational sigmoid and wide FP16-domain gate product",
       "ACE-2 reference/vector/test pattern becomes an integer-only binary16 oracle, authenticated serialized streams, Icarus four-state probes, and a separate Verilator harness"
     ],

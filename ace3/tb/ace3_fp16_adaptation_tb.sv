@@ -461,11 +461,11 @@ module ace3_fp16_adaptation_tb;
                 @(posedge clk);
                 #1;
                 sqrt_cycles = sqrt_cycles + 1;
-                if (sqrt_cycles > 46)
+                if (sqrt_cycles > 48)
                     $fatal(1, "RMSNorm sqrt timeout case=%0d", case_index);
             end
-            if (sqrt_cycles != 46)
-                $fatal(1, "RMSNorm sqrt cycles=%0d expected=46", sqrt_cycles);
+            if (sqrt_cycles != 48)
+                $fatal(1, "RMSNorm sqrt cycles=%0d expected=48", sqrt_cycles);
             if (rn_rms_q24 !== rms_meta[case_index][45:0])
                 $fatal(1, "RMSNorm root mismatch case=%0d", case_index);
 
@@ -517,7 +517,7 @@ module ace3_fp16_adaptation_tb;
             saturation_outputs == 0)
             $fatal(1, "non-vacuous coverage counters failed");
         $display(
-            "ACE3_FP16_ADAPTATION_IVERILOG_PASS accepted_inputs=%0d outputs=%0d backpressure=%0d reset=%0d clear=%0d invalid_starts=%0d xz=%0d invalid_outputs=%0d saturation_outputs=%0d residual_latency=1 silu_latency=1 rms_sqrt_cycles=46",
+            "ACE3_FP16_ADAPTATION_IVERILOG_PASS accepted_inputs=%0d outputs=%0d backpressure=%0d reset=%0d clear=%0d invalid_starts=%0d xz=%0d invalid_outputs=%0d saturation_outputs=%0d residual_latency=1 silu_latency=1 rms_sqrt_cycles=48",
             accepted_inputs, checked_outputs, backpressure_checks,
             reset_checks, clear_checks, invalid_start_checks, xz_checks,
             invalid_outputs, saturation_outputs

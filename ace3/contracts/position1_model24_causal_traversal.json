@@ -19,7 +19,7 @@
     "kv": "FP16"
   },
   "execution_build": {
-    "build_manifest_sha256": "406c72c6cd955a51e665c9ee5b87093d14919e840353db42084bd532bc59bc64",
+    "build_manifest_sha256": "7b34a85aef2cc0e297a990f8f824617b9979acea9d78eddb433dfd3b602009d7",
     "accurate_silu_layers": [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23]
   },
   "parent_import": {
@@ -50,7 +50,8 @@
     "tolerance": 0.125
   },
   "verification": {
-    "independent_oracle": "PyTorch CPU float64 dequantized-AWQ Qwen2 causal layer execution from the official checkpoint, seeded per layer with that layer's authenticated ordered position-0 FP16 K/V",
+    "independent_oracle": "PyTorch CPU float64 dequantized-AWQ Qwen2 causal layer execution from the official checkpoint, seeded once from the selected token embedding and independently rounded to FP16 after every layer boundary; no prior RTL hidden seeds the hard gate",
+    "non_gating_diagnostics": ["continuous-float64 cumulative reference", "prior-RTL-seeded local reference"],
     "per_layer": "all 24 restored RTL transactions must end naturally and remain within the reviewed terminal hidden absolute tolerance",
     "parent_kv": "each reference layer imports exactly 128 ordered key elements and 128 ordered value elements from its own sealed position-0 trace; the corrected model proves exact cache readback before position 1 starts",
     "negative_tests": ["missing layer", "stale digest", "layer reorder", "duplicate state", "missing, reordered, duplicated, wrong-count, or wrong-position parent K/V", "cross-layer substituted parent K/V", "tampered semantic payload", "checkpoint/vector mismatch", "feedback substitution"]

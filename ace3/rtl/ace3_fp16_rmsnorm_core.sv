@@ -45,7 +45,7 @@ module ace3_fp16_rmsnorm_core #(
     reg [INDEX_WIDTH-1:0] output_index_q;
     reg [91:0] sumsq_q;
     reg [91:0] mean_q48_q;
-    reg [45:0] sqrt_root_q;
+    reg [47:0] sqrt_root_q;
     reg [5:0] sqrt_bit_q;
     reg invalid_seen_q;
     reg signed [40:0] activation_mem [0:HIDDEN_SIZE-1];
@@ -75,34 +75,48 @@ module ace3_fp16_rmsnorm_core #(
     wire [91:0] mean_rounded_w =
         mean_quotient_w + {{91{1'b0}}, mean_increment_w};
 
-    wire [45:0] sqrt_mask_w = 46'd1 << sqrt_bit_q;
-    wire [45:0] sqrt_candidate_w = sqrt_root_q | sqrt_mask_w;
-    wire [91:0] sqrt_candidate_square_w =
+    wire [95:0] mean_q52_w = {mean_q48_q, 4'b0000};
+    wire [47:0] sqrt_mask_w = 48'd1 << sqrt_bit_q;
+    wire [47:0] sqrt_candidate_w = sqrt_root_q | sqrt_mask_w;
+    wire [95:0] sqrt_candidate_square_w =
         sqrt_candidate_w * sqrt_candidate_w;
     wire sqrt_candidate_fits_w =
-        sqrt_candidate_square_w <= mean_q48_q;
+        sqrt_candidate_square_w <= mean_q52_w;
+    wire [47:0] sqrt_floor_w = sqrt_candidate_fits_w
+        ? sqrt_candidate_w : sqrt_root_q;
+    wire [95:0] sqrt_floor_square_w = sqrt_floor_w * sqrt_floor_w;
+    wire [95:0] sqrt_remainder_w = mean_q52_w - sqrt_floor_square_w;
+    wire sqrt_increment_w =
+        sqrt_remainder_w > {{48{1'b0}}, sqrt_floor_w};
+    wire [47:0] sqrt_rounded_w =
+        sqrt_floor_w + {{47{1'b0}}, sqrt_increment_w};
 
     wire signed [81:0] output_product_w =
         activation_mem[output_index_q] * weight_mem[output_index_q];
     wire output_product_sign_w = output_product_w[81];
     wire [81:0] output_product_magnitude_w = output_product_sign_w
         ? (~output_product_w + 82'd1) : output_product_w;
-    wire [81:0] sqrt_root_extended_w = {{36{1'b0}}, sqrt_root_q};
-    wire [81:0] output_quotient_w =
-        output_product_magnitude_w / sqrt_root_extended_w;
-    wire [81:0] output_remainder_w =
-        output_product_magnitude_w % sqrt_root_extended_w;
+    wire [83:0] output_numerator_w = {output_product_magnitude_w, 2'b00};
+    wire [83:0] sqrt_root_extended_w = {{36{1'b0}}, sqrt_root_q};
+    wire [83:0] output_quotient_w =
+        output_numerator_w / sqrt_root_extended_w;
+    wire [83:0] output_remainder_w =
+        output_numerator_w % sqrt_root_extended_w;
     wire output_increment_w =
         ({1'b0, output_remainder_w} << 1) >
             {1'b0, sqrt_root_extended_w} ||
         ((({1'b0, output_remainder_w} << 1) ==
           {1'b0, sqrt_root_extended_w}) && output_quotient_w[0]);
-    wire [82:0] output_rounded_magnitude_w =
+    wire [84:0] output_rounded_magnitude_w =
         {1'b0, output_quotient_w} +
-        {{82{1'b0}}, output_increment_w};
-    wire signed [83:0] output_q24_w = output_product_sign_w
+        {{84{1'b0}}, output_increment_w};
+    wire signed [85:0] output_q24_w = output_product_sign_w
         ? -$signed({1'b0, output_rounded_magnitude_w})
         : $signed({1'b0, output_rounded_magnitude_w});
+    wire [45:0] rms_q24_base_w = sqrt_root_q[47:2];
+    wire rms_q24_increment_w =
+        (sqrt_root_q[1:0] > 2'd2) ||
+        ((sqrt_root_q[1:0] == 2'd2) && rms_q24_base_w[0]);
     wire [15:0] rounded_output_w;
     wire rounded_saturation_w;
 
@@ -121,7 +135,7 @@ module ace3_fp16_rmsnorm_core #(
     );
 
     ace3_q24_to_fp16_rne #(
-        .WIDTH(84)
+        .WIDTH(86)
     ) round_output (
         .q24_i(output_q24_w),
         .zero_sign_i(zero_sign_mem[output_index_q]),
@@ -140,7 +154,8 @@ module ace3_fp16_rmsnorm_core #(
     assign invalid_operand_o = invalid_seen_q;
     assign saturation_o = invalid_seen_q ? 1'b0 : rounded_saturation_w;
     assign busy_o = state_q != ST_IDLE;
-    assign rms_q24_o = sqrt_root_q;
+    assign rms_q24_o = rms_q24_base_w +
+                         {{45{1'b0}}, rms_q24_increment_w};
 
     always @(posedge clk_i or negedge rst_ni) begin
         if (!rst_ni) begin
@@ -149,8 +164,8 @@ module ace3_fp16_rmsnorm_core #(
             output_index_q <= {INDEX_WIDTH{1'b0}};
             sumsq_q <= 92'd0;
             mean_q48_q <= 92'd0;
-            sqrt_root_q <= 46'd1;
-            sqrt_bit_q <= 6'd45;
+            sqrt_root_q <= 48'd1;
+            sqrt_bit_q <= 6'd47;
             invalid_seen_q <= 1'b0;
         end else if (clear_i) begin
             state_q <= ST_IDLE;
@@ -158,8 +173,8 @@ module ace3_fp16_rmsnorm_core #(
             output_index_q <= {INDEX_WIDTH{1'b0}};
             sumsq_q <= 92'd0;
             mean_q48_q <= 92'd0;
-            sqrt_root_q <= 46'd1;
-            sqrt_bit_q <= 6'd45;
+            sqrt_root_q <= 48'd1;
+            sqrt_bit_q <= 6'd47;
             invalid_seen_q <= 1'b0;
         end else begin
             case (state_q)
@@ -170,8 +185,8 @@ module ace3_fp16_rmsnorm_core #(
                         output_index_q <= {INDEX_WIDTH{1'b0}};
                         sumsq_q <= 92'd0;
                         mean_q48_q <= 92'd0;
-                        sqrt_root_q <= 46'd0;
-                        sqrt_bit_q <= 6'd45;
+                        sqrt_root_q <= 48'd0;
+                        sqrt_bit_q <= 6'd47;
                         invalid_seen_q <= 1'b0;
                     end
                 end
@@ -190,8 +205,8 @@ module ace3_fp16_rmsnorm_core #(
                             input_index_q <= {INDEX_WIDTH{1'b0}};
                             output_index_q <= {INDEX_WIDTH{1'b0}};
                             mean_q48_q <= mean_rounded_w;
-                            sqrt_root_q <= 46'd0;
-                            sqrt_bit_q <= 6'd45;
+                            sqrt_root_q <= 48'd0;
+                            sqrt_bit_q <= 6'd47;
                             state_q <= ST_SQRT;
                         end else begin
                             input_index_q <= input_index_q +
@@ -201,12 +216,13 @@ module ace3_fp16_rmsnorm_core #(
                 end
 
                 ST_SQRT: begin
-                    if (sqrt_candidate_fits_w)
-                        sqrt_root_q <= sqrt_candidate_w;
                     if (sqrt_bit_q == 6'd0) begin
+                        sqrt_root_q <= sqrt_rounded_w;
                         output_index_q <= {INDEX_WIDTH{1'b0}};
                         state_q <= ST_OUTPUT;
                     end else begin
+                        if (sqrt_candidate_fits_w)
+                            sqrt_root_q <= sqrt_candidate_w;
                         sqrt_bit_q <= sqrt_bit_q - 6'd1;
                     end
                 end

@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import gzip
+import json
 import sys
 import tempfile
 import unittest
@@ -19,6 +20,9 @@ from model24_execution_oracle import TENSOR_MAP_SHA256
 from position1_model24_causal_traversal import (
     LAYER_COUNT,
     PARENT_SCHEMA,
+    POSITION,
+    SCHEMA,
+    SELECTED_TOKEN,
     TraversalError,
     SEMANTIC_KV_SCHEMA,
     _bound_file_matches,
@@ -30,12 +34,13 @@ from position1_model24_causal_traversal import (
     sha256,
     validate_semantic_kv_preload,
     validate_parent_document,
+    verify_result,
     write_json,
 )
 
 
 class LayerReferencePrecisionTests(unittest.TestCase):
-    def test_local_gate_uses_actual_prior_rtl_fp16_input(self):
+    def test_hard_gate_uses_embedding_seeded_contract_precision(self):
         state = SimpleNamespace(
             reference_k=torch.empty((0, 2, 64), dtype=torch.float64),
             reference_v=torch.empty((0, 2, 64), dtype=torch.float64),
@@ -44,7 +49,8 @@ class LayerReferencePrecisionTests(unittest.TestCase):
         parent_v = torch.zeros((1, 2, 64), dtype=torch.float64)
         input_bits = np.asarray([0x3C00, 0xC000], dtype="<u2")
         output_bits = input_bits.copy()
-        cumulative_input = torch.tensor([0.5, -0.5], dtype=torch.float64)
+        contract_input = torch.tensor([0.5, -0.5], dtype=torch.float64)
+        continuous_input = torch.tensor([0.25, -0.25], dtype=torch.float64)
         seen_inputs = []
         seen_cache_lengths = []
 
@@ -55,17 +61,16 @@ class LayerReferencePrecisionTests(unittest.TestCase):
             layer_state.reference_k = torch.cat(
                 (layer_state.reference_k, parent_k), dim=0
             )
-            if len(seen_inputs) == 1:
-                return torch.tensor([[1.2, -2.2]], dtype=torch.float64)
-            return torch.tensor([[1.01, -2.01]], dtype=torch.float64)
+            return hidden
 
         with mock.patch(
             "position1_model24_causal_traversal._reference_layer_step",
             side_effect=fake_step,
         ):
-            _, _, cumulative, local = _layer_reference_comparisons(
+            contract_output, _, _, contract, _, local = _layer_reference_comparisons(
                 state,
-                cumulative_input,
+                contract_input,
+                continuous_input,
                 input_bits,
                 output_bits,
                 parent_k,
@@ -73,14 +78,119 @@ class LayerReferencePrecisionTests(unittest.TestCase):
                 1,
             )
 
-        self.assertEqual(seen_cache_lengths, [1, 1])
-        torch.testing.assert_close(seen_inputs[0][0], cumulative_input)
+        self.assertEqual(seen_cache_lengths, [1, 1, 1])
+        torch.testing.assert_close(seen_inputs[0][0], contract_input)
         torch.testing.assert_close(
-            seen_inputs[1][0],
+            seen_inputs[2][0],
             torch.tensor([1.0, -2.0], dtype=torch.float64),
         )
-        self.assertGreater(cumulative["max_abs_error"], 0.125)
+        torch.testing.assert_close(contract_output, contract_input)
+        self.assertGreater(contract["max_abs_error"], 0.125)
         self.assertLessEqual(local["max_abs_error"], 0.125)
+
+    def test_prior_rtl_input_cannot_change_hard_gate(self):
+        state = SimpleNamespace(
+            reference_k=torch.empty((0, 2, 64), dtype=torch.float64),
+            reference_v=torch.empty((0, 2, 64), dtype=torch.float64),
+        )
+        parent_k = torch.zeros((1, 2, 64), dtype=torch.float64)
+        parent_v = torch.zeros((1, 2, 64), dtype=torch.float64)
+        output_bits = np.asarray([0x3C00, 0x4000], dtype="<u2")
+
+        with mock.patch(
+            "position1_model24_causal_traversal._reference_layer_step",
+            side_effect=lambda state, hidden, position: hidden,
+        ):
+            hard_results = []
+            for local_bits in (
+                np.asarray([0x0000, 0x0000], dtype="<u2"),
+                np.asarray([0x7BFF, 0xFBFF], dtype="<u2"),
+            ):
+                _, _, _, hard, _, _ = _layer_reference_comparisons(
+                    state,
+                    torch.tensor([1.0, 2.0], dtype=torch.float64),
+                    torch.tensor([1.0, 2.0], dtype=torch.float64),
+                    local_bits,
+                    output_bits,
+                    parent_k,
+                    parent_v,
+                    1,
+                )
+                hard_results.append(hard)
+        self.assertEqual(hard_results[0], hard_results[1])
+
+    def test_injected_upstream_drift_fails_even_when_local_matches(self):
+        state = SimpleNamespace(
+            reference_k=torch.empty((0, 2, 64), dtype=torch.float64),
+            reference_v=torch.empty((0, 2, 64), dtype=torch.float64),
+        )
+        zeros = torch.zeros((1, 2, 64), dtype=torch.float64)
+        output_bits = np.asarray([0x3C00, 0x4000], dtype="<u2")
+        with mock.patch(
+            "position1_model24_causal_traversal._reference_layer_step",
+            side_effect=lambda state, hidden, position: hidden,
+        ):
+            _, _, _, hard, _, local = _layer_reference_comparisons(
+                state,
+                torch.tensor([1.5, 2.5], dtype=torch.float64),
+                torch.tensor([1.0, 2.0], dtype=torch.float64),
+                output_bits,
+                output_bits,
+                zeros,
+                zeros,
+                1,
+            )
+        self.assertGreater(hard["max_abs_error"], 0.125)
+        self.assertEqual(local["max_abs_error"], 0.0)
+
+    def test_result_rejects_prior_rtl_local_gate_substitution(self):
+        contract_path = MODEL.parent / "contracts/position1_model24_causal_traversal.json"
+        contract = json.loads(contract_path.read_text(encoding="ascii"))
+        artifact = {"bytes": 1, "sha256": "a" * 64}
+        layers = []
+        for layer_index in range(LAYER_COUNT):
+            layers.append({
+                "layer_index": layer_index,
+                "semantic_kv_payload": artifact,
+                "semantic_kv_readback": artifact,
+                "transaction": {
+                    "natural_terminal": True,
+                    "final_records": 896,
+                    "done_records": 1,
+                    "semantic_kv_readback": "exact",
+                },
+                "independent_reference": {
+                    "seed": "selected token embedding; prior RTL hidden is never consumed",
+                    "inter_layer_boundary": "independent binary16 round after every reference layer",
+                    "absolute_tolerance": 0.125,
+                    "max_abs_error": 0.125,
+                    "within_tolerance": True,
+                    "gating": True,
+                },
+                "continuous_float64_reference": {"gating": False},
+                "local_reference": {"gating": False},
+            })
+        result = {
+            "schema": SCHEMA,
+            "selected_token": SELECTED_TOKEN,
+            "position": POSITION,
+            "checkpoint_sha256": CHECKPOINT_SHA256,
+            "tensor_map_sha256": TENSOR_MAP_SHA256,
+            "build_manifest_sha256": contract["execution_build"]["build_manifest_sha256"],
+            "parent_build_manifest_sha256": contract["parent_import"]["build_manifest_sha256"],
+            "parent_set_sha256": contract["parent_import"]["parent_set_sha256"],
+            "layers": layers,
+            "natural_terminal_layers": LAYER_COUNT,
+            "hard_gate": "embedding-seeded contract-precision cumulative reference only",
+        }
+        with tempfile.TemporaryDirectory() as directory:
+            result_path = Path(directory) / "result.json"
+            write_json(result_path, result)
+            layers[-1]["independent_reference"]["gating"] = False
+            layers[-1]["local_reference"]["gating"] = True
+            write_json(result_path, result)
+            with self.assertRaisesRegex(TraversalError, "oracle"):
+                verify_result(result_path, contract_path)
 
 
 def fixture() -> dict:

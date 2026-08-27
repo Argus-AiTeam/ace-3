@@ -4,15 +4,15 @@
   "serialized_artifacts": [
     {
       "file": "fp16_adaptation_params.svh",
-      "sha256": "16e45fc8474c40dadca423fa52ddba650be5be74ca706357c429c8bd09597127",
+      "sha256": "c4ac45e9522d0dc7a68d00824fda2d301632ed366e91b7f1d68687969a67aef2",
       "byte_count": 163,
       "line_count": 4
     },
     {
       "file": "manifest.json",
-      "sha256": "1bbba7ca827d3589bf2a1003ecc4c9ff7a3a241d83e36ba85144d5cbfdc31076",
-      "byte_count": 7335,
-      "line_count": 390
+      "sha256": "be23d25ee058860b2f70590dad7fac9b60a900f85acf15ccb4d4683be6459369",
+      "byte_count": 8137,
+      "line_count": 438
     },
     {
       "file": "residual_cases.hex",
@@ -22,21 +22,21 @@
     },
     {
       "file": "rms_expected.hex",
-      "sha256": "9c993a7229cf5a1754b41ba398f004ba27b1a14d231450d17d3d9c71d091ff68",
-      "byte_count": 192,
-      "line_count": 32
+      "sha256": "929bf5ddf80700a5fbc0afda053ab6b05ed6922ca8a291bd6703869f9fe22516",
+      "byte_count": 240,
+      "line_count": 40
     },
     {
       "file": "rms_inputs.hex",
-      "sha256": "2b17e396717239343090cded7c4b6d2e0b09f53a997704926e756c828a1c3eef",
-      "byte_count": 288,
-      "line_count": 32
+      "sha256": "b4118d44c378ccbd33e2ca4bda550805901a7ca374ff78a75f4bd12a1fed8b4d",
+      "byte_count": 360,
+      "line_count": 40
     },
     {
       "file": "rms_meta.hex",
-      "sha256": "901e2302df2155ae066579667a5e6c816156f93553c81d1ad9bf35d9bb26e7b2",
-      "byte_count": 52,
-      "line_count": 4
+      "sha256": "522f5c0a75d41ce684bba7cdfa91be5007a72ab3431ec7a0474f72ba66520f0a",
+      "byte_count": 65,
+      "line_count": 5
     },
     {
       "file": "silu_cases.hex",

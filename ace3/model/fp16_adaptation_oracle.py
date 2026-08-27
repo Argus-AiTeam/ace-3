@@ -10,6 +10,14 @@ Q24_HALF = 1 << 23
 LN2_Q24 = 11_629_080
 EPSILON_Q48 = 281_474_977
 MAX_FINITE_F16 = 0x7BFF
+RMS_SQRT_FRACTION_BITS = 2
+
+
+def rounded_isqrt(value: int) -> int:
+    if value < 0:
+        raise ValueError("square root domain violation")
+    root = math.isqrt(value)
+    return root + int(value - root * root > root)
 
 
 def decode_f16_q24(bits: int) -> tuple[int, bool, bool, bool]:
@@ -165,10 +173,11 @@ def rmsnorm(
         sumsq + epsilon_q48 * len(activations_f16),
         len(activations_f16),
     )
-    rms_q24 = math.isqrt(mean_q48)
+    rms_q26 = rounded_isqrt(mean_q48 << (2 * RMS_SQRT_FRACTION_BITS))
+    rms_q24 = round_div_even_unsigned(rms_q26, 1 << RMS_SQRT_FRACTION_BITS)
     if invalid:
         return [(0, True, False)] * len(activations_f16), mean_q48, rms_q24
-    if rms_q24 == 0:
+    if rms_q26 == 0:
         raise ArithmeticError("positive epsilon produced zero RMS")
 
     outputs: list[tuple[int, bool, bool]] = []
@@ -176,7 +185,10 @@ def rmsnorm(
         decoded_activations, decoded_weights, strict=True
     ):
         product = activation[0] * weight[0]
-        magnitude = round_div_even_unsigned(abs(product), rms_q24)
+        magnitude = round_div_even_unsigned(
+            abs(product) << RMS_SQRT_FRACTION_BITS,
+            rms_q26,
+        )
         result_q24 = -magnitude if product < 0 else magnitude
         result, saturated = q24_to_f16(
             result_q24, zero_sign=activation[3] ^ weight[3]
@@ -191,11 +203,12 @@ def self_test() -> None:
     assert q24_to_f16(Q24_ONE) == (0x3C00, False)
     assert residual_add(0x3C00, 0x3C00) == (0x4000, False, False)
     assert silu_gate(0x3C00, 0x3C00) == (0x3A00, False, False)
+    assert rounded_isqrt(8) == 3
     outputs, _, rms = rmsnorm([0x3C00, 0xBC00], [0x3C00, 0x3C00])
     assert [item[0] for item in outputs] == [0x3C00, 0xBC00]
     assert rms > 0
     print(
-        "FP16_ADAPTATION_ORACLE_PASS checks=7 q_fraction=24 "
+        "FP16_ADAPTATION_ORACLE_PASS checks=8 q_fraction=24 rms_sqrt_fraction=26 "
         "epsilon_q48=281474977 sigmoid=rational_rne"
     )
 

@@ -111,7 +111,8 @@ def main() -> None:
         manifest.get("hidden_size") == 896
         and manifest.get("intermediate_size") == 4864
         and manifest.get("rms_epsilon") == "1e-6"
-        and manifest.get("rms_epsilon_q48") == 281_474_977,
+        and manifest.get("rms_epsilon_q48") == 281_474_977
+        and manifest.get("rms_sqrt_fraction_bits") == 26,
         "frozen model geometry or RMS epsilon mismatch",
     )
 
@@ -126,6 +127,13 @@ def main() -> None:
     require(len(residual_stream) == len(residual_cases) >= 8, "residual case count")
     require(len(silu_stream) == len(silu_cases) >= 8, "SiLU case count")
     require(len(rms_transactions) >= 4, "RMS transaction count")
+    require(
+        any(
+            transaction.get("source") == "directed_q26_distinguishing"
+            for transaction in rms_transactions
+        ),
+        "Q26-distinguishing RMS transaction missing",
+    )
 
     for packed, case in zip(residual_stream, residual_cases, strict=True):
         expected = residual_add(case["left"], case["right"])

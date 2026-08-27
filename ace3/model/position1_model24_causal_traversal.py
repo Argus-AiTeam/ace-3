@@ -129,17 +129,35 @@ def _trace_parent_kv(path: Path) -> dict[str, Any]:
 
 def _layer_reference_comparisons(
     reference_state: Any,
-    cumulative_input: torch.Tensor,
+    contract_input: torch.Tensor,
+    continuous_input: torch.Tensor,
     actual_input_bits: np.ndarray,
     output_bits: np.ndarray,
     reference_k: torch.Tensor,
     reference_v: torch.Tensor,
     position: int,
-) -> tuple[torch.Tensor, torch.Tensor, dict[str, Any], dict[str, Any]]:
+) -> tuple[
+    torch.Tensor,
+    torch.Tensor,
+    torch.Tensor,
+    dict[str, Any],
+    dict[str, Any],
+    dict[str, Any],
+]:
     reference_state.reference_k = reference_k.clone()
     reference_state.reference_v = reference_v.clone()
-    cumulative_output = _reference_layer_step(
-        reference_state, cumulative_input.unsqueeze(0), position
+    contract_output_float64 = _reference_layer_step(
+        reference_state, contract_input.unsqueeze(0), position
+    )[0]
+    contract_output = torch.from_numpy(
+        np.asarray(
+            contract_output_float64.detach().cpu().numpy(), dtype="<f2"
+        ).astype(np.float64)
+    )
+    reference_state.reference_k = reference_k.clone()
+    reference_state.reference_v = reference_v.clone()
+    continuous_output = _reference_layer_step(
+        reference_state, continuous_input.unsqueeze(0), position
     )[0]
     reference_state.reference_k = reference_k.clone()
     reference_state.reference_v = reference_v.clone()
@@ -150,11 +168,28 @@ def _layer_reference_comparisons(
         reference_state, actual_input.unsqueeze(0), position
     )[0]
     return (
-        cumulative_output,
+        contract_output,
+        continuous_output,
         local_output,
-        _comparison(output_bits, cumulative_output),
+        _comparison(output_bits, contract_output),
+        _comparison(output_bits, continuous_output),
         _comparison(output_bits, local_output),
     )
+
+
+def _parse_hidden_words(path: Path, label: str) -> np.ndarray:
+    lines = path.read_text(encoding="ascii").splitlines()
+    require(len(lines) == HIDDEN_SIZE, f"{label} record count mismatch")
+    values = np.empty(HIDDEN_SIZE, dtype="<u2")
+    for expected_index, line in enumerate(lines):
+        require(
+            len(line) == 10
+            and line[:2] == "00"
+            and int(line[2:6], 16) == expected_index,
+            f"{label} ordering mismatch",
+        )
+        values[expected_index] = int(line[6:10], 16)
+    return values
 
 
 def parse_semantic_kv_payload(path: Path, layer_index: int) -> dict[str, Any]:
@@ -731,7 +766,10 @@ def execute(
         "Host-substituted token embedding",
     )
     hidden_bits = embedding_bits
-    reference_hidden = reference_embeddings[SELECTED_TOKEN].clone()
+    contract_reference_hidden = torch.from_numpy(
+        _bits_to_f16(embedding_bits).astype(np.float64)
+    )
+    continuous_reference_hidden = reference_embeddings[SELECTED_TOKEN].clone()
     vector_workspace = output_dir / "vector_workspace"
     tensor_manifests = output_dir / "tensor_manifests"
     tensor_manifests.mkdir()
@@ -781,13 +819,16 @@ def execute(
         finally:
             shutil.rmtree(vector_workspace, ignore_errors=True)
         (
-            reference_hidden,
+            contract_reference_hidden,
+            continuous_reference_hidden,
             local_reference_hidden,
-            cumulative_comparison,
-            comparison,
+            contract_comparison,
+            continuous_comparison,
+            local_comparison,
         ) = _layer_reference_comparisons(
             reference_state,
-            reference_hidden,
+            contract_reference_hidden,
+            continuous_reference_hidden,
             input_bits,
             hidden_bits,
             reference_k,
@@ -800,7 +841,8 @@ def execute(
             f"layer {layer_index} semantic K/V readback mismatch",
         )
         require(
-            comparison["max_abs_error"] <= TERMINAL_HIDDEN_ABSOLUTE_TOLERANCE,
+            contract_comparison["max_abs_error"]
+            <= TERMINAL_HIDDEN_ABSOLUTE_TOLERANCE,
             f"layer {layer_index} independent oracle mismatch",
         )
         layers.append({
@@ -816,18 +858,30 @@ def execute(
             "tensor_manifest": tensor_manifest,
             "transaction": transaction,
             "independent_reference": {
-                **comparison,
-                "seed": "actual layer input from prior RTL FP16 output",
+                **contract_comparison,
+                "seed": "selected token embedding; prior RTL hidden is never consumed",
+                "inter_layer_boundary": "independent binary16 round after every reference layer",
                 "inherited_parent_kv": parent_kv,
                 "absolute_tolerance": TERMINAL_HIDDEN_ABSOLUTE_TOLERANCE,
                 "within_tolerance": True,
+                "gating": True,
             },
-            "cumulative_reference": {
-                **cumulative_comparison,
+            "continuous_float64_reference": {
+                **continuous_comparison,
                 "seed": "float64 reference propagated from token embedding",
                 "absolute_tolerance": TERMINAL_HIDDEN_ABSOLUTE_TOLERANCE,
                 "within_tolerance": (
-                    cumulative_comparison["max_abs_error"]
+                    continuous_comparison["max_abs_error"]
+                    <= TERMINAL_HIDDEN_ABSOLUTE_TOLERANCE
+                ),
+                "gating": False,
+            },
+            "local_reference": {
+                **local_comparison,
+                "seed": "actual layer input from prior RTL FP16 output",
+                "absolute_tolerance": TERMINAL_HIDDEN_ABSOLUTE_TOLERANCE,
+                "within_tolerance": (
+                    local_comparison["max_abs_error"]
                     <= TERMINAL_HIDDEN_ABSOLUTE_TOLERANCE
                 ),
                 "gating": False,
@@ -846,6 +900,7 @@ def execute(
         "layers": layers,
         "terminal_hidden_sha256": sha256(np.asarray(hidden_bits, dtype="<u2").tobytes()),
         "natural_terminal_layers": sum(int(layer["transaction"]["natural_terminal"]) for layer in layers),
+        "hard_gate": "embedding-seeded contract-precision cumulative reference only",
         "claim_boundary": "token 2114 at position 1 only; no lm_head rerun, dialogue, synthesis, PPA, FPGA, or latency claim",
     }
     write_json(output_dir / "result.json", result)
@@ -864,8 +919,175 @@ def verify_result(path: Path, contract_path: Path) -> dict[str, Any]:
     layers = result.get("layers")
     require(isinstance(layers, list) and [x.get("layer_index") for x in layers] == list(range(LAYER_COUNT)), "result layer order mismatch")
     require(result.get("natural_terminal_layers") == LAYER_COUNT, "result natural terminal mismatch")
-    require(all(x.get("independent_reference", {}).get("within_tolerance") is True for x in layers), "result oracle mismatch")
+    require(
+        result.get("hard_gate")
+        == "embedding-seeded contract-precision cumulative reference only",
+        "result hard gate mismatch",
+    )
+    require(
+        all(
+            x.get("transaction", {}).get("natural_terminal") is True
+            and x.get("transaction", {}).get("final_records") == HIDDEN_SIZE
+            and x.get("transaction", {}).get("done_records") == 1
+            and x.get("transaction", {}).get("semantic_kv_readback") == "exact"
+            and x.get("semantic_kv_payload") == x.get("semantic_kv_readback")
+            and x.get("independent_reference", {}).get("seed")
+            == "selected token embedding; prior RTL hidden is never consumed"
+            and x.get("independent_reference", {}).get("inter_layer_boundary")
+            == "independent binary16 round after every reference layer"
+            and x.get("independent_reference", {}).get("absolute_tolerance")
+            == TERMINAL_HIDDEN_ABSOLUTE_TOLERANCE
+            and type(x.get("independent_reference", {}).get("max_abs_error"))
+            in (int, float)
+            and x["independent_reference"]["max_abs_error"]
+            <= TERMINAL_HIDDEN_ABSOLUTE_TOLERANCE
+            and x.get("independent_reference", {}).get("within_tolerance") is True
+            and x.get("independent_reference", {}).get("gating") is True
+            and x.get("continuous_float64_reference", {}).get("gating") is False
+            and x.get("local_reference", {}).get("gating") is False
+            for x in layers
+        ),
+        "result oracle mismatch",
+    )
     return result
+
+
+def recompute_preserved(
+    preserved_output_dir: Path,
+    checkpoint_path: Path,
+    feedback_dir: Path,
+    contract_path: Path,
+    report_path: Path,
+) -> dict[str, Any]:
+    require(not report_path.exists(), "preserved comparison report already exists")
+    require(hash_file(checkpoint_path)["sha256"] == CHECKPOINT_SHA256, "checkpoint mismatch")
+    contract = load_contract(contract_path)
+    embedding_bits = load_feedback(feedback_dir, contract)
+    failure_path = preserved_output_dir / "failure_terminal_manifest.json"
+    failure = load_json(failure_path, "preserved repair7 failure terminal")
+    require(
+        failure.get("schema") == "ace3-position1-terminal-failure-v1"
+        and failure.get("attempt", {}).get("replayed") is False
+        and failure.get("evidence", {}).get("all_24_natural_terminal") is True
+        and failure.get("evidence", {}).get("all_24_semantic_kv_readbacks_exact") is True,
+        "preserved repair7 terminal binding mismatch",
+    )
+    parent_document = load_json(
+        preserved_output_dir / "sealed_parents/manifest.json",
+        "preserved sealed parent manifest",
+    )
+    validate_parent_document(
+        parent_document, contract["parent_import"]["parent_set_sha256"]
+    )
+    embeddings, _, reference_embeddings, reference_states = _load_model(checkpoint_path)
+    require(
+        np.array_equal(_f16_to_bits(embeddings[SELECTED_TOKEN]), embedding_bits),
+        "Host-substituted token embedding",
+    )
+    contract_hidden = torch.from_numpy(
+        _bits_to_f16(embedding_bits).astype(np.float64)
+    )
+    continuous_hidden = reference_embeddings[SELECTED_TOKEN].clone()
+    previous_output_bits: np.ndarray | None = None
+    layers = []
+    for layer_index, reference_state in enumerate(reference_states):
+        transaction_dir = (
+            preserved_output_dir
+            / f"execution/transactions/position001/layer{layer_index:02d}"
+        )
+        transaction = load_json(
+            transaction_dir / "transaction.json",
+            f"preserved layer {layer_index} transaction",
+        )
+        require(
+            transaction.get("layer_index") == layer_index
+            and transaction.get("position") == POSITION
+            and transaction.get("natural_terminal") is True
+            and transaction.get("final_records") == HIDDEN_SIZE
+            and transaction.get("done_records") == 1,
+            f"preserved layer {layer_index} natural terminal mismatch",
+        )
+        input_path = transaction_dir / "inputs.hex"
+        output_path = transaction_dir / "raw/final.hex"
+        input_bits = _parse_hidden_words(input_path, f"layer {layer_index} input")
+        output_bits = _parse_hidden_words(output_path, f"layer {layer_index} output")
+        require(
+            np.array_equal(
+                input_bits,
+                embedding_bits if previous_output_bits is None else previous_output_bits,
+            ),
+            f"preserved layer {layer_index} activation chain mismatch",
+        )
+        parent = parent_document["layers"][layer_index]
+        parent_kv, reference_k, reference_v = _load_parent_kv(
+            preserved_output_dir
+            / f"sealed_parents/transactions/position000/layer{layer_index:02d}/raw/trace.hex.gz",
+            parent["parent_kv"],
+            layer_index,
+        )
+        preload = preserved_output_dir / f"semantic_kv/layer{layer_index:02d}.hex"
+        readback = preserved_output_dir / f"semantic_kv/layer{layer_index:02d}.readback.hex"
+        require(
+            preload.read_bytes() == readback.read_bytes()
+            and parse_semantic_kv_payload(readback, layer_index) == parent["parent_kv"],
+            f"preserved layer {layer_index} semantic K/V readback mismatch",
+        )
+        (
+            contract_hidden,
+            continuous_hidden,
+            _,
+            contract_comparison,
+            continuous_comparison,
+            local_comparison,
+        ) = _layer_reference_comparisons(
+            reference_state,
+            contract_hidden,
+            continuous_hidden,
+            input_bits,
+            output_bits,
+            reference_k,
+            reference_v,
+            POSITION,
+        )
+        layers.append({
+            "layer_index": layer_index,
+            "input": hash_file(input_path),
+            "output": hash_file(output_path),
+            "parent_kv": parent_kv,
+            "independent_reference": {
+                **contract_comparison,
+                "seed": "selected token embedding; prior RTL hidden is never consumed",
+                "inter_layer_boundary": "independent binary16 round after every reference layer",
+                "absolute_tolerance": TERMINAL_HIDDEN_ABSOLUTE_TOLERANCE,
+                "within_tolerance": contract_comparison["max_abs_error"]
+                <= TERMINAL_HIDDEN_ABSOLUTE_TOLERANCE,
+                "gating": True,
+            },
+            "continuous_float64_reference": {
+                **continuous_comparison,
+                "gating": False,
+            },
+            "local_reference": {**local_comparison, "gating": False},
+        })
+        previous_output_bits = output_bits
+    accepted = all(
+        layer["independent_reference"]["within_tolerance"] for layer in layers
+    )
+    report = {
+        "schema": "ace3-position1-preserved-contract-precision-v1",
+        "preserved_repair7": hash_file(failure_path),
+        "checkpoint_sha256": CHECKPOINT_SHA256,
+        "parent_set_sha256": contract["parent_import"]["parent_set_sha256"],
+        "hard_gate": "embedding-seeded contract-precision cumulative reference only",
+        "layers": layers,
+        "layer23_max_abs_error": layers[-1]["independent_reference"]["max_abs_error"],
+        "absolute_tolerance": TERMINAL_HIDDEN_ABSOLUTE_TOLERANCE,
+        "accepted": accepted,
+        "repair7_replayed": False,
+    }
+    write_json(report_path, report)
+    require(accepted, "preserved repair7 contract-precision oracle mismatch")
+    return report
 
 
 def main() -> None:
@@ -880,6 +1102,12 @@ def main() -> None:
     verify = sub.add_parser("verify")
     verify.add_argument("--result", type=Path, required=True)
     verify.add_argument("--contract", type=Path, required=True)
+    preserved = sub.add_parser("recompute-preserved")
+    preserved.add_argument("--preserved-output-dir", type=Path, required=True)
+    preserved.add_argument("--checkpoint", type=Path, required=True)
+    preserved.add_argument("--feedback-dir", type=Path, required=True)
+    preserved.add_argument("--contract", type=Path, required=True)
+    preserved.add_argument("--report", type=Path, required=True)
     args = parser.parse_args()
     if args.command == "preflight":
         result = preflight(
@@ -907,9 +1135,22 @@ def main() -> None:
             args.output_dir.resolve(),
         )
         print(f"POSITION1_MODEL24_CAUSAL_TRAVERSAL_PASS token=2114 position=1 layers={len(result['layers'])} parent_set={result['parent_set_sha256']} terminal={result['terminal_hidden_sha256']}")
-    else:
+    elif args.command == "verify":
         result = verify_result(args.result.resolve(strict=True), args.contract.resolve(strict=True))
         print(f"POSITION1_MODEL24_CAUSAL_VERIFY_PASS layers={len(result['layers'])} natural_terminal=24 oracle=independent")
+    else:
+        result = recompute_preserved(
+            args.preserved_output_dir.resolve(strict=True),
+            args.checkpoint.resolve(strict=True),
+            args.feedback_dir.resolve(strict=True),
+            args.contract.resolve(strict=True),
+            args.report.resolve(),
+        )
+        print(
+            "POSITION1_PRESERVED_CONTRACT_PRECISION_PASS "
+            f"layers={len(result['layers'])} "
+            f"layer23_max_abs_error={result['layer23_max_abs_error']}"
+        )
 
 
 if __name__ == "__main__":

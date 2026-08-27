@@ -77,9 +77,9 @@ int main(int argc, char** argv) {
     const auto rms_inputs = read_hex(vector_dir + "/rms_inputs.hex");
     const auto rms_expected = read_hex(vector_dir + "/rms_expected.hex");
     const auto rms_meta = read_hex(vector_dir + "/rms_meta.hex");
-    require(!residual.empty() && !silu.empty() && rms_meta.size() == 4,
+    require(!residual.empty() && !silu.empty() && rms_meta.size() == 5,
             "vector streams are vacuous");
-    require(rms_inputs.size() == 32 && rms_expected.size() == 32,
+    require(rms_inputs.size() == 40 && rms_expected.size() == 40,
             "RMS vector stream count mismatch");
 
     auto* top = new Vace3_fp16_adaptation_verilator_top;
@@ -236,11 +236,11 @@ int main(int argc, char** argv) {
         }
         top->rn_in_valid_i = 0;
         unsigned sqrt_cycles = 0;
-        while (!top->rn_out_valid_o && sqrt_cycles <= 46) {
+        while (!top->rn_out_valid_o && sqrt_cycles <= 48) {
             tick(top);
             ++sqrt_cycles;
         }
-        require(sqrt_cycles == 46, "RMSNorm square-root cycle mismatch");
+        require(sqrt_cycles == 48, "RMSNorm square-root cycle mismatch");
         require(top->rn_rms_q24_o == (rms_meta.at(transaction) & ((1ull << 46) - 1)),
                 "RMSNorm root mismatch");
         for (unsigned element = 0; element < 8; ++element) {
@@ -293,7 +293,7 @@ int main(int argc, char** argv) {
         << " saturation_outputs=" << saturation_outputs
         << " invalid_starts=" << invalid_starts
         << " clear=" << clear_checks << " reset=" << reset_checks
-        << " residual_latency=1 silu_latency=1 rms_sqrt_cycles=46\n";
+        << " residual_latency=1 silu_latency=1 rms_sqrt_cycles=48\n";
     top->final();
     delete top;
     return 0;
