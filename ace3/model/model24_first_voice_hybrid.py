@@ -412,6 +412,13 @@ def load_trusted_tips_checkpoint(
     return tips
 
 
+def artifact_path(path: Path, repository_root: Path) -> str:
+    try:
+        return str(path.relative_to(repository_root))
+    except ValueError:
+        return str(path)
+
+
 def load_json(path: Path, label: str) -> dict[str, Any]:
     def object_hook(pairs: list[tuple[str, Any]]) -> dict[str, Any]:
         result: dict[str, Any] = {}
@@ -1283,7 +1290,7 @@ def _compact_trace(path: Path, repository_root: Path) -> dict[str, Any]:
     return {
         **raw_record,
         "storage": {
-            "path": str(archive.relative_to(repository_root)),
+            "path": artifact_path(archive, repository_root),
             "compression": "gzip",
             "mtime": 0,
             **hash_file(archive),
@@ -1428,7 +1435,7 @@ def _run_transaction(
             f"indexed RTL layer {layer_index} position {position} exited "
             f"{completed.returncode}"
         ),
-        {"log": str(log_path.relative_to(repository_root))},
+        {"log": artifact_path(log_path, repository_root)},
     )
     metadata = load_json(metadata_path, "RTL transaction metadata")
     require(

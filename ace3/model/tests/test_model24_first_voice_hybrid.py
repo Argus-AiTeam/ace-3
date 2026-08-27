@@ -27,6 +27,7 @@ from model24_first_voice_hybrid import (  # noqa: E402
     STATE_SCHEMA_VERSION,
     HybridRtlError,
     _canonical_bytes,
+    artifact_path,
     authenticate_build,
     authenticate_compact_layer,
     authenticate_fixed_inputs,
@@ -362,6 +363,12 @@ class Model24FirstVoiceHybridTests(unittest.TestCase):
             ),
             {0: digest},
         )
+
+    def test_artifact_path_supports_external_tmpfs_outputs(self) -> None:
+        internal = REPOSITORY_ROOT / "build" / "run.log"
+        external = REPOSITORY_ROOT.parent / "external" / "run.log"
+        self.assertEqual(artifact_path(internal, REPOSITORY_ROOT), "build/run.log")
+        self.assertEqual(artifact_path(external, REPOSITORY_ROOT), str(external))
 
     def test_valid_retained_state_chain_is_accepted(self) -> None:
         state, _ = self._write_two_record_chain()
