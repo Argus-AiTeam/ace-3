@@ -1,5 +1,9 @@
 # Reference models
 
+`final_rmsnorm_model.py` authenticates the official checkpoint and emits four
+integer-exact 896-element vector cases. `final_rmsnorm_compare.py` gates raw
+simulator evidence before opening the generated oracle artifacts.
+
 Bit-level arithmetic oracles and vector generators live here. These models are
 verification references, not accelerator implementations or performance paths.
 

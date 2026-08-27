@@ -112,7 +112,7 @@ ACE-3 MP 是一个证据驱动、处于综合前阶段的混合精度 Transforme
 checkpoint 建立完整的原生 AWQ 系统边界：非对称打包 INT4 权重、128 group size、
 FP16 激活与残差、因果 K/V 状态、decoder 执行、Host 集成和可复现验证。
 
-ACE-3 MP 是 ACE 硬件路线中的独立后继项目，不依赖 ACE-2 的源码树、build 目录、
+ACE-3 MP 是 ACE 硬件路线中的独立后继项目，不依赖 predecessor 的源码树、build 目录、
 fixture 路径、runtime 或 evidence store。需要复用的架构思想必须重新实现，或复制
 为 ACE-3 自有且带 provenance 的资产。
 

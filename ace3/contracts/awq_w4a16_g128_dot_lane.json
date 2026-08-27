@@ -3,7 +3,7 @@
   "conclusion": "START_ACE3_MP_AWQ_ADAPTATION",
   "profiles": {
     "ACE_W4A8": {
-      "implementation": "rtl/ace2_w4a8_proj_core.sv",
+      "implementation": "rtl/predecessor_w4a8_proj_core.sv",
       "status": "existing_unchanged",
       "activation": "signed_int8",
       "weight": "signed_int4",

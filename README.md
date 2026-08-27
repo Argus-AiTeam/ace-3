@@ -127,7 +127,7 @@ and residuals, causal K/V state, decoder execution, host integration, and
 reproducible verification.
 
 ACE-3 MP is a standalone successor in the ACE hardware line. It does not
-depend on an ACE-2 source tree, build directory, fixture path, runtime, or
+depend on an predecessor source tree, build directory, fixture path, runtime, or
 evidence store. Reused architectural ideas are reimplemented or copied into
 ACE-3-owned, provenance-tracked assets.
 

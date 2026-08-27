@@ -1,0 +1,68 @@
+{
+  "schema_version": 1,
+  "contract_id": "ace3-final-rmsnorm-v1",
+  "public_top": {
+    "module": "ace3_final_rmsnorm",
+    "parameters": [],
+    "ports": [
+      ["input", "clk_i", 1],
+      ["input", "rst_ni", 1],
+      ["input", "clear_i", 1],
+      ["input", "start_valid_i", 1],
+      ["output", "start_ready_o", 1],
+      ["input", "in_valid_i", 1],
+      ["output", "in_ready_o", 1],
+      ["input", "activation_f16_i", 16],
+      ["input", "weight_f16_i", 16],
+      ["output", "out_valid_o", 1],
+      ["input", "out_ready_i", 1],
+      ["output", "out_f16_o", 16],
+      ["output", "out_index_o", 13],
+      ["output", "out_last_o", 1],
+      ["output", "invalid_operand_o", 1],
+      ["output", "saturation_o", 1],
+      ["output", "busy_o", 1],
+      ["output", "rms_q24_o", 46]
+    ]
+  },
+  "geometry": {
+    "hidden_size": 896,
+    "checkpoint_tensor": "model.norm.weight",
+    "checkpoint_tensor_dtype": "float16"
+  },
+  "numerical_contract": {
+    "activation_format": "IEEE-754 binary16 bits",
+    "weight_format": "IEEE-754 binary16 bits",
+    "internal_format": "signed Q24 activation and weight, Q48 square accumulation",
+    "epsilon_q48": 281474977,
+    "mean_rounding": "round to nearest, ties to even",
+    "rms_root": "floor integer square root in Q24",
+    "output_rounding": "IEEE-754 binary16 round to nearest, ties to even",
+    "nonfinite": "transaction output is positive zero and invalid_operand_o is asserted"
+  },
+  "protocol": {
+    "start": "one start handshake begins exactly one 896-element transaction",
+    "input": "exactly 896 activation/weight beats are accepted under ready/valid",
+    "output": "exactly 896 indexed beats are produced under ready/valid",
+    "clear": "synchronous active-high cancellation",
+    "reset": "asynchronous active-low reset"
+  },
+  "official_checkpoint": {
+    "repository": "Qwen/Qwen2.5-0.5B-Instruct-AWQ",
+    "revision": "db09cd27ead7fee40cdee309693cf83601b9c899",
+    "model_safetensors_sha256": "c50d807b7bed7ff314308972e0f4bcf4e5a70bc60ad88fc7df53940831ed0c1b",
+    "model_safetensors_size": 730652248
+  },
+  "verification_boundary": {
+    "icarus_four_state_outputs": 896,
+    "verilator_exact_comparisons": 3584,
+    "generated_artifacts": "ignored build paths only",
+    "excluded": [
+      "language-model output projection",
+      "interactive traversal",
+      "implementation-resource results",
+      "device deployment",
+      "performance timing"
+    ]
+  }
+}

@@ -1,5 +1,9 @@
 # Testbenches
 
+`ace3_final_rmsnorm_tb.sv` captures four-state Icarus output evidence without
+opening oracle files. `ace3_final_rmsnorm_main.cpp` provides the corresponding
+Verilator capture harness.
+
 RTL testbenches, deterministic vectors, and harness source live here. Each
 testbench must identify the independent oracle and arithmetic contract it uses.
 

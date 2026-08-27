@@ -1,6 +1,9 @@
 .DEFAULT_GOAL := test
 .NOTPARALLEL:
 
+FINAL_RMSNORM_CHECKPOINT ?=
+FINAL_RMSNORM_RUN_DIR ?= $(BUILD_DIR)/final-rmsnorm/attempt-01
+
 ROOT := $(abspath $(dir $(lastword $(MAKEFILE_LIST))))
 BUILD_DIR := $(ROOT)/build
 VECTOR_DIR := $(BUILD_DIR)/vectors
@@ -17,6 +20,23 @@ PYTHON ?= python3
 IVERILOG ?= iverilog
 VVP ?= vvp
 VERILATOR ?= verilator
+
+.PHONY: final-rmsnorm-contract final-rmsnorm-acceptance
+
+final-rmsnorm-contract:
+	$(PYTHON) $(ROOT)/ace3/model/tests/test_final_rmsnorm.py \
+		--repo-root $(ROOT) \
+		--checkpoint /dev/null \
+		--run-dir $(BUILD_DIR)/final-rmsnorm/contract-freeze \
+		--contract-only
+
+final-rmsnorm-acceptance:
+	@test -n "$(FINAL_RMSNORM_CHECKPOINT)" || \
+		{ echo "FINAL_RMSNORM_CHECKPOINT is required" >&2; exit 2; }
+	$(PYTHON) $(ROOT)/ace3/model/tests/test_final_rmsnorm.py \
+		--repo-root $(ROOT) \
+		--checkpoint $(FINAL_RMSNORM_CHECKPOINT) \
+		--run-dir $(FINAL_RMSNORM_RUN_DIR)
 STRIP ?= strip
 STRACE ?= strace
 OFFICIAL_TENSOR_DIR ?= $(ROOT)/ace3/fixtures/qwen2.5-0.5b-instruct-awq/layer0-q-proj

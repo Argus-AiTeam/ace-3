@@ -1,5 +1,8 @@
 # RTL
 
+`ace3_final_rmsnorm.sv` is the parameter-free 896-element final-layer wrapper
+around the accepted FP16 RMSNorm arithmetic core.
+
 Synthesizable ACE-3 modules live here. Generated netlists and simulator output
 belong under ignored build directories, not in this source tree.
 

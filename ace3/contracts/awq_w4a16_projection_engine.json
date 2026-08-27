@@ -9,15 +9,15 @@
     "group_result_usage": "acc_q47_48_o only; the primitive FP16 result is not accumulated",
     "final_rounding": "one binary16 round-to-nearest-ties-to-even conversion after every input group has been summed"
   },
-  "ace2_evolution_audit": {
+  "predecessor_evolution_audit": {
     "accepted_source_revision": "8edf99e16633e7877f6be357cae4ddc4b9a8fb97",
     "audited_sources": [
-      "rtl/ace2_w4a8_proj_core.sv",
-      "rtl/ace2_shell.sv",
-      "tools/ace2_projection_reference.py",
-      "verification/tb/ace2_w4a8_proj_tb.sv",
-      "verification/verilator/ace2_shell_oproj_harness.sv",
-      "verification/verilator/ace2_shell_oproj_main.cpp"
+      "rtl/predecessor_w4a8_proj_core.sv",
+      "rtl/predecessor_shell.sv",
+      "tools/predecessor_projection_reference.py",
+      "verification/tb/predecessor_w4a8_proj_tb.sv",
+      "verification/verilator/predecessor_shell_oproj_harness.sv",
+      "verification/verilator/predecessor_shell_oproj_main.cpp"
     ],
     "reused": [
       "separate start, pair, metadata, and output ready-valid channels",
@@ -25,8 +25,8 @@
       "active-low asynchronous reset, synchronous clear abort, and output retention until acceptance"
     ],
     "adapted": [
-      "ACE-2 output-major shell scheduling becomes output-major then G128-group-major sequencing with explicit native tensor indices",
-      "ACE-2 variable-ready protocol tests become deterministic metadata, pair, and output stalls plus stable-output checks",
+      "predecessor output-major shell scheduling becomes output-major then G128-group-major sequencing with explicit native tensor indices",
+      "predecessor variable-ready protocol tests become deterministic metadata, pair, and output stalls plus stable-output checks",
       "the independent fixed-point reference pattern becomes an independent native-AWQ FP16 oracle"
     ],
     "replaced": [
@@ -34,7 +34,7 @@
       "32-bit accumulation and INT8 output saturation",
       "shell-coupled memory addressing and writeback, which are outside this stream-engine milestone"
     ],
-    "copy_policy": "No ACE-2 arithmetic RTL is copied. Compatible interface and control patterns are re-expressed for native asymmetric AWQ W4A16 semantics and verified independently."
+    "copy_policy": "No predecessor arithmetic RTL is copied. Compatible interface and control patterns are re-expressed for native asymmetric AWQ W4A16 semantics and verified independently."
   },
   "authenticated_model_config": {
     "path": "official/config.json",

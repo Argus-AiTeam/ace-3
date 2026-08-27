@@ -131,32 +131,32 @@ for a seven-group 896-input output and 4,940 compute cycles for a 38-group
 costs one additional cycle. These numbers describe this sequential RTL only,
 not synthesized frequency, throughput, or PPA.
 
-## ACE-2 evolutionary reuse audit
+## predecessor evolutionary reuse audit
 
-The projection milestone was compared against the ACE-2 Alpha 2 certified
+The projection milestone was compared against the predecessor Alpha 2 certified
 snapshot revision `8edf99e16633e7877f6be357cae4ddc4b9a8fb97`. The audited files
 were present and clean at that revision:
 
-- `rtl/ace2_w4a8_proj_core.sv`
-- `rtl/ace2_shell.sv`
-- `tools/ace2_projection_reference.py`
-- `verification/tb/ace2_w4a8_proj_tb.sv`
-- `verification/verilator/ace2_shell_oproj_harness.sv`
-- `verification/verilator/ace2_shell_oproj_main.cpp`
+- `rtl/predecessor_w4a8_proj_core.sv`
+- `rtl/predecessor_shell.sv`
+- `tools/predecessor_projection_reference.py`
+- `verification/tb/predecessor_w4a8_proj_tb.sv`
+- `verification/verilator/predecessor_shell_oproj_harness.sv`
+- `verification/verilator/predecessor_shell_oproj_main.cpp`
 
 The reuse decision is explicit:
 
-| Classification | ACE-2 structure | ACE-3 projection treatment |
+| Classification | predecessor structure | ACE-3 projection treatment |
 | --- | --- | --- |
 | Reused | Separate start, pair, metadata, and output ready/valid channels; handshake-gated state changes; held output until acceptance | Preserved as the native projection stream protocol and stable-output backpressure rule |
 | Adapted | Shell output-index sequencing and variable-ready verification harnesses | Output-major then G128-group-major sequencing with exposed tensor indices; deterministic metadata/pair stalls and output backpressure checks |
 | Adapted | Independent fixed-point projection reference | Independent native-AWQ oracle with exact FP16 inputs, G128 accumulation, cross-group summation, and one final FP16 rounding |
 | Replaced | Signed symmetric INT4 x INT8 MAC, 32-bit accumulator, integer multiplier/right shift, output zero point, and INT8 saturation | Asymmetric packed AWQ qweight/qzeros, FP16 scales/activations, unchanged 96-bit G128 results, exact 102-bit cross-group accumulation, and final FP16 RNE |
-| Deferred | ACE-2 shell memory requests, SRAM scheduling, fused command flow, and writeback | Not copied into this bounded stream-engine milestone; SRAM/DMA and decoder integration remain unsupported |
+| Deferred | predecessor shell memory requests, SRAM scheduling, fused command flow, and writeback | Not copied into this bounded stream-engine milestone; SRAM/DMA and decoder integration remain unsupported |
 
-No ACE-2 arithmetic RTL is copied. Compatible interface and control patterns
+No predecessor arithmetic RTL is copied. Compatible interface and control patterns
 are re-expressed for the W4A16 profile, while incompatible W4A8 assumptions are
-replaced and independently verified. ACE-2 is therefore a provenance-tracked
+replaced and independently verified. predecessor is therefore a provenance-tracked
 architectural baseline, not a build dependency or a numerically equivalent
 projection baseline. Cross-profile comparisons may compare protocol invariants
 or identically defined cycle boundaries, but must not present differing

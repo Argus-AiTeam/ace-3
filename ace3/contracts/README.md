@@ -1,5 +1,9 @@
 # Contracts
 
+`final_rmsnorm.json` freezes the parameter-free `ace3_final_rmsnorm` public top,
+the fixed 896-element transaction, checkpoint provenance, arithmetic semantics,
+and bounded verification counts.
+
 Implemented precision, packing, rounding, streaming, and reset contracts live
 here. A contract is descriptive evidence and does not by itself certify RTL.
 

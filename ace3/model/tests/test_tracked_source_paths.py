@@ -41,7 +41,7 @@ def main() -> None:
     )
     allowed_examples = (
         f"{LEGACY_NAME.upper()} remains historical provenance",
-        "/ace2_reuse_audit",
+        "/predecessor_reuse_audit",
     )
     if not all(prohibited_reference(value) for value in forbidden_examples):
         raise AssertionError("path regression does not detect every prohibited form")

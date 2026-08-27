@@ -14,7 +14,7 @@ raises a status flag. RMSNorm uses epsilon `1e-6`, represented by the nearest
 Q48 integer 281474977. SiLU uses the documented rational Q0.24 sigmoid
 approximation rather than claiming a correctly rounded exponential.
 
-The reuse ledger records the exact ACE-2 RTL snapshots and the inspected Python
+The reuse ledger records the exact predecessor RTL snapshots and the inspected Python
 reference and testbench patterns. Ready-valid channel separation,
 handshake-gated advancement, retained outputs, reset/clear aborts, two-pass
 RMSNorm scheduling, and generated self-checking tests are reused structurally.
