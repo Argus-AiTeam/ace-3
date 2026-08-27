@@ -4,6 +4,7 @@
 #include "verilated_save.h"
 
 #include <array>
+#include <cctype>
 #include <cstdio>
 #include <cstdint>
 #include <cstdlib>
@@ -70,6 +71,103 @@ static uint16_t at(const std::vector<uint16_t>& values, size_t index, const char
 static uint32_t at(const std::vector<uint32_t>& values, size_t index, const char* name) {
     if (index >= values.size()) throw std::runtime_error(std::string("tensor address out of range: ") + name);
     return values[index];
+}
+
+struct SemanticKvPreload {
+    std::array<uint16_t, 128> k{};
+    std::array<uint16_t, 128> v{};
+};
+
+static unsigned hex_field(const std::string& line, size_t offset, size_t width,
+                          const char* name) {
+    if (offset + width > line.size())
+        throw std::runtime_error(std::string("semantic K/V ") + name + " field missing");
+    for (size_t i = offset; i < offset + width; ++i)
+        if (!std::isxdigit(static_cast<unsigned char>(line[i])))
+            throw std::runtime_error(std::string("semantic K/V ") + name + " is not hexadecimal");
+    return std::stoul(line.substr(offset, width), nullptr, 16);
+}
+
+static SemanticKvPreload load_semantic_kv(const std::string& path,
+                                          unsigned expected_layer) {
+    const auto records = lines(path);
+    if (records.size() != 256)
+        throw std::runtime_error("semantic K/V record count mismatch");
+    SemanticKvPreload preload;
+    for (size_t ordinal = 0; ordinal < records.size(); ++ordinal) {
+        const auto& line = records[ordinal];
+        if (line.size() != 18)
+            throw std::runtime_error("semantic K/V record width mismatch");
+        const unsigned layer = hex_field(line, 0, 2, "layer");
+        const unsigned slot = hex_field(line, 2, 2, "slot");
+        const unsigned position = hex_field(line, 4, 4, "position");
+        const unsigned stage = hex_field(line, 8, 2, "stage");
+        const unsigned index = hex_field(line, 10, 4, "index");
+        const unsigned value = hex_field(line, 14, 4, "value");
+        const unsigned expected_stage = (ordinal & 1u) ? 7u : 6u;
+        const unsigned expected_index = unsigned(ordinal >> 1);
+        if (layer != expected_layer)
+            throw std::runtime_error("semantic K/V layer mismatch");
+        if (slot != 0)
+            throw std::runtime_error("semantic K/V cache slot mismatch");
+        if (position != 0)
+            throw std::runtime_error("semantic K/V source position mismatch");
+        if (stage != expected_stage || index != expected_index)
+            throw std::runtime_error("semantic K/V order, duplicate, or index mismatch");
+        if (stage == 6) preload.k[index] = uint16_t(value);
+        else preload.v[index] = uint16_t(value);
+    }
+    return preload;
+}
+
+static void import_semantic_kv(Vace3_decoder_layer0_token_engine& top,
+                               const std::string& preload_path,
+                               const std::string& readback_path,
+                               unsigned expected_layer) {
+    if (top.busy_o || top.done_valid_o || top.phase_o != 0)
+        throw std::runtime_error("semantic K/V import requires idle RTL");
+    if (top.ace3_decoder_layer0_token_engine__DOT__context_len_q[0] != 0 ||
+        top.ace3_decoder_layer0_token_engine__DOT__context_len_q[1] != 0)
+        throw std::runtime_error("semantic K/V import requires empty context metadata");
+    for (unsigned address = 0; address < 32768; ++address)
+        if (top.ace3_decoder_layer0_token_engine__DOT__cache__DOT__valid_mem[address])
+            throw std::runtime_error("semantic K/V import requires empty cache");
+
+    const auto preload = load_semantic_kv(preload_path, expected_layer);
+    for (unsigned index = 0; index < 128; ++index) {
+        top.ace3_decoder_layer0_token_engine__DOT__cache__DOT__k_mem[index] = preload.k[index];
+        top.ace3_decoder_layer0_token_engine__DOT__cache__DOT__v_mem[index] = preload.v[index];
+        top.ace3_decoder_layer0_token_engine__DOT__cache__DOT__valid_mem[index] = 1;
+    }
+    top.ace3_decoder_layer0_token_engine__DOT__context_len_q[0] = 1;
+    top.eval();
+
+    std::ofstream readback(readback_path, std::ios::trunc);
+    if (!readback) throw std::runtime_error("cannot open semantic K/V readback");
+    for (unsigned index = 0; index < 128; ++index) {
+        if (!top.ace3_decoder_layer0_token_engine__DOT__cache__DOT__valid_mem[index] ||
+            top.ace3_decoder_layer0_token_engine__DOT__cache__DOT__k_mem[index] != preload.k[index] ||
+            top.ace3_decoder_layer0_token_engine__DOT__cache__DOT__v_mem[index] != preload.v[index])
+            throw std::runtime_error("semantic K/V cache readback mismatch");
+        for (unsigned stage : {6u, 7u}) {
+            const unsigned value = stage == 6 ? preload.k[index] : preload.v[index];
+            readback << std::hex << std::setfill('0')
+                     << std::setw(2) << expected_layer
+                     << std::setw(2) << 0
+                     << std::setw(4) << 0
+                     << std::setw(2) << stage
+                     << std::setw(4) << index
+                     << std::setw(4) << value << '\n';
+        }
+    }
+    for (unsigned address = 128; address < 32768; ++address)
+        if (top.ace3_decoder_layer0_token_engine__DOT__cache__DOT__valid_mem[address])
+            throw std::runtime_error("semantic K/V import modified an unbound cache entry");
+    if (top.ace3_decoder_layer0_token_engine__DOT__context_len_q[0] != 1 ||
+        top.ace3_decoder_layer0_token_engine__DOT__context_len_q[1] != 0)
+        throw std::runtime_error("semantic K/V context metadata mismatch");
+    readback.close();
+    if (!readback) throw std::runtime_error("semantic K/V readback close failed");
 }
 template <typename T, size_t N>
 static T at(const std::array<T, N>& values, size_t index, const char* name) {
@@ -344,6 +442,10 @@ struct Harness {
         if (top.load_ready_o||top.start_ready_o||top.busy_o||top.done_valid_o) mismatch("async reset");
         tick(); tick(); top.rst_ni=1; drive(); top.eval();
     }
+    void preload_semantic_kv(const std::string& preload_path,
+                             const std::string& readback_path) {
+        import_semantic_kv(top, preload_path, readback_path, active_layer_index);
+    }
     void load(unsigned kind, unsigned token) {
         const uint64_t deadline=cycles+preload_timeout_cycles;
         for (unsigned index=0; index<896; ++index) {
@@ -570,9 +672,11 @@ int main(int argc, char** argv) {
         bool fail_after_raw=false;
         bool transaction=false;
         bool compact_build_self_test=false;
+        bool semantic_kv_preload_only=false;
         unsigned transaction_position=0;
         std::string transaction_input, transaction_rope, state_in, state_out;
         std::string transaction_metadata, savable_self_test;
+        std::string semantic_kv_preload, semantic_kv_readback;
         for(int i=1;i<argc;++i) {
             const std::string argument=argv[i];
             if(argument=="--vector-dir" && i+1<argc) dir=argv[++i];
@@ -603,6 +707,12 @@ int main(int argc, char** argv) {
                 savable_self_test=argv[++i];
             else if(argument=="--compact-build-self-test")
                 compact_build_self_test=true;
+            else if(argument=="--semantic-kv-preload" && i+1<argc)
+                semantic_kv_preload=argv[++i];
+            else if(argument=="--semantic-kv-readback" && i+1<argc)
+                semantic_kv_readback=argv[++i];
+            else if(argument=="--semantic-kv-preload-only")
+                semantic_kv_preload_only=true;
         }
         if(compact_build_self_test) {
             if(active_layer_index>23)
@@ -614,18 +724,39 @@ int main(int argc, char** argv) {
             run_savable_self_test(savable_self_test);
             return 0;
         }
+        if(semantic_kv_preload_only) {
+            if(active_layer_index>23 || semantic_kv_preload.empty() ||
+               semantic_kv_readback.empty() || transaction || !state_in.empty())
+                throw std::runtime_error("invalid semantic K/V preflight arguments");
+            Vace3_decoder_layer0_token_engine top;
+            savable_idle(top);
+            top.rst_ni=0; top.clk_i=0; top.eval();
+            savable_tick(top); savable_tick(top);
+            top.rst_ni=1; savable_tick(top);
+            import_semantic_kv(top, semantic_kv_preload, semantic_kv_readback,
+                               active_layer_index);
+            top.final();
+            std::cout << "DECODER_LAYER_TOKEN_ENGINE_SEMANTIC_KV_PRELOAD_PASS layer="
+                      << active_layer_index
+                      << " records=256 readback=exact context_len=1\n";
+            return 0;
+        }
         if(dir.empty() || raw_dir.empty())
             throw std::runtime_error("usage: --vector-dir PATH --raw-dir PATH");
         if(active_layer_index>23)
             throw std::runtime_error("layer index must be in [0,23]");
         if(!preload_timeout_cycles || !start_timeout_cycles)
             throw std::runtime_error("timeout cycles must be nonzero");
+        const bool semantic_kv = !semantic_kv_preload.empty() ||
+                                 !semantic_kv_readback.empty();
         if(transaction &&
            (transaction_position>=128 || transaction_input.empty() ||
             transaction_rope.empty() || state_out.empty() ||
             transaction_metadata.empty() ||
-            (transaction_position==0 && !state_in.empty()) ||
-            (transaction_position>0 && state_in.empty()) ||
+            (semantic_kv && (transaction_position != 1 || !state_in.empty() ||
+                             semantic_kv_preload.empty() || semantic_kv_readback.empty())) ||
+            (!semantic_kv && transaction_position==0 && !state_in.empty()) ||
+            (!semantic_kv && transaction_position>0 && state_in.empty()) ||
             state_in==state_out))
             throw std::runtime_error("invalid transaction arguments");
         cycles=stalls=failures=trace_count=final_count=done_count=0; checking=false;
@@ -638,6 +769,10 @@ int main(int argc, char** argv) {
         if (transaction) {
             if (transaction_position == 0) {
                 h.idle(); h.reset();
+                h.load(1,0); h.load(2,0);
+            } else if (semantic_kv) {
+                h.idle(); h.reset();
+                h.preload_semantic_kv(semantic_kv_preload, semantic_kv_readback);
                 h.load(1,0); h.load(2,0);
             } else {
                 h.restore_state(state_in);
@@ -665,7 +800,12 @@ int main(int argc, char** argv) {
                 << "\"trace_records\":" << trace_count << ","
                 << "\"final_records\":" << final_count << ","
                 << "\"done_records\":" << done_count << ","
-                << "\"natural_terminal\":true}\n";
+                << "\"natural_terminal\":true";
+            if (semantic_kv)
+                metadata << ",\"semantic_kv_preload\":true,"
+                         << "\"semantic_kv_records\":256,"
+                         << "\"semantic_kv_readback\":\"exact\"";
+            metadata << "}\n";
             metadata.close();
             if (!metadata)
                 throw std::runtime_error("transaction metadata close failed");

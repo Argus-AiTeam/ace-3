@@ -15,11 +15,16 @@ from position1_model24_causal_traversal import (
     LAYER_COUNT,
     PARENT_SCHEMA,
     TraversalError,
+    SEMANTIC_KV_SCHEMA,
     _bound_file_matches,
     _load_parent_kv,
     canonical_json,
+    hash_file,
+    parse_semantic_kv_payload,
     sha256,
+    validate_semantic_kv_preload,
     validate_parent_document,
+    write_json,
 )
 
 
@@ -109,6 +114,90 @@ class ParentKvImportNegativeTests(unittest.TestCase):
             expected, _, _ = _load_parent_kv(first, layer_index=0)
             with self.assertRaisesRegex(TraversalError, "substituted"):
                 _load_parent_kv(second, expected, layer_index=0)
+
+
+def write_semantic_payload(path: Path, *, layer: int = 0, position: int = 0) -> None:
+    rows = []
+    for index in range(128):
+        rows.append(f"{layer:02x}00{position:04x}06{index:04x}{index + 6:04x}\n")
+        rows.append(f"{layer:02x}00{position:04x}07{index:04x}{index + 7:04x}\n")
+    path.write_text("".join(rows), encoding="ascii", newline="")
+
+
+class SemanticKvPreloadTests(unittest.TestCase):
+    def mutate_rejects(self, mutate, message):
+        with tempfile.TemporaryDirectory() as directory:
+            path = Path(directory) / "preload.hex"
+            write_semantic_payload(path)
+            rows = path.read_text(encoding="ascii").splitlines(keepends=True)
+            mutate(rows)
+            path.write_text("".join(rows), encoding="ascii", newline="")
+            with self.assertRaisesRegex(TraversalError, message):
+                parse_semantic_kv_payload(path, 0)
+
+    def test_positive_exact_payload(self):
+        with tempfile.TemporaryDirectory() as directory:
+            path = Path(directory) / "preload.hex"
+            write_semantic_payload(path)
+            self.assertEqual(parse_semantic_kv_payload(path, 0)["elements_each"], 128)
+
+    def test_wrong_count(self):
+        self.mutate_rejects(lambda rows: rows.pop(), "count")
+
+    def test_reordered(self):
+        self.mutate_rejects(lambda rows: rows.__setitem__(slice(0, 2), rows[0:2][::-1]), "reordered")
+
+    def test_duplicated(self):
+        self.mutate_rejects(lambda rows: rows.__setitem__(2, rows[0]), "duplicated")
+
+    def test_cross_layer(self):
+        self.mutate_rejects(lambda rows: rows.__setitem__(0, "01" + rows[0][2:]), "cross-layer")
+
+    def test_wrong_position(self):
+        self.mutate_rejects(lambda rows: rows.__setitem__(0, rows[0][:4] + "0001" + rows[0][8:]), "position")
+
+    def test_tampered_payload_hash(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            payload = root / "layer00.hex"
+            manifest = root / "layer00.json"
+            write_semantic_payload(payload)
+            parent_kv = parse_semantic_kv_payload(payload, 0)
+            parent = {
+                "trace": {"bytes": 1, "sha256": "1" * 64},
+                "parent_kv": parent_kv,
+                "trusted_tip": {"kind": "test-tip", "layer_index": 0},
+            }
+            parent_document = {"model_binding": fixture()["model_binding"]}
+            document = {
+                "schema": SEMANTIC_KV_SCHEMA,
+                "model_binding": parent_document["model_binding"],
+                "parent_set_sha256": "2" * 64,
+                "layer_index": 0,
+                "cache_slot": 0,
+                "source_position": 0,
+                "execution_position": 1,
+                "execution_token": 2114,
+                "tensor_binding": {
+                    "key": "trace-stage-6-rotated-key-fp16",
+                    "value": "trace-stage-7-value-fp16",
+                    "ordering": "kv-head-major-dimension-minor",
+                },
+                "source_trace": parent["trace"],
+                "parent_kv": parent_kv,
+                "trusted_tip": parent["trusted_tip"],
+                "payload": {"path": payload.name, **hash_file(payload)},
+            }
+            write_json(manifest, document)
+            rows = payload.read_text(encoding="ascii").splitlines(keepends=True)
+            rows[-1] = rows[-1][:-5] + "ffff\n"
+            payload.write_text("".join(rows), encoding="ascii", newline="")
+            with self.assertRaisesRegex(TraversalError, "tampered"):
+                validate_semantic_kv_preload(
+                    manifest, payload, layer_index=0, parent=parent,
+                    parent_document=parent_document,
+                    parent_set_sha256="2" * 64,
+                )
 
 
 class HistoricalBuildFileBindingTests(unittest.TestCase):

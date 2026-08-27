@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Import sealed position-0 decoder states and execute token 2114 at position 1."""
+"""Import sealed position-0 semantic K/V and execute token 2114 at position 1."""
 
 from __future__ import annotations
 
@@ -8,6 +8,7 @@ import copy
 import gzip
 import hashlib
 import shutil
+import subprocess
 from pathlib import Path
 from typing import Any, Mapping
 
@@ -50,6 +51,7 @@ PARENT_SCHEMA = "ace3-position1-parent-set-v1"
 SELECTED_TOKEN = 2114
 POSITION = 1
 LAYER_COUNT = 24
+SEMANTIC_KV_SCHEMA = "ace3-semantic-kv-preload-v1"
 
 
 class TraversalError(RuntimeError):
@@ -122,6 +124,139 @@ def _load_parent_kv(
 
 def _trace_parent_kv(path: Path) -> dict[str, Any]:
     return _load_parent_kv(path)[0]
+
+
+def parse_semantic_kv_payload(path: Path, layer_index: int) -> dict[str, Any]:
+    lines = path.read_text(encoding="ascii").splitlines()
+    require(len(lines) == 256, "semantic K/V record count mismatch")
+    source_rows: dict[int, list[bytes]] = {6: [], 7: []}
+    for ordinal, line in enumerate(lines):
+        require(len(line) == 18, "semantic K/V record width mismatch")
+        try:
+            layer = int(line[0:2], 16)
+            slot = int(line[2:4], 16)
+            position = int(line[4:8], 16)
+            stage = int(line[8:10], 16)
+            index = int(line[10:14], 16)
+            value = int(line[14:18], 16)
+        except ValueError as error:
+            raise TraversalError("semantic K/V record is not hexadecimal") from error
+        require(layer == layer_index, "semantic K/V cross-layer mismatch")
+        require(slot == 0, "semantic K/V cache slot mismatch")
+        require(position == 0, "semantic K/V source position mismatch")
+        require(
+            stage == (6 if ordinal % 2 == 0 else 7)
+            and index == ordinal // 2,
+            "semantic K/V reordered or duplicated record",
+        )
+        source_rows[stage].append(
+            f"00{position:04x}{stage:02x}{index:04x}{value:04x}\n".encode("ascii")
+        )
+    return {
+        "k_sha256": sha256(b"".join(source_rows[6])),
+        "v_sha256": sha256(b"".join(source_rows[7])),
+        "elements_each": 128,
+        "format": "FP16",
+    }
+
+
+def write_semantic_kv_preload(
+    trace_path: Path,
+    destination: Path,
+    *,
+    layer_index: int,
+    parent: Mapping[str, Any],
+    parent_document: Mapping[str, Any],
+    parent_set_sha256: str,
+) -> tuple[Path, Path]:
+    _load_parent_kv(trace_path, parent["parent_kv"], layer_index)
+    payload_path = destination / f"layer{layer_index:02d}.hex"
+    manifest_path = destination / f"layer{layer_index:02d}.json"
+    require(not payload_path.exists() and not manifest_path.exists(), "semantic K/V preload already exists")
+    destination.mkdir(parents=True, exist_ok=True)
+    records = []
+    with gzip.open(trace_path, "rt", encoding="ascii", newline="") as source:
+        for line in source:
+            raw = line.rstrip("\n")
+            stage = int(raw[6:8], 16)
+            if stage in (6, 7):
+                records.append(
+                    f"{layer_index:02x}00{int(raw[2:6], 16):04x}{stage:02x}"
+                    f"{int(raw[8:12], 16):04x}{int(raw[12:16], 16):04x}\n"
+                )
+    payload_path.write_text("".join(records), encoding="ascii", newline="")
+    require(
+        parse_semantic_kv_payload(payload_path, layer_index) == parent["parent_kv"],
+        f"layer {layer_index} semantic K/V payload mismatch",
+    )
+    document = {
+        "schema": SEMANTIC_KV_SCHEMA,
+        "model_binding": parent_document["model_binding"],
+        "parent_set_sha256": parent_set_sha256,
+        "layer_index": layer_index,
+        "cache_slot": 0,
+        "source_position": 0,
+        "execution_position": POSITION,
+        "execution_token": SELECTED_TOKEN,
+        "tensor_binding": {
+            "key": "trace-stage-6-rotated-key-fp16",
+            "value": "trace-stage-7-value-fp16",
+            "ordering": "kv-head-major-dimension-minor",
+        },
+        "source_trace": parent["trace"],
+        "parent_kv": parent["parent_kv"],
+        "trusted_tip": parent["trusted_tip"],
+        "payload": {"path": payload_path.name, **hash_file(payload_path)},
+    }
+    write_json(manifest_path, document)
+    validate_semantic_kv_preload(
+        manifest_path,
+        payload_path,
+        layer_index=layer_index,
+        parent=parent,
+        parent_document=parent_document,
+        parent_set_sha256=parent_set_sha256,
+    )
+    return manifest_path, payload_path
+
+
+def validate_semantic_kv_preload(
+    manifest_path: Path,
+    payload_path: Path,
+    *,
+    layer_index: int,
+    parent: Mapping[str, Any],
+    parent_document: Mapping[str, Any],
+    parent_set_sha256: str,
+) -> dict[str, Any]:
+    document = load_json(manifest_path, "semantic K/V preload manifest")
+    require(manifest_path.read_bytes() == canonical_json(document), "semantic K/V manifest is not canonical")
+    require(
+        document.get("schema") == SEMANTIC_KV_SCHEMA
+        and document.get("model_binding") == parent_document["model_binding"]
+        and document.get("parent_set_sha256") == parent_set_sha256
+        and document.get("layer_index") == layer_index
+        and document.get("cache_slot") == 0
+        and document.get("source_position") == 0
+        and document.get("execution_position") == POSITION
+        and document.get("execution_token") == SELECTED_TOKEN
+        and document.get("source_trace") == parent["trace"]
+        and document.get("parent_kv") == parent["parent_kv"]
+        and document.get("trusted_tip") == parent["trusted_tip"],
+        f"layer {layer_index} semantic K/V binding mismatch",
+    )
+    payload = document.get("payload")
+    require(
+        isinstance(payload, Mapping)
+        and payload.get("path") == payload_path.name
+        and hash_file(payload_path) == {key: payload.get(key) for key in ("bytes", "sha256")},
+        f"layer {layer_index} tampered semantic K/V payload",
+    )
+    require(
+        parse_semantic_kv_payload(payload_path, layer_index) == parent["parent_kv"],
+        f"layer {layer_index} substituted semantic K/V values",
+    )
+    return document
 
 
 def _bound_file_matches(
@@ -362,21 +497,6 @@ def seal_parent_snapshot(
     destination.chmod(0o555)
 
 
-def _stage_import(sealed: Path, execution: Path, parent_document: Mapping[str, Any]) -> None:
-    for record in parent_document["layers"]:
-        layer = record["layer_index"]
-        for relative in (
-            f"states/layer{layer:02d}/position001/state",
-            f"states/layer{layer:02d}/position001/envelope.json",
-            f"transactions/position000/layer{layer:02d}/transaction.json",
-            f"transactions/position000/layer{layer:02d}/inputs.hex",
-            f"transactions/position000/layer{layer:02d}/raw/final.hex",
-        ):
-            target = execution / relative
-            target.parent.mkdir(parents=True, exist_ok=True)
-            shutil.copy2(sealed / relative, target)
-
-
 def load_feedback(feedback_dir: Path, contract: Mapping[str, Any]) -> np.ndarray:
     bindings = contract["sealed_feedback"]
     files = {
@@ -424,6 +544,99 @@ def _negative_checks(document: Mapping[str, Any], expected_sha256: str) -> None:
         raise TraversalError("negative parent validation unexpectedly passed")
 
 
+def preflight(
+    repository_root: Path,
+    source_root: Path,
+    parent_compiled_dir: Path,
+    compiled_dir: Path,
+    checkpoint_path: Path,
+    tensor_map_path: Path,
+    feedback_dir: Path,
+    contract_path: Path,
+    output_dir: Path,
+) -> dict[str, Any]:
+    require(not output_dir.exists(), "semantic K/V preflight directory already exists")
+    require(hash_file(checkpoint_path)["sha256"] == CHECKPOINT_SHA256, "checkpoint mismatch")
+    require(hash_file(tensor_map_path)["sha256"] == TENSOR_MAP_SHA256, "tensor map mismatch")
+    _authenticate_tensor_map(tensor_map_path)
+    contract = load_contract(contract_path)
+    parent_document = collect_parent_document(
+        repository_root, source_root, parent_compiled_dir,
+        contract["parent_import"]["build_manifest_sha256"],
+    )
+    parent_set_sha256 = contract["parent_import"]["parent_set_sha256"]
+    validate_parent_document(parent_document, parent_set_sha256)
+    _negative_checks(parent_document, parent_set_sha256)
+    load_feedback(feedback_dir, contract)
+    _, first_voice_contract = contract_binding(repository_root)
+    build_manifest, build_sha256 = authenticate_build(
+        repository_root, compiled_dir, first_voice_contract
+    )
+    require(
+        build_sha256 == contract["execution_build"]["build_manifest_sha256"],
+        "corrected execution build mismatch",
+    )
+    binary_hashes = compiled_binary_hashes(build_manifest)
+
+    output_dir.mkdir(parents=True)
+    sealed = output_dir / "sealed_parents"
+    seal_parent_snapshot(source_root, sealed, parent_document)
+    preload_dir = output_dir / "semantic_kv"
+    layers = []
+    for layer_index, parent in enumerate(parent_document["layers"]):
+        trace_path = sealed / f"transactions/position000/layer{layer_index:02d}/raw/trace.hex.gz"
+        manifest_path, payload_path = write_semantic_kv_preload(
+            trace_path,
+            preload_dir,
+            layer_index=layer_index,
+            parent=parent,
+            parent_document=parent_document,
+            parent_set_sha256=parent_set_sha256,
+        )
+        readback_path = preload_dir / f"layer{layer_index:02d}.readback.hex"
+        log_path = preload_dir / f"layer{layer_index:02d}.preflight.log"
+        command = [
+            str(compiled_dir / f"layer{layer_index}/bin/Vace3_decoder_layer0_token_engine"),
+            "--layer-index", str(layer_index),
+            "--semantic-kv-preload", str(payload_path),
+            "--semantic-kv-readback", str(readback_path),
+            "--semantic-kv-preload-only",
+        ]
+        with log_path.open("wb") as log:
+            completed = subprocess.run(
+                command, cwd=repository_root, stdout=log,
+                stderr=subprocess.STDOUT, check=False,
+            )
+        require(completed.returncode == 0, f"layer {layer_index} semantic K/V preflight failed")
+        require(
+            readback_path.read_bytes() == payload_path.read_bytes()
+            and parse_semantic_kv_payload(readback_path, layer_index) == parent["parent_kv"],
+            f"layer {layer_index} semantic K/V readback mismatch",
+        )
+        layers.append({
+            "layer_index": layer_index,
+            "binary_sha256": binary_hashes[layer_index],
+            "manifest": hash_file(manifest_path),
+            "payload": hash_file(payload_path),
+            "readback": hash_file(readback_path),
+            "log": hash_file(log_path),
+            "exact_readback": True,
+        })
+    result = {
+        "schema": "ace3-semantic-kv-preflight-v1",
+        "model_binding": parent_document["model_binding"],
+        "parent_set_sha256": parent_set_sha256,
+        "execution_build_manifest_sha256": build_sha256,
+        "selected_token": SELECTED_TOKEN,
+        "source_position": 0,
+        "execution_position": POSITION,
+        "layers": layers,
+        "official_traversal_consumed": False,
+    }
+    write_json(output_dir / "result.json", result)
+    return result
+
+
 def execute(
     repository_root: Path,
     source_root: Path,
@@ -467,7 +680,7 @@ def execute(
     sealed = output_dir / "sealed_parents"
     seal_parent_snapshot(source_root, sealed, parent_document)
     execution = output_dir / "execution"
-    _stage_import(sealed, execution, parent_document)
+    preload_dir = output_dir / "semantic_kv"
 
     tensor_map = _authenticate_tensor_map(tensor_map_path)
     _, first_voice_contract = contract_binding(repository_root)
@@ -477,7 +690,7 @@ def execute(
         "corrected execution build mismatch",
     )
     binary_hashes = compiled_binary_hashes(build_manifest)
-    trusted_tips = {record["layer_index"]: record["trusted_tip"] for record in parent_document["layers"]}
+    trusted_tips: dict[int, dict[str, Any]] = {}
 
     torch.set_num_threads(8)
     torch.use_deterministic_algorithms(True)
@@ -507,6 +720,15 @@ def execute(
         )
         reference_state.reference_k = reference_k
         reference_state.reference_v = reference_v
+        preload_manifest, preload_payload = write_semantic_kv_preload(
+            sealed / f"transactions/position000/layer{layer_index:02d}/raw/trace.hex.gz",
+            preload_dir,
+            layer_index=layer_index,
+            parent=parent,
+            parent_document=parent_document,
+            parent_set_sha256=expected_parent_sha,
+        )
+        preload_readback = preload_dir / f"layer{layer_index:02d}.readback.hex"
         tensor_manifest = _serialize_layer_tensors(
             checkpoint_path, tensor_map, layer_index, vector_workspace, tensor_manifests
         )
@@ -523,14 +745,19 @@ def execute(
                 build_manifest_sha256=build_sha,
                 binary_sha256=binary_hashes[layer_index],
                 trusted_tips=trusted_tips,
-                restore_build_manifest_sha256=parent_document["build_manifest_sha256"],
-                restore_binary_sha256=parent["binary_sha256"],
+                semantic_kv_preload_path=preload_payload,
+                semantic_kv_readback_path=preload_readback,
             )
         finally:
             shutil.rmtree(vector_workspace, ignore_errors=True)
         reference_hidden = _reference_layer_step(
             reference_state, reference_hidden.unsqueeze(0), POSITION
         )[0]
+        require(
+            preload_readback.read_bytes() == preload_payload.read_bytes()
+            and parse_semantic_kv_payload(preload_readback, layer_index) == parent["parent_kv"],
+            f"layer {layer_index} semantic K/V readback mismatch",
+        )
         comparison = _comparison(hidden_bits, reference_hidden)
         require(
             comparison["max_abs_error"] <= TERMINAL_HIDDEN_ABSOLUTE_TOLERANCE,
@@ -538,10 +765,13 @@ def execute(
         )
         layers.append({
             "layer_index": layer_index,
-            "restored_parent_state": parent["state"],
-            "restored_parent_envelope": parent["envelope"],
-            "restored_parent_kv": parent["parent_kv"],
-            "restored_parent_binary_sha256": parent["binary_sha256"],
+            "semantic_parent_state_binding": parent["state"],
+            "semantic_parent_envelope_binding": parent["envelope"],
+            "semantic_parent_kv": parent["parent_kv"],
+            "semantic_parent_binary_sha256": parent["binary_sha256"],
+            "semantic_kv_manifest": hash_file(preload_manifest),
+            "semantic_kv_payload": hash_file(preload_payload),
+            "semantic_kv_readback": hash_file(preload_readback),
             "binary_sha256": binary_hashes[layer_index],
             "tensor_manifest": tensor_manifest,
             "transaction": transaction,
@@ -593,11 +823,27 @@ def main() -> None:
     run = sub.add_parser("run")
     for name in ("repository-root", "source-root", "parent-compiled-dir", "compiled-dir", "checkpoint", "tensor-map", "feedback-dir", "contract", "output-dir"):
         run.add_argument(f"--{name}", type=Path, required=True)
+    check = sub.add_parser("preflight")
+    for name in ("repository-root", "source-root", "parent-compiled-dir", "compiled-dir", "checkpoint", "tensor-map", "feedback-dir", "contract", "output-dir"):
+        check.add_argument(f"--{name}", type=Path, required=True)
     verify = sub.add_parser("verify")
     verify.add_argument("--result", type=Path, required=True)
     verify.add_argument("--contract", type=Path, required=True)
     args = parser.parse_args()
-    if args.command == "run":
+    if args.command == "preflight":
+        result = preflight(
+            args.repository_root.resolve(strict=True),
+            args.source_root.resolve(strict=True),
+            args.parent_compiled_dir.resolve(strict=True),
+            args.compiled_dir.resolve(strict=True),
+            args.checkpoint.resolve(strict=True),
+            args.tensor_map.resolve(strict=True),
+            args.feedback_dir.resolve(strict=True),
+            args.contract.resolve(strict=True),
+            args.output_dir.resolve(),
+        )
+        print(f"POSITION1_SEMANTIC_KV_PREFLIGHT_PASS layers={len(result['layers'])} readback=exact traversal_consumed=0")
+    elif args.command == "run":
         result = execute(
             args.repository_root.resolve(strict=True),
             args.source_root.resolve(strict=True),

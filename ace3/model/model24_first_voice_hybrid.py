@@ -1363,6 +1363,8 @@ def _run_transaction(
     trusted_tips: dict[int, dict[str, Any]],
     restore_build_manifest_sha256: str | None = None,
     restore_binary_sha256: str | None = None,
+    semantic_kv_preload_path: Path | None = None,
+    semantic_kv_readback_path: Path | None = None,
 ) -> tuple[np.ndarray, dict[str, Any]]:
     transaction_dir = runtime_dir / f"position{position:03d}" / f"layer{layer_index:02d}"
     raw_dir = transaction_dir / "raw"
@@ -1375,8 +1377,23 @@ def _run_transaction(
         layer_index,
         position,
     )
+    semantic_kv = (
+        semantic_kv_preload_path is not None or semantic_kv_readback_path is not None
+    )
+    require(
+        not semantic_kv
+        or (
+            position == 1
+            and semantic_kv_preload_path is not None
+            and semantic_kv_readback_path is not None
+            and restore_build_manifest_sha256 is None
+            and restore_binary_sha256 is None
+        ),
+        "invalid_semantic_kv_preload",
+        "semantic K/V preload is complete, position-1-only, and mutually exclusive with raw restore",
+    )
     previous = None
-    if position:
+    if position and not semantic_kv:
         previous = validate_state_envelope(
             envelope_path,
             state_path,
@@ -1421,7 +1438,16 @@ def _run_transaction(
         "--progress-interval",
         "1000000",
     ]
-    if position:
+    if semantic_kv:
+        command.extend(
+            (
+                "--semantic-kv-preload",
+                str(semantic_kv_preload_path),
+                "--semantic-kv-readback",
+                str(semantic_kv_readback_path),
+            )
+        )
+    elif position:
         command.extend(("--state-in", str(state_path)))
     log_path = transaction_dir / "run.log"
     with log_path.open("wb") as log:
@@ -1532,6 +1558,16 @@ def _run_transaction(
         "metadata": hash_file(metadata_path),
         "natural_terminal": True,
     }
+    if semantic_kv:
+        require(
+            metadata.get("semantic_kv_preload") is True
+            and metadata.get("semantic_kv_records") == 256
+            and metadata.get("semantic_kv_readback") == "exact",
+            "rtl_transaction_failed",
+            "RTL transaction semantic K/V metadata mismatch",
+        )
+        record["semantic_kv_preload"] = hash_file(semantic_kv_preload_path)
+        record["semantic_kv_readback"] = hash_file(semantic_kv_readback_path)
     return output_bits, record
 
 
