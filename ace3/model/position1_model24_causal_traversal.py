@@ -919,6 +919,52 @@ def verify_result(path: Path, contract_path: Path) -> dict[str, Any]:
     layers = result.get("layers")
     require(isinstance(layers, list) and [x.get("layer_index") for x in layers] == list(range(LAYER_COUNT)), "result layer order mismatch")
     require(result.get("natural_terminal_layers") == LAYER_COUNT, "result natural terminal mismatch")
+    for layer_index, layer in enumerate(layers):
+        transaction_dir = (
+            path.parent
+            / f"execution/transactions/position{POSITION:03d}/layer{layer_index:02d}"
+        )
+        metadata_path = transaction_dir / "transaction.json"
+        metadata = load_json(
+            metadata_path, f"preserved layer {layer_index} transaction"
+        )
+        require(
+            hash_file(metadata_path) == layer.get("transaction", {}).get("metadata")
+            and metadata.get("schema_version") == 1
+            and metadata.get("kind") == "ace3_decoder_verilator_transaction"
+            and metadata.get("layer_index") == layer_index
+            and metadata.get("position") == POSITION
+            and metadata.get("next_position") == POSITION + 1
+            and metadata.get("cache_slot") == 0
+            and type(metadata.get("trace_records")) is int
+            and metadata["trace_records"] > 0
+            and metadata.get("final_records") == HIDDEN_SIZE
+            and metadata.get("done_records") == 1
+            and metadata.get("natural_terminal") is True,
+            f"result layer {layer_index} preserved transaction mismatch",
+        )
+        terminal_path = transaction_dir / "raw/terminal.txt"
+        terminal_parts: list[str] = []
+        try:
+            terminal_parts = terminal_path.read_text(encoding="ascii").split()
+            terminal = dict(part.split("=", 1) for part in terminal_parts)
+        except (OSError, UnicodeError, ValueError):
+            terminal = {}
+        require(
+            len(terminal_parts) == len(terminal) == 8
+            and terminal
+            == {
+                "schema": "ace3_decoder_transaction_raw_v1",
+                "natural_terminal": "1",
+                "exit_code": "0",
+                "layer_index": str(layer_index),
+                "position": str(POSITION),
+                "trace_count": str(metadata["trace_records"]),
+                "final_count": str(HIDDEN_SIZE),
+                "done_count": "1",
+            },
+            f"result layer {layer_index} natural terminal evidence mismatch",
+        )
     require(
         result.get("hard_gate")
         == "embedding-seeded contract-precision cumulative reference only",

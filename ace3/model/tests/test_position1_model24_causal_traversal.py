@@ -40,6 +40,77 @@ from position1_model24_causal_traversal import (
 
 
 class LayerReferencePrecisionTests(unittest.TestCase):
+    def write_result_fixture(self, directory: Path) -> tuple[Path, Path, dict]:
+        contract_path = MODEL.parent / "contracts/position1_model24_causal_traversal.json"
+        contract = json.loads(contract_path.read_text(encoding="ascii"))
+        artifact = {"bytes": 1, "sha256": "a" * 64}
+        layers = []
+        for layer_index in range(LAYER_COUNT):
+            transaction_dir = (
+                directory
+                / f"execution/transactions/position{POSITION:03d}/layer{layer_index:02d}"
+            )
+            transaction_dir.mkdir(parents=True)
+            metadata_path = transaction_dir / "transaction.json"
+            metadata = {
+                "schema_version": 1,
+                "kind": "ace3_decoder_verilator_transaction",
+                "layer_index": layer_index,
+                "position": POSITION,
+                "next_position": POSITION + 1,
+                "cache_slot": 0,
+                "trace_records": 23352,
+                "final_records": 896,
+                "done_records": 1,
+                "natural_terminal": True,
+            }
+            write_json(metadata_path, metadata)
+            terminal_path = transaction_dir / "raw/terminal.txt"
+            terminal_path.parent.mkdir(parents=True)
+            terminal_path.write_text(
+                "schema=ace3_decoder_transaction_raw_v1 natural_terminal=1 "
+                f"exit_code=0 layer_index={layer_index} position={POSITION} "
+                "trace_count=23352 final_count=896 done_count=1\n",
+                encoding="ascii",
+            )
+            layers.append({
+                "layer_index": layer_index,
+                "semantic_kv_payload": artifact,
+                "semantic_kv_readback": artifact,
+                "transaction": {
+                    "metadata": hash_file(metadata_path),
+                    "natural_terminal": True,
+                    "semantic_kv_preload": artifact,
+                    "semantic_kv_readback": artifact,
+                },
+                "independent_reference": {
+                    "seed": "selected token embedding; prior RTL hidden is never consumed",
+                    "inter_layer_boundary": "independent binary16 round after every reference layer",
+                    "absolute_tolerance": 0.125,
+                    "max_abs_error": 0.125,
+                    "within_tolerance": True,
+                    "gating": True,
+                },
+                "continuous_float64_reference": {"gating": False},
+                "local_reference": {"gating": False},
+            })
+        result = {
+            "schema": SCHEMA,
+            "selected_token": SELECTED_TOKEN,
+            "position": POSITION,
+            "checkpoint_sha256": CHECKPOINT_SHA256,
+            "tensor_map_sha256": TENSOR_MAP_SHA256,
+            "build_manifest_sha256": contract["execution_build"]["build_manifest_sha256"],
+            "parent_build_manifest_sha256": contract["parent_import"]["build_manifest_sha256"],
+            "parent_set_sha256": contract["parent_import"]["parent_set_sha256"],
+            "layers": layers,
+            "natural_terminal_layers": LAYER_COUNT,
+            "hard_gate": "embedding-seeded contract-precision cumulative reference only",
+        }
+        result_path = directory / "result.json"
+        write_json(result_path, result)
+        return result_path, contract_path, result
+
     def test_hard_gate_uses_embedding_seeded_contract_precision(self):
         state = SimpleNamespace(
             reference_k=torch.empty((0, 2, 64), dtype=torch.float64),
@@ -144,52 +215,50 @@ class LayerReferencePrecisionTests(unittest.TestCase):
         self.assertEqual(local["max_abs_error"], 0.0)
 
     def test_result_rejects_prior_rtl_local_gate_substitution(self):
-        contract_path = MODEL.parent / "contracts/position1_model24_causal_traversal.json"
-        contract = json.loads(contract_path.read_text(encoding="ascii"))
-        artifact = {"bytes": 1, "sha256": "a" * 64}
-        layers = []
-        for layer_index in range(LAYER_COUNT):
-            layers.append({
-                "layer_index": layer_index,
-                "semantic_kv_payload": artifact,
-                "semantic_kv_readback": artifact,
-                "transaction": {
-                    "natural_terminal": True,
-                    "semantic_kv_preload": artifact,
-                    "semantic_kv_readback": artifact,
-                },
-                "independent_reference": {
-                    "seed": "selected token embedding; prior RTL hidden is never consumed",
-                    "inter_layer_boundary": "independent binary16 round after every reference layer",
-                    "absolute_tolerance": 0.125,
-                    "max_abs_error": 0.125,
-                    "within_tolerance": True,
-                    "gating": True,
-                },
-                "continuous_float64_reference": {"gating": False},
-                "local_reference": {"gating": False},
-            })
-        result = {
-            "schema": SCHEMA,
-            "selected_token": SELECTED_TOKEN,
-            "position": POSITION,
-            "checkpoint_sha256": CHECKPOINT_SHA256,
-            "tensor_map_sha256": TENSOR_MAP_SHA256,
-            "build_manifest_sha256": contract["execution_build"]["build_manifest_sha256"],
-            "parent_build_manifest_sha256": contract["parent_import"]["build_manifest_sha256"],
-            "parent_set_sha256": contract["parent_import"]["parent_set_sha256"],
-            "layers": layers,
-            "natural_terminal_layers": LAYER_COUNT,
-            "hard_gate": "embedding-seeded contract-precision cumulative reference only",
-        }
         with tempfile.TemporaryDirectory() as directory:
-            result_path = Path(directory) / "result.json"
-            write_json(result_path, result)
+            result_path, contract_path, result = self.write_result_fixture(
+                Path(directory)
+            )
             verify_result(result_path, contract_path)
-            layers[-1]["independent_reference"]["gating"] = False
-            layers[-1]["local_reference"]["gating"] = True
+            result["layers"][-1]["independent_reference"]["gating"] = False
+            result["layers"][-1]["local_reference"]["gating"] = True
             write_json(result_path, result)
             with self.assertRaisesRegex(TraversalError, "oracle"):
+                verify_result(result_path, contract_path)
+
+    def test_result_rejects_preserved_transaction_terminal_tamper(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            result_path, contract_path, result = self.write_result_fixture(root)
+            metadata_path = (
+                root / "execution/transactions/position001/layer23/transaction.json"
+            )
+            metadata = json.loads(metadata_path.read_text(encoding="ascii"))
+            for field, bad_value in (("final_records", 895), ("done_records", 0)):
+                with self.subTest(field=field):
+                    tampered = dict(metadata)
+                    tampered[field] = bad_value
+                    write_json(metadata_path, tampered)
+                    result["layers"][23]["transaction"]["metadata"] = hash_file(
+                        metadata_path
+                    )
+                    write_json(result_path, result)
+                    with self.assertRaisesRegex(TraversalError, "preserved transaction"):
+                        verify_result(result_path, contract_path)
+            write_json(metadata_path, metadata)
+            result["layers"][23]["transaction"]["metadata"] = hash_file(metadata_path)
+            write_json(result_path, result)
+            terminal_path = (
+                root
+                / "execution/transactions/position001/layer23/raw/terminal.txt"
+            )
+            terminal_path.write_text(
+                terminal_path.read_text(encoding="ascii").replace(
+                    "natural_terminal=1", "natural_terminal=0"
+                ),
+                encoding="ascii",
+            )
+            with self.assertRaisesRegex(TraversalError, "natural terminal evidence"):
                 verify_result(result_path, contract_path)
 
 
