@@ -925,6 +925,15 @@ def authenticate_build(
     return manifest, sha256_bytes(manifest_payload)
 
 
+def compiled_binary_hashes(
+    build_manifest: Mapping[str, Any],
+) -> dict[int, str]:
+    return {
+        record["layer_index"]: record["binary"]["sha256"]
+        for record in build_manifest["layers"]
+    }
+
+
 def state_record_paths(
     states_dir: Path,
     layer_index: int,
@@ -1688,10 +1697,7 @@ def execute(
         compiled_dir,
         contract_record,
     )
-    binary_hashes = {
-        record["layer_index"]: record["sha256"]
-        for record in build_manifest["layers"]
-    }
+    binary_hashes = compiled_binary_hashes(build_manifest)
 
     output_dir.mkdir(parents=True)
     vector_workspace = output_dir / "vector_workspace"

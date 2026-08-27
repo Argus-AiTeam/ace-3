@@ -35,6 +35,7 @@ from model24_first_voice_hybrid import (  # noqa: E402
     build_compact_layer,
     canonical_json,
     compact_layer_manifest_path,
+    compiled_binary_hashes,
     _compact_trace,
     contract_binding,
     hash_file,
@@ -344,6 +345,22 @@ class Model24FirstVoiceHybridTests(unittest.TestCase):
         self.assertEqual(
             raised.exception.details["path"],
             str(self.work / "build_manifest.json"),
+        )
+
+    def test_compiled_binary_hashes_use_nested_binary_record(self) -> None:
+        digest = "a" * 64
+        self.assertEqual(
+            compiled_binary_hashes(
+                {
+                    "layers": [
+                        {
+                            "layer_index": 0,
+                            "binary": {"sha256": digest},
+                        }
+                    ]
+                }
+            ),
+            {0: digest},
         )
 
     def test_valid_retained_state_chain_is_accepted(self) -> None:
