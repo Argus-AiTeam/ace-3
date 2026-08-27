@@ -46,6 +46,7 @@ module ace3_streaming_tied_lm_head_topk_tb;
 
     integer failures;
     integer four_state_probes;
+    integer negative_underflow_probes;
     integer logit_count;
     integer top_count;
     reg previous_logit_stall;
@@ -247,6 +248,7 @@ module ace3_streaming_tied_lm_head_topk_tb;
     initial begin
         failures = 0;
         four_state_probes = 0;
+        negative_underflow_probes = 0;
         logit_count = 0;
         top_count = 0;
         previous_logit_stall = 1'b0;
@@ -260,14 +262,19 @@ module ace3_streaming_tied_lm_head_topk_tb;
         accept_start();
         send_hidden(0, 16'h3c00, 0);
         send_hidden(1, 16'h3c00, 0);
-        send_hidden(2, 16'h0000, 0);
+        send_hidden(2, 16'h0001, 0);
         send_hidden(3, 16'h0000, 1);
 
         send_row(0, 16'h3c00, 16'h0000, 16'h0000, 16'h0000, 16'h3c00);
         send_row(1, 16'h0000, 16'h3c00, 16'h0000, 16'h0000, 16'h3c00);
         send_row(2, 16'h3c00, 16'h3c00, 16'h0000, 16'h0000, 16'h4000);
         send_row(3, 16'hbc00, 16'h0000, 16'h0000, 16'h0000, 16'hbc00);
-        send_row(4, 16'h3800, 16'h3800, 16'h0000, 16'h0000, 16'h3c00);
+        send_row(4, 16'h0000, 16'h0000, 16'h8001, 16'h0000, 16'h8000);
+        negative_underflow_probes = negative_underflow_probes + 1;
+        if (held_accumulator !== -96'sd1) begin
+            $display("NEGATIVE_UNDERFLOW_ACCUMULATOR_FAIL got=%h", held_accumulator);
+            failures = failures + 1;
+        end
 
         while (top_valid !== 1'b1) @(negedge clk);
         repeat (TOP_K) begin
@@ -404,9 +411,11 @@ module ace3_streaming_tied_lm_head_topk_tb;
         end
 
         if ((failures == 0) && (logit_count == VOCAB_SIZE) &&
-            (top_count == TOP_K) && (four_state_probes == 2)) begin
-            $display("STREAMING_LM_HEAD_PROTOCOL_PASS logits=%0d top_k=%0d four_state=%0d",
-                     logit_count, top_count, four_state_probes);
+            (top_count == TOP_K) && (four_state_probes == 2) &&
+            (negative_underflow_probes == 1)) begin
+            $display("STREAMING_LM_HEAD_PROTOCOL_PASS logits=%0d top_k=%0d four_state=%0d negative_underflow=%0d",
+                     logit_count, top_count, four_state_probes,
+                     negative_underflow_probes);
             $finish;
         end
         $fatal(1, "STREAMING_LM_HEAD_PROTOCOL_FAIL failures=%0d logits=%0d top=%0d",

@@ -117,6 +117,7 @@ module ace3_streaming_tied_lm_head_topk #(
     wire signed [81:0] product_w;
     wire signed [95:0] product_extended_w;
     wire signed [95:0] accumulated_w;
+    wire [15:0] rounded_logit_raw_w;
     wire [15:0] rounded_logit_w;
     wire rounded_saturation_w;
     wire signed [40:0] held_logit_q24_w;
@@ -216,9 +217,14 @@ module ace3_streaming_tied_lm_head_topk #(
         .ACC_WIDTH(96)
     ) round_logit (
         .fixed_i(accumulated_w),
-        .f16_o(rounded_logit_w),
+        .f16_o(rounded_logit_raw_w),
         .saturation_o(rounded_saturation_w)
     );
+
+    assign rounded_logit_w =
+        ((rounded_logit_raw_w[14:0] == 15'd0) && accumulated_w[95])
+            ? 16'h8000
+            : rounded_logit_raw_w;
 
     ace3_fp16_to_q24 decode_held_logit (
         .f16_i(logit_f16_q),
