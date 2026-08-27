@@ -2127,3 +2127,37 @@ generation-feedback-failure-gate: generation-feedback-official-run
 	@test ! -e $(GENERATION_FEEDBACK_DIR)/failure-comparison.json
 	@! grep -E 'oracle\.json|oracle_embedding\.hex' $(GENERATION_FEEDBACK_DIR)/failure-gate.trace
 	@printf '%s\n' 'GENERATION_FEEDBACK_FAILURE_GATE_PASS partial_feedback=8 natural_terminal=0 oracle_opened=0 report_created=0'
+
+POSITION1_CAUSAL_DIR := $(BUILD_DIR)/position1_model24_causal
+POSITION1_CAUSAL_SCRIPT := $(ROOT)/ace3/model/position1_model24_causal_traversal.py
+POSITION1_CAUSAL_CONTRACT := $(ROOT)/ace3/contracts/position1_model24_causal_traversal.json
+POSITION1_PARENT_ROOT ?= /run/user/1000/argus-ace3-tmp/first-genuine-dialogue-v2
+POSITION1_PARENT_COMPILED_DIR ?= /run/user/1000/argus-ace3-retained/model24_first_voice_hybrid/compiled
+POSITION1_COMPILED_DIR ?= $(BUILD_DIR)/position1_model24_accurate_silu_compiled
+POSITION1_CHECKPOINT ?= $(ROOT)/model24_execution_vectors/model.safetensors
+
+.PHONY: position1-model24-causal-traversal position1-model24-causal-tests position1-model24-causal-verification
+position1-model24-causal-tests:
+	@$(PYTHON) -m json.tool $(POSITION1_CAUSAL_CONTRACT) >/dev/null
+	@$(PYTHON) -m py_compile $(POSITION1_CAUSAL_SCRIPT) $(ROOT)/ace3/model/tests/test_position1_model24_causal_traversal.py
+	@cd $(ROOT) && $(PYTHON) -m unittest ace3/model/tests/test_position1_model24_causal_traversal.py
+
+position1-model24-causal-verification:
+	@$(RM) -r $(POSITION1_CAUSAL_DIR)
+	@cd $(ROOT) && $(PYTHON) $(POSITION1_CAUSAL_SCRIPT) run \
+		--repository-root $(ROOT) \
+		--source-root $(POSITION1_PARENT_ROOT) \
+		--parent-compiled-dir $(POSITION1_PARENT_COMPILED_DIR) \
+		--compiled-dir $(POSITION1_COMPILED_DIR) \
+		--checkpoint $(POSITION1_CHECKPOINT) \
+		--tensor-map $(MODEL24_TENSOR_MAP) \
+		--feedback-dir $(GENERATION_FEEDBACK_DIR) \
+		--contract $(POSITION1_CAUSAL_CONTRACT) \
+		--output-dir $(POSITION1_CAUSAL_DIR)
+	@cd $(ROOT) && $(PYTHON) $(POSITION1_CAUSAL_SCRIPT) verify \
+		--result $(POSITION1_CAUSAL_DIR)/result.json \
+		--contract $(POSITION1_CAUSAL_CONTRACT)
+
+position1-model24-causal-traversal: position1-model24-causal-tests \
+	position1-model24-causal-verification
+	@printf '%s\n' 'POSITION1_MODEL24_CAUSAL_PASS token=2114 position=1 layers=24 restored_parents=24 kv=FP16 oracle=independent lm_head=not_rerun dialogue=not_run synthesis=not_run ppa=not_measured fpga=not_run latency=not_measured'

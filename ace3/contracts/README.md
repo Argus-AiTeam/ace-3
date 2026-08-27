@@ -37,3 +37,9 @@ explicit runtime limitation rather than a passing numerical claim.
 completion, checkpoint, terminal, and fail-closed sequencing boundary. It does
 not extend the numerical decoder claim beyond the separately verified,
 layer-indexed engines.
+`position1_model24_causal_traversal.json` pins the operator-designated ordered
+set of 24 post-position-0 Verilator states, the historical parent binaries, the
+corrected child binaries, and the sealed token-2114 feedback evidence used for
+a position-1 restore traversal.
+Its independent checkpoint oracle is seeded from each matching authenticated
+position-0 FP16 K/V trace rather than from an empty cache.

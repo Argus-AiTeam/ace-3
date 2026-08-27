@@ -35,7 +35,12 @@ The arithmetic-free `ace3_model24_layer_controller` launches one reusable layer
 boundary in strict index order from 0 through 23, retaining every checkpoint
 until acceptance and allowing terminal completion only after layer 23. The
 controller-driven cascade uses separately compiled decoder instances; it is not
-a monolithic controller-plus-decoder RTL image. Layers 3 through 23 select the
-range-reduced exponential SiLU profile while layers 0 through 2 preserve their
-reviewed rational-profile hashes. The tied language-model head, dialogue,
-synthesis, PPA, and FPGA behavior remain outside this claim.
+a monolithic controller-plus-decoder RTL image. All 24 indexed layers select
+the range-reduced exponential SiLU profile. The tied language-model head,
+dialogue, synthesis, PPA, and FPGA behavior remain outside this claim.
+The position-1 causal traversal reuses the existing indexed decoder RTL without
+changing its public ports. Its Verilator `--savable` image is restored only
+after checkpoint, binary, layer, position, envelope, state, and parent K/V
+lineage authenticate against the pinned ordered parent set.
+The independent reference imports the same layer-indexed inherited K/V values
+before evaluating position 1; it does not regenerate position 0.

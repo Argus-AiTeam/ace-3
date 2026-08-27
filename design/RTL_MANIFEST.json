@@ -1411,6 +1411,35 @@
         "The claim excludes a monolithic full-model RTL image, tokenizer and tied-head execution, synthesis, timing, PPA, FPGA, latency, throughput, and silicon."
       ]
     },
+    "position1_model24_causal_traversal": {
+      "contract": {
+        "path": "ace3/contracts/position1_model24_causal_traversal.json",
+        "sha256": "undefined"
+      },
+      "rtl_and_restore_harness": {
+        "rtl_path": "ace3/rtl/ace3_decoder_layer0_token_engine.sv",
+        "harness_path": "ace3/tb/ace3_decoder_layer0_token_engine_main.cpp",
+        "verilator_savable": true,
+        "restore_option": "--state-in"
+      },
+      "executor": {
+        "path": "ace3/model/position1_model24_causal_traversal.py",
+        "sha256": "undefined"
+      },
+      "negative_tests": {
+        "path": "ace3/model/tests/test_position1_model24_causal_traversal.py",
+        "sha256": "undefined"
+      },
+      "target": "make position1-model24-causal-traversal",
+      "coverage_obligations": [
+        "The accepted sealed token-2114 embedding is reused without rerunning lm_head or feedback.",
+        "Each exact layer-indexed Verilator binary restores its own pinned post-position-0 opaque state before executing position 1.",
+        "The ordered parent set binds checkpoint, tensor map, build manifest, binary, state, envelope, natural terminal, activation chain, and FP16 parent K/V hashes.",
+        "Every restored RTL layer is compared with the independent official-checkpoint PyTorch float64 causal oracle after that reference layer imports its own authenticated ordered position-0 FP16 K/V.",
+        "The corrected execution build selects the accurate SiLU profile for all 24 indexed layers while the sealed parent build remains independently hash-bound.",
+        "Dialogue, synthesis, PPA, FPGA, latency, throughput, and readability remain excluded."
+      ]
+    },
     "aggregate_regression": {
       "fresh_nonclean_command": "make OFFICIAL_TENSOR_DIR=/path/to/official_tensors test",
       "retained_targets": [

@@ -665,7 +665,7 @@ def indexed_layer_tensor_value_hashes(
 
 def indexed_layer_uses_accurate_silu(layer_index: int) -> bool:
     indexed_layer_binding(layer_index)
-    return layer_index >= 3
+    return True
 
 
 def sampled_indexed_q_projection_rows(

@@ -584,7 +584,7 @@ def compact_build_configuration(
         "options": ["--cc", "--exe", "--build", "--savable", "--Wall", "-Wno-fatal"],
         "parameters": {
             "LAYER_INDEX": layer_index,
-            "ACCURATE_SILU": int(layer_index >= 3),
+            "ACCURATE_SILU": 1,
         },
         "source_arguments": source_arguments,
         "strip_arguments": ["--strip-all"],
@@ -1361,6 +1361,8 @@ def _run_transaction(
     build_manifest_sha256: str,
     binary_sha256: str,
     trusted_tips: dict[int, dict[str, Any]],
+    restore_build_manifest_sha256: str | None = None,
+    restore_binary_sha256: str | None = None,
 ) -> tuple[np.ndarray, dict[str, Any]]:
     transaction_dir = runtime_dir / f"position{position:03d}" / f"layer{layer_index:02d}"
     raw_dir = transaction_dir / "raw"
@@ -1382,8 +1384,10 @@ def _run_transaction(
             runtime_dir=runtime_dir,
             layer_index=layer_index,
             next_position=position,
-            build_manifest_sha256=build_manifest_sha256,
-            binary_sha256=binary_sha256,
+            build_manifest_sha256=(
+                restore_build_manifest_sha256 or build_manifest_sha256
+            ),
+            binary_sha256=restore_binary_sha256 or binary_sha256,
             expected_tip=trusted_tips.get(layer_index),
         )
     else:

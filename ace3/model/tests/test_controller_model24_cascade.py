@@ -126,7 +126,7 @@ class ControllerModel24CascadeTests(unittest.TestCase):
             ):
                 parse_simulation_terminal(path)
 
-    def test_layer3_switches_from_reviewed_rational_to_accurate_silu(self) -> None:
+    def test_all_layers_use_accurate_silu(self) -> None:
         hidden = np.zeros((2, 896), dtype="<u2")
         observed: list[bool] = []
 
@@ -149,7 +149,7 @@ class ControllerModel24CascadeTests(unittest.TestCase):
         ):
             _run_accepted_decoder_layer(2, binding, {}, hidden)
             _run_accepted_decoder_layer(3, binding, {}, hidden)
-        self.assertEqual(observed, [False, False, True, True])
+        self.assertEqual(observed, [True, True, True, True])
 
     def test_two_token_comparison_rejects_token0_only_tolerance_miss(self) -> None:
         produced = np.zeros((2, 896), dtype="<u2")

@@ -8,7 +8,7 @@
  */
 module ace3_decoder_layer0_token_engine #(
     parameter integer LAYER_INDEX = 0,
-    parameter integer ACCURATE_SILU = (LAYER_INDEX >= 3)
+    parameter integer ACCURATE_SILU = 1
 ) (
     input  wire clk_i, input wire rst_ni, input wire clear_i,
 

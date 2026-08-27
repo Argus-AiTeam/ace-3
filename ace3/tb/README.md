@@ -59,3 +59,8 @@ checkpoint sequence, then runs the controller protocol under both Icarus and
 Verilator. The tests cover strict ordering, retained backpressure, layer-23-only
 completion, malformed or mismatched transactions, latched fault suppression,
 and clear recovery.
+`position1_model24_causal_traversal.py` drives the existing Verilator decoder
+transaction harness with one exact `--state-in` per layer. Focused Python tests
+reject missing, stale, reordered, duplicated, or checkpoint-mismatched parents
+and missing, reordered, or cross-layer-substituted inherited K/V before any
+restored RTL transaction can start.
