@@ -1,9 +1,5 @@
 # ACE-3 MP: ARGUS Mixed-Precision Engine
 
-[简体中文](README.zh-CN.md) · [Documentation](docs/INDEX.md) ·
-[Current status](docs/STATUS.md) · [Getting started](docs/GETTING_STARTED.md) ·
-[Architecture](docs/ARCHITECTURE.md) · [Roadmap](docs/ROADMAP.md)
-
 ACE-3 MP is a standalone, evidence-first RTL project for mixed-precision
 transformer inference. The first implementation profile targets native AWQ
 W4A16 execution for the official
@@ -19,12 +15,6 @@ ACE-3 is developed with **[Argus](https://github.com/lbx154/Argus)**, the
 open-source long-running agent harness used to plan, execute, review, and
 preserve evidence across this engineering campaign.
 
-> **Research preview:** the repository contains verified RTL building blocks,
-> a controller-driven 24-layer RTL cascade, and the infrastructure for
-> persistent-state Hybrid RTL generation. It does not yet publish an accepted
-> readable RTL dialogue, synthesis result, PPA result, FPGA bitstream, timing
-> closure, or measured hardware performance.
-
 ## Project contract
 
 | Item | Target |
@@ -37,7 +27,20 @@ preserve evidence across this engineering campaign.
 | Verification | Independent oracle, authenticated inputs, Icarus and Verilator |
 | Delivery level | Reproducible RTL simulation before synthesis/PPA/FPGA claims |
 
+The design covers native AWQ unpacking and dequantization, complete projection
+reductions, FP16 normalization and nonlinear operators, RoPE, causal K/V state,
+attention and value composition, decoder-layer integration, indexed 24-layer
+execution, authenticated persistent simulator state, and the host boundary
+needed for readable autoregressive generation.
+
 ## Current status
+
+ACE-3 is active research, not a synthesized implementation, FPGA deployment,
+fabricated chip, or measured-performance result. The repository contains
+independently reviewed RTL and evidence through a controller-driven 24-layer
+decoder cascade. A genuine Hybrid RTL dialogue traversal is currently running,
+but it is not an accepted readable-dialogue result until the complete
+transaction chain and generated output are independently reviewed.
 
 | Layer | Published boundary | Status |
 | --- | --- | --- |
@@ -51,149 +54,75 @@ preserve evidence across this engineering campaign.
 | First Voice | Savable RTL state, authenticated lineage, trusted tips, and compact indexed-layer builder | Infrastructure accepted; all-layer runtime evidence and full traversal in progress |
 | Implementation | Synthesis, timing, PPA, FPGA, and measured performance | Not claimed |
 
-See [Current status](docs/STATUS.md) for exact claim boundaries and the active
-milestone.
-
-## Execution model
-
-ACE-3 separates the host boundary from the RTL decoder boundary:
-
-```text
-Host
-  chat template → tokenizer → embedding lookup
-                         │
-                         ▼
-RTL
-  layer 0 → layer 1 → ... → layer 23
-     │          │                  │
-     └── persistent authenticated FP16 K/V state ──┘
-                         │
-                         ▼
-Host
-  final RMSNorm → tied lm_head → greedy token → feedback
-```
-
-In the First Voice profile, every prompt token and every fed-back generated
-token must traverse all 24 indexed RTL decoder layers. The host is limited to
-serialization, tokenization, embeddings, final normalization, tied-head
-selection, decoding, and feedback. A software-only hidden-state path cannot be
-reported as RTL dialogue.
+The current Hybrid RTL boundary keeps chat serialization, tokenization,
+embedding lookup, final RMSNorm, tied `lm_head`, greedy selection, decoding,
+and token feedback on the host. Every represented prompt or generated token
+must traverse indexed RTL decoder layers 0–23 with authenticated persistent
+per-layer K/V state. A software-only hidden-state path is not completion.
 
 ## Repository map
 
-```text
-ace3/
-  contracts/   Machine-readable arithmetic, interface, lineage, and evidence contracts
-  model/       Independent bit-level oracles, vector tools, and host/runtime drivers
-  rtl/         Synthesizable SystemVerilog modules
-  tb/          Icarus and Verilator testbenches
-design/        RTL manifest and requirement-to-evidence traceability
-docs/
-  results/     Reviewed, scope-bounded result notes
-  INDEX.md     Documentation map
-  STATUS.md    Current accepted and active boundaries
-  ROADMAP.md   Ordered development plan
-```
+| Path | Contents |
+| --- | --- |
+| `ace3/contracts/` | Machine-readable arithmetic, interface, lineage, and evidence contracts |
+| `ace3/model/` | Independent bit-level oracles, vector tools, and host/runtime drivers |
+| `ace3/rtl/` | Synthesizable SystemVerilog implementation |
+| `ace3/tb/` | Icarus and Verilator testbenches |
+| `ace3/fixtures/` | Small source-controlled model fixtures with provenance |
+| `design/` | RTL manifest and requirement-to-evidence traceability |
+| `docs/results/` | Reviewed, scope-bounded result notes |
 
 Generated vectors, simulator objects, traces, model weights, and local agent
 state are intentionally excluded from source control.
 
+Start with [the documentation map](docs/INDEX.md),
+[current status](docs/STATUS.md), [architecture](docs/ARCHITECTURE.md), and
+[getting started](docs/GETTING_STARTED.md). The status page is authoritative
+for accepted, active, and explicitly unclaimed results.
+
 ## Reproducible entry points
 
-Requirements:
-
-- Python 3.10 or newer;
-- GNU Make;
-- Icarus Verilog;
-- Verilator and a C++ compiler.
-
-List supported entry points:
-
 ```sh
+# List supported validation and Model24 entry points.
 make help
-```
 
-Run the standalone arithmetic oracle:
-
-```sh
+# Run the standalone arithmetic oracle.
 make oracle
-```
 
-Run the source-controlled AWQ fixture regression:
-
-```sh
+# Run the source-controlled AWQ fixture regression.
 make test
-```
 
-Run the reviewed Model24 controller/publication checks. This target validates
-the published controller and source/unit evidence; it does not rerun the sealed
-full-24 numerical cascade:
-
-```sh
+# Validate the published Model24 controller and source/unit evidence.
+# This does not rerun the sealed full-24 numerical cascade.
 make model24-publication-tests
-```
 
-Rerun the checkpoint-bound full-24 RTL cascade only after preparing the
-official assets described in [Getting started](docs/GETTING_STARTED.md):
+# Run focused First Voice state-lineage and compact-builder checks.
+make model24-first-voice-hybrid-tests
+make model24-first-voice-compact-builder-tests
 
-```sh
+# Rerun the checkpoint-bound full-24 RTL cascade after preparing the
+# official checkpoint and tokenizer described in docs/GETTING_STARTED.md.
 make model24-controller-rtl-cascade
 ```
 
-Run focused First Voice state-lineage and compact-builder checks:
+The basic regressions require Python 3.10 or newer, GNU Make, Icarus Verilog,
+Verilator, and a C++ compiler. Model-bound execution additionally requires the
+official checkpoint revision
+`db09cd27ead7fee40cdee309693cf83601b9c899` and its tokenizer; these assets are
+not redistributed by this repository.
 
-```sh
-make model24-first-voice-hybrid-tests
-make model24-first-voice-compact-builder-tests
-```
+The validation flow binds contracts, official tensor payloads, serialized
+vectors, simulator binaries, and persistent state transitions with SHA-256.
+Icarus provides bounded four-state checks while Verilator provides the
+documented full numerical execution. Simulation cycles are not hardware
+latency, and software execution is not RTL, FPGA, or silicon evidence.
 
-Model-bound full execution additionally requires the official checkpoint and
-tokenizer. Those assets are not redistributed by this repository. See
-[Getting started](docs/GETTING_STARTED.md) for paths, overrides, and
-target-specific prerequisites.
+Some flows require model assets, synthesis tools, or FPGA hardware that are not
+bundled with this repository. Missing prerequisites are reported explicitly
+rather than represented as successful synthesis, PPA, FPGA, or hardware runs.
 
-## Verification model
-
-1. **Contract:** packing, widths, rounding, reset, stream behavior, and claim
-   scope are machine-readable.
-2. **Independent oracle:** Python reference models do not derive expected
-   results from DUT implementation logic.
-3. **Authenticated inputs:** checkpoint revision, tensor payloads, serialized
-   vectors, binaries, and state transitions are SHA-256 bound.
-4. **Independent simulators:** Icarus provides bounded four-state checks;
-   Verilator provides full two-state numerical execution where documented.
-5. **Fail-closed lineage:** persistent RTL state is restored only against a
-   caller-held trusted commitment, not a self-authenticating mutable envelope.
-6. **Explicit non-claims:** simulation cycles are not hardware latency, and
-   software execution is not RTL, FPGA, or silicon evidence.
-
-The fixed model revision is
-`db09cd27ead7fee40cdee309693cf83601b9c899`.
-
-## Precision roadmap
-
-ACE-3 is developed as one standalone architecture line:
-
-1. native AWQ W4A16;
-2. W8A16;
-3. BF16/FP16;
-4. larger 1.5B and 3B model tiers;
-5. reproducible synthesis, PPA, and FPGA evidence.
-
-Modes are added only after a real datapath and verification contract exist.
-There are no placeholder precision claims.
-
-## Documentation
-
-Start with [Documentation index](docs/INDEX.md). The most useful pages are:
-
-- [Current status and claim matrix](docs/STATUS.md)
-- [Architecture](docs/ARCHITECTURE.md)
-- [Getting started](docs/GETTING_STARTED.md)
-- [First Voice Hybrid RTL](docs/FIRST_VOICE_HYBRID_RTL.md)
-- [RTL traceability](design/RTL_TRACEABILITY.md)
-- [Roadmap](docs/ROADMAP.md)
-- [Contributing](CONTRIBUTING.md)
+For the ordered W4A16, W8A16, BF16/FP16, larger-model, and implementation
+milestones, see the [roadmap](docs/ROADMAP.md).
 
 ## Argus
 
