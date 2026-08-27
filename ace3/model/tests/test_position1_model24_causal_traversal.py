@@ -155,9 +155,8 @@ class LayerReferencePrecisionTests(unittest.TestCase):
                 "semantic_kv_readback": artifact,
                 "transaction": {
                     "natural_terminal": True,
-                    "final_records": 896,
-                    "done_records": 1,
-                    "semantic_kv_readback": "exact",
+                    "semantic_kv_preload": artifact,
+                    "semantic_kv_readback": artifact,
                 },
                 "independent_reference": {
                     "seed": "selected token embedding; prior RTL hidden is never consumed",
@@ -186,6 +185,7 @@ class LayerReferencePrecisionTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as directory:
             result_path = Path(directory) / "result.json"
             write_json(result_path, result)
+            verify_result(result_path, contract_path)
             layers[-1]["independent_reference"]["gating"] = False
             layers[-1]["local_reference"]["gating"] = True
             write_json(result_path, result)

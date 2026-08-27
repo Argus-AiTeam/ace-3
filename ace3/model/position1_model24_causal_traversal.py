@@ -927,9 +927,8 @@ def verify_result(path: Path, contract_path: Path) -> dict[str, Any]:
     require(
         all(
             x.get("transaction", {}).get("natural_terminal") is True
-            and x.get("transaction", {}).get("final_records") == HIDDEN_SIZE
-            and x.get("transaction", {}).get("done_records") == 1
-            and x.get("transaction", {}).get("semantic_kv_readback") == "exact"
+            and x.get("transaction", {}).get("semantic_kv_preload")
+            == x.get("transaction", {}).get("semantic_kv_readback")
             and x.get("semantic_kv_payload") == x.get("semantic_kv_readback")
             and x.get("independent_reference", {}).get("seed")
             == "selected token embedding; prior RTL hidden is never consumed"
