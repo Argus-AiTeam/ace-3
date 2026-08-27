@@ -153,9 +153,9 @@
     },
     {
       "id": "FP16-ADAPT-PROVENANCE-001",
-      "summary": "ACE-3 arithmetic is first-party RTL; only the enumerated predecessor control, protocol, dataflow, and verification structures are re-expressed.",
+      "summary": "ACE-3 arithmetic is first-party RTL; only the enumerated ACE-2 control, protocol, dataflow, and verification structures are re-expressed.",
       "contract_refs": [
-        "/predecessor_reuse_audit"
+        "/ace2_reuse_audit"
       ]
     },
     {
@@ -346,9 +346,9 @@
       "sha256": "e7f38a3434b60849896a0a5bab549bd6d4b6a4908280a2860a33fc8e839c86c8",
       "provenance": {
         "classification": "first_party_ace3_rtl",
-        "copied_from_predecessor": false,
+        "copied_from_ace2": false,
         "origin": "Authored for the ACE-3 native-AWQ W4A16 FP16 adaptation contract.",
-        "predecessor_relationship": "Replaces predecessor INT8, Scale32, requantization, and saturation arithmetic; no predecessor arithmetic source is copied."
+        "ace2_relationship": "Replaces ACE-2 INT8, Scale32, requantization, and saturation arithmetic; no ACE-2 arithmetic source is copied."
       },
       "modules": [
         {
@@ -429,9 +429,9 @@
       "sha256": "335954e0bf6909f3aa27330c241cc002f777e6eb5ef483e0b1f684c2fe35ba89",
       "provenance": {
         "classification": "first_party_ace3_rtl",
-        "copied_from_predecessor": false,
+        "copied_from_ace2": false,
         "origin": "Authored for the ACE-3 native-AWQ W4A16 FP16 adaptation contract.",
-        "predecessor_relationship": "Re-expresses ready-valid, handshake-gated advancement, retained output, reset, and clear patterns from the audited down-projection/residual-fusion structure while replacing Scale32 and INT8 arithmetic."
+        "ace2_relationship": "Re-expresses ready-valid, handshake-gated advancement, retained output, reset, and clear patterns from the audited down-projection/residual-fusion structure while replacing Scale32 and INT8 arithmetic."
       },
       "modules": [
         {
@@ -561,9 +561,9 @@
       "sha256": "f302975fa91aefc20bb48f768fc08ffbddc088e83ca9cdb23b219c2f70d9fc2a",
       "provenance": {
         "classification": "first_party_ace3_rtl",
-        "copied_from_predecessor": false,
+        "copied_from_ace2": false,
         "origin": "Authored for the ACE-3 native-AWQ W4A16 FP16 adaptation contract.",
-        "predecessor_relationship": "Re-expresses the audited two-pass collect/normalize schedule, ready-valid control, and abort behavior while replacing INT8/Q7.8 arithmetic with exact Q24 decode, a 92-bit Q48 workspace, fixed epsilon, and bounded integer square root."
+        "ace2_relationship": "Re-expresses the audited two-pass collect/normalize schedule, ready-valid control, and abort behavior while replacing INT8/Q7.8 arithmetic with exact Q24 decode, a 92-bit Q48 workspace, fixed epsilon, and bounded integer square root."
       },
       "modules": [
         {
@@ -703,9 +703,9 @@
       "sha256": "c5f26b50ba2396852e966a430719a6170df9adf5546903ec018049e9e084cf43",
       "provenance": {
         "classification": "first_party_ace3_rtl",
-        "copied_from_predecessor": false,
+        "copied_from_ace2": false,
         "origin": "Authored for the ACE-3 native-AWQ W4A16 FP16 adaptation contract.",
-        "predecessor_relationship": "Re-expresses the audited stream scheduling, output retention, and abort behavior while replacing LUT, clipping, Q6.9/Q3.12, and INT8 arithmetic with the frozen rational Q0.24 sigmoid and wide FP16-domain gate product."
+        "ace2_relationship": "Re-expresses the audited stream scheduling, output retention, and abort behavior while replacing LUT, clipping, Q6.9/Q3.12, and INT8 arithmetic with the frozen rational Q0.24 sigmoid and wide FP16-domain gate product."
       },
       "modules": [
         {
@@ -835,9 +835,9 @@
       "sha256": "a02880cc69110b226f0121053b3bad72355e33c1e576f7c749f9daf034305de1",
       "provenance": {
         "classification": "first_party_ace3_rtl",
-        "copied_from_predecessor": false,
+        "copied_from_ace2": false,
         "origin": "Authored as an ACE-3 composition wrapper over the accepted native-AWQ projection engine.",
-        "predecessor_relationship": "No predecessor source is copied; all arithmetic and control remain in the accepted ACE-3 projection engine instances."
+        "ace2_relationship": "No ACE-2 source is copied; all arithmetic and control remain in the accepted ACE-3 projection engine instances."
       },
       "modules": [
         {
@@ -898,9 +898,9 @@
       "sha256": "d6da922485f1f9818a08e604b3559d56fe407ad42fc2f7605d3bfdded3ee36b8",
       "provenance": {
         "classification": "first_party_ace3_rtl",
-        "copied_from_predecessor": false,
+        "copied_from_ace2": false,
         "origin": "Authored for the fixed Qwen2.5 half-split rotary contract using accepted ACE-3 FP16 conversion modules.",
-        "predecessor_relationship": "No predecessor source is copied and no predecessor W4A8 numerical path is used."
+        "ace2_relationship": "No ACE-2 source is copied and no ACE-2 W4A8 numerical path is used."
       },
       "modules": [
         {
@@ -953,9 +953,9 @@
       "sha256": "fa2b30ca6f22fcc0e2f1fb7ac91761c1aa3d2440d3b9abed28bb76a0569ed179",
       "provenance": {
         "classification": "first_party_ace3_rtl",
-        "copied_from_predecessor": false,
+        "copied_from_ace2": false,
         "origin": "Authored as parameterized SRAM-oriented indexed storage for rotated FP16 K and unrotated FP16 V.",
-        "predecessor_relationship": "No predecessor source or W4A8 cache format is copied."
+        "ace2_relationship": "No ACE-2 source or W4A8 cache format is copied."
       },
       "modules": [
         {
@@ -1010,9 +1010,9 @@
           "sha256": "35db39940444c3f286c0110c94f46347e7192511b162a7ef4d10a6b299be5221",
           "provenance": {
             "classification": "first_party_ace3_rtl",
-            "copied_from_predecessor": false,
+            "copied_from_ace2": false,
             "origin": "Authored for the fixed Qwen2.5 scaled-QK and causal-status contract.",
-            "predecessor_relationship": "No predecessor source or W4A8 arithmetic is copied."
+            "ace2_relationship": "No ACE-2 source or W4A8 arithmetic is copied."
           },
           "modules": [
             {
@@ -1042,9 +1042,9 @@
           "sha256": "899220e73557cbbb46f4e409551b2396e59ad230b126b2f3fc4809fd8d9d11ca",
           "provenance": {
             "classification": "first_party_ace3_rtl",
-            "copied_from_predecessor": false,
+            "copied_from_ace2": false,
             "origin": "Authored for the fixed causal Q0.24 softmax approximation contract.",
-            "predecessor_relationship": "No predecessor source or W4A8 arithmetic is copied."
+            "ace2_relationship": "No ACE-2 source or W4A8 arithmetic is copied."
           },
           "modules": [
             {
@@ -1074,9 +1074,9 @@
           "sha256": "17beacde641684df7f87c03d62c8187e43f6b8a6a928734cd8a3916ce8d14201",
           "provenance": {
             "classification": "first_party_ace3_rtl",
-            "copied_from_predecessor": false,
+            "copied_from_ace2": false,
             "origin": "Authored for the fixed FP16 attention value-composition contract.",
-            "predecessor_relationship": "No predecessor source or W4A8 arithmetic is copied."
+            "ace2_relationship": "No ACE-2 source or W4A8 arithmetic is copied."
           },
           "modules": [
             {

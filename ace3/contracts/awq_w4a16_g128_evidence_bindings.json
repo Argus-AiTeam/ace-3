@@ -5,22 +5,22 @@
   "accepted_evidence": [
     {
       "kind": "recommendation",
-      "path": "build/predecessor_chat_demo/qwen25-05b-instruct-awq-cpu-dialogue-cf03/attempt-0001/recommendation.json",
+      "path": "build/ace2_chat_demo/qwen25-05b-instruct-awq-cpu-dialogue-cf03/attempt-0001/recommendation.json",
       "sha256": "8296043746b40367d08c3ca126bbcc414f73e7d2263672163faac61178875ae5"
     },
     {
       "kind": "capability_assessment",
-      "path": "build/predecessor_chat_demo/qwen25-05b-instruct-awq-cpu-dialogue-cf03/attempt-0001/capability-assessment.json",
+      "path": "build/ace2_chat_demo/qwen25-05b-instruct-awq-cpu-dialogue-cf03/attempt-0001/capability-assessment.json",
       "sha256": "3a7e05c71dcb9479556646fd379cf9cb75e169bb787eb8b7e8110a783e49ba27"
     },
     {
       "kind": "generations",
-      "path": "build/predecessor_chat_demo/qwen25-05b-instruct-awq-cpu-dialogue-cf03/attempt-0001/generation-results.json",
+      "path": "build/ace2_chat_demo/qwen25-05b-instruct-awq-cpu-dialogue-cf03/attempt-0001/generation-results.json",
       "sha256": "61cb2def01e62a04f395a045156cc1fb5abdef21f9cee4e77e737dacbcf29437"
     },
     {
       "kind": "execution_status",
-      "path": "build/predecessor_chat_demo/qwen25-05b-instruct-awq-cpu-dialogue-cf03/attempt-0001/execution-status.json",
+      "path": "build/ace2_chat_demo/qwen25-05b-instruct-awq-cpu-dialogue-cf03/attempt-0001/execution-status.json",
       "sha256": "b6d7676a612364fab977084d7c72b046449d70a76150aada625065a03ed769ce"
     }
   ],
@@ -28,19 +28,19 @@
     {
       "kind": "qweight_i32le",
       "shape": [896, 112],
-      "path": "build/predecessor_chat_demo/qwen25-05b-instruct-awq-software-baseline-cf01/official/sample-model_layers_0_self_attn_q_proj-qweight.bin",
+      "path": "build/ace2_chat_demo/qwen25-05b-instruct-awq-software-baseline-cf01/official/sample-model_layers_0_self_attn_q_proj-qweight.bin",
       "sha256": "db4770023698611ff0115d220590fdb8232fbe5dcbd22fbe80e0bcdc838caf87"
     },
     {
       "kind": "qzeros_i32le",
       "shape": [7, 112],
-      "path": "build/predecessor_chat_demo/qwen25-05b-instruct-awq-software-baseline-cf01/official/sample-model_layers_0_self_attn_q_proj-qzeros.bin",
+      "path": "build/ace2_chat_demo/qwen25-05b-instruct-awq-software-baseline-cf01/official/sample-model_layers_0_self_attn_q_proj-qzeros.bin",
       "sha256": "3cf7cd5712dd7523db3c7dd47c2b1d582e19545036f75b95ff0331c1fc0c596c"
     },
     {
       "kind": "scales_f16le",
       "shape": [7, 896],
-      "path": "build/predecessor_chat_demo/qwen25-05b-instruct-awq-software-baseline-cf01/official/sample-model_layers_0_self_attn_q_proj-scales.bin",
+      "path": "build/ace2_chat_demo/qwen25-05b-instruct-awq-software-baseline-cf01/official/sample-model_layers_0_self_attn_q_proj-scales.bin",
       "sha256": "687adc7d7bcd6e45a065f914dd27a1284b7e48260491bb0d26ae1e13b78ac321"
     }
   ]

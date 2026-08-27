@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Reject tracked publication sources that depend on a legacy checkout path."""
+"""Reject tracked publication sources that depend on local runtime paths."""
 
 from __future__ import annotations
 
@@ -18,10 +18,18 @@ PARENT_PATH = re.compile(
     r"(?<![A-Za-z0-9_.-])\.\./" + re.escape(LEGACY_NAME) + PATH_END,
     re.IGNORECASE,
 )
+LOCAL_CHECKPOINT_PATH = re.compile(
+    r"(?<![A-Za-z0-9_.-])/(?:home|dev/shm|tmp|run/user)/(?:[^\s/]+/)*[^\s/]+\.safetensors"
+    + PATH_END,
+    re.IGNORECASE,
+)
 
 
 def prohibited_reference(line: str) -> bool:
-    return ABSOLUTE_PATH.search(line) is not None or PARENT_PATH.search(line) is not None
+    return any(
+        pattern.search(line) is not None
+        for pattern in (ABSOLUTE_PATH, PARENT_PATH, LOCAL_CHECKPOINT_PATH)
+    )
 
 
 def tracked_paths(root: Path) -> list[Path]:
@@ -38,10 +46,14 @@ def main() -> None:
     forbidden_examples = (
         f"/home/example/{LEGACY_NAME}/fixture",
         f"../{LEGACY_NAME}/fixture",
+        "/home/example/ace3/model24_execution_vectors/model." + "safetensors",
     )
     allowed_examples = (
         f"{LEGACY_NAME.upper()} remains historical provenance",
-        "/predecessor_reuse_audit",
+        "/ace2_reuse_audit",
+        '"rtl/ace2_rmsnorm_core.sv": "b09fe7073fd6509f0"',
+        '"ace2_relationship": "No ACE-2 arithmetic source is copied."',
+        "build/ace2_chat_demo/accepted-evidence.json",
     )
     if not all(prohibited_reference(value) for value in forbidden_examples):
         raise AssertionError("path regression does not detect every prohibited form")
@@ -66,6 +78,7 @@ def main() -> None:
     print(
         "TRACKED_SOURCE_PATH_PASS "
         "absolute_legacy_paths=absent parent_legacy_paths=absent "
+        "local_checkpoint_paths=absent provenance_records=allowed "
         f"tracked_files={len(paths)}"
     )
 

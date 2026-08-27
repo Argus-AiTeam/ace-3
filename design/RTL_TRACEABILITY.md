@@ -25,23 +25,23 @@ dialogue, and model quality are outside this trace.
 
 All five FP16-adaptation modules and all three QKV/RoPE/cache modules are
 first-party ACE-3 RTL authored against the native-AWQ W4A16 FP16 contracts. No
-predecessor arithmetic or cache source is copied. The predecessor snapshots and
+ACE-2 arithmetic or cache source is copied. The ACE-2 snapshots and
 reference/test hashes for the adaptation baseline remain recorded under
-`/predecessor_reuse_audit` in its frozen contract.
+`/ace2_reuse_audit` in its frozen contract.
 
-| Source | Module | SHA256 | predecessor relationship |
+| Source | Module | SHA256 | ACE-2 relationship |
 | --- | --- | --- | --- |
 | `ace3/rtl/ace3_fp16_fixed.sv` | `ace3_fp16_to_q24` | `e7f38a3434b60849896a0a5bab549bd6d4b6a4908280a2860a33fc8e839c86c8` | Replaces INT8/Scale32 decode arithmetic with exact finite binary16-to-Q24 conversion. |
 | `ace3/rtl/ace3_fp16_fixed.sv` | `ace3_q24_to_fp16_rne` | `e7f38a3434b60849896a0a5bab549bd6d4b6a4908280a2860a33fc8e839c86c8` | Replaces requantization and INT8 saturation with the frozen binary16 RNE/saturation boundary. |
 | `ace3/rtl/ace3_fp16_residual_add_core.sv` | `ace3_fp16_residual_add_core` | `335954e0bf6909f3aa27330c241cc002f777e6eb5ef483e0b1f684c2fe35ba89` | Re-expresses ready-valid, handshake-gated advancement, retained output, reset, and clear structure; replaces Scale32 and INT8 residual arithmetic. |
 | `ace3/rtl/ace3_fp16_rmsnorm_core.sv` | `ace3_fp16_rmsnorm_core` | `f302975fa91aefc20bb48f768fc08ffbddc088e83ca9cdb23b219c2f70d9fc2a` | Re-expresses two-pass scheduling and stream control; adapts sum/square-root dataflow to the frozen Q24/Q48 contract. |
 | `ace3/rtl/ace3_fp16_silu_gate_core.sv` | `ace3_fp16_silu_gate_core` | `c5f26b50ba2396852e966a430719a6170df9adf5546903ec018049e9e084cf43` | Re-expresses stream scheduling and retained output; supports the reviewed rational sigmoid and the range-reduced exponential profile with the same wide gate product. |
-| `ace3/rtl/ace3_qkv_projection_cluster.sv` | `ace3_qkv_projection_cluster` | `a02880cc69110b226f0121053b3bad72355e33c1e576f7c749f9daf034305de1` | First-party fixed-checkpoint wrapper around three unchanged accepted ACE-3 projection engines; no predecessor source is copied. |
-| `ace3/rtl/ace3_qwen2_rope_pair.sv` | `ace3_qwen2_rope_pair` | `d6da922485f1f9818a08e604b3559d56fe407ad42fc2f7605d3bfdded3ee36b8` | First-party half-split Qwen2.5 rotary arithmetic using accepted ACE-3 FP16 converters; no predecessor W4A8 path is used. |
-| `ace3/rtl/ace3_fp16_kv_cache.sv` | `ace3_fp16_kv_cache` | `fa2b30ca6f22fcc0e2f1fb7ac91761c1aa3d2440d3b9abed28bb76a0569ed179` | First-party SRAM-oriented indexed FP16 K/V storage; no predecessor source or cache format is copied. |
-| `ace3/rtl/ace3_attention_score_core.sv` | `ace3_attention_score_core` | `35db39940444c3f286c0110c94f46347e7192511b162a7ef4d10a6b299be5221` | First-party exact-Q24/Q48 scaled-QK reduction; no predecessor W4A8 arithmetic is copied. |
-| `ace3/rtl/ace3_attention_softmax_core.sv` | `ace3_attention_softmax_core` | `899220e73557cbbb46f4e409551b2396e59ad230b126b2f3fc4809fd8d9d11ca` | First-party frozen Q0.24 causal-softmax approximation; no predecessor source is copied. |
-| `ace3/rtl/ace3_attention_value_core.sv` | `ace3_attention_value_core` | `17beacde641684df7f87c03d62c8187e43f6b8a6a928734cd8a3916ce8d14201` | First-party exact-Q24/Q48 cached-V composition; no predecessor W4A8 arithmetic is copied. |
+| `ace3/rtl/ace3_qkv_projection_cluster.sv` | `ace3_qkv_projection_cluster` | `a02880cc69110b226f0121053b3bad72355e33c1e576f7c749f9daf034305de1` | First-party fixed-checkpoint wrapper around three unchanged accepted ACE-3 projection engines; no ACE-2 source is copied. |
+| `ace3/rtl/ace3_qwen2_rope_pair.sv` | `ace3_qwen2_rope_pair` | `d6da922485f1f9818a08e604b3559d56fe407ad42fc2f7605d3bfdded3ee36b8` | First-party half-split Qwen2.5 rotary arithmetic using accepted ACE-3 FP16 converters; no ACE-2 W4A8 path is used. |
+| `ace3/rtl/ace3_fp16_kv_cache.sv` | `ace3_fp16_kv_cache` | `fa2b30ca6f22fcc0e2f1fb7ac91761c1aa3d2440d3b9abed28bb76a0569ed179` | First-party SRAM-oriented indexed FP16 K/V storage; no ACE-2 source or cache format is copied. |
+| `ace3/rtl/ace3_attention_score_core.sv` | `ace3_attention_score_core` | `35db39940444c3f286c0110c94f46347e7192511b162a7ef4d10a6b299be5221` | First-party exact-Q24/Q48 scaled-QK reduction; no ACE-2 W4A8 arithmetic is copied. |
+| `ace3/rtl/ace3_attention_softmax_core.sv` | `ace3_attention_softmax_core` | `899220e73557cbbb46f4e409551b2396e59ad230b126b2f3fc4809fd8d9d11ca` | First-party frozen Q0.24 causal-softmax approximation; no ACE-2 source is copied. |
+| `ace3/rtl/ace3_attention_value_core.sv` | `ace3_attention_value_core` | `17beacde641684df7f87c03d62c8187e43f6b8a6a928734cd8a3916ce8d14201` | First-party exact-Q24/Q48 cached-V composition; no ACE-2 W4A8 arithmetic is copied. |
 
 The reviewed full-projection baseline is commit
 `d6f37f1c3bfcce0c9c71f7d28cd1cd5b97ef0ad6`
@@ -179,7 +179,7 @@ The requirement IDs below are defined machine-readably in
 | `FP16-ADAPT-SILU-001` | `/numerical_contract/silu_gate` | Rational Q0.24 sigmoid, exact signed Q72 gate product, one RNE Q24 shift, and `WIDTH=64` binary16 conversion. | Directed and authenticated official-derived operands compare bit-for-bit in both simulators. |
 | `FP16-ADAPT-DIMENSION-001` | `/projection_compatibility/residual_vector_size`, `/projection_compatibility/rmsnorm_hidden_size`, `/projection_compatibility/silu_intermediate_size` | Defaults are `VECTOR_SIZE=896`, `HIDDEN_SIZE=896`, and `INTERMEDIATE_SIZE=4864`; the bounds remain parameters. | `fp16-geometry` elaborates/lints 896- and 4864-element parameterizations under Icarus and Verilator. |
 | `FP16-ADAPT-CYCLE-001` | `/cycle_boundaries` | Residual and SiLU register outputs one cycle after acceptance; RMSNorm runs 46 square-root iterations after collection. | Harnesses reject any mismatch and report measured `residual_latency=1`, `silu_latency=1`, and `rms_sqrt_cycles=46`. |
-| `FP16-ADAPT-PROVENANCE-001` | `/predecessor_reuse_audit` | First-party ACE-3 arithmetic with explicit reused/adapted/replaced boundaries; predecessor remains a read-only structural baseline. | Source hashes in the manifest bind the reviewed delta; the frozen contract binds all audited predecessor source/reference/test snapshots. |
+| `FP16-ADAPT-PROVENANCE-001` | `/ace2_reuse_audit` | First-party ACE-3 arithmetic with explicit reused/adapted/replaced boundaries; ACE-2 remains a read-only structural baseline. | Source hashes in the manifest bind the reviewed delta; the frozen contract binds all audited ACE-2 source/reference/test snapshots. |
 
 ## QKV projection-cluster interface
 
@@ -336,7 +336,7 @@ QKV contract references are JSON Pointers into
 | `QKV-CACHE-ABORT-001` | `/kv_cache/storage`, `/kv_cache/clear_reset` | Reset and clear invalidate metadata and abort the pending response without resetting data arrays. | Both harnesses prove prior entries miss after reset and clear; Icarus also rejects out-of-range and idle X/Z addresses. |
 | `QKV-EVIDENCE-001` | `/model/repository`, `/model/revision`, `/model/config_sha256`, `/verification_boundary/official_derived`, `/verification_boundary/simulators` | Generator and validator bind official-checkpoint-derived scale samples, model identity, contract, and serialized streams to SHA256. | `qkv-tamper-rejection` requires a changed `rope_cases.hex` to fail authentication before simulation; the aggregate reruns Icarus and Verilator. |
 | `QKV-BOUNDARY-001` | `/verification_boundary/excluded` | No attention, decoder, physical-design, FPGA, or dialogue module is included in this manifest. | Manifest scope and aggregate output remain bounded to projection geometry, RoPE, and cache behavior. |
-| `QKV-PROVENANCE-001` | `/projection_cluster/implementation`, `/rope/implementation`, `/kv_cache/implementation` | First-party ACE-3 sources with exact accepted-module dependencies and no copied predecessor implementation. | Manifest SHA256 entries bind all three review-candidate RTL files. |
+| `QKV-PROVENANCE-001` | `/projection_cluster/implementation`, `/rope/implementation`, `/kv_cache/implementation` | First-party ACE-3 sources with exact accepted-module dependencies and no copied ACE-2 implementation. | Manifest SHA256 entries bind all three review-candidate RTL files. |
 
 ## Verification surfaces and claim boundary
 
