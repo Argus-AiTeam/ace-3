@@ -1,13 +1,14 @@
-# ACE-3 MP：ARGUS Mixed-Precision Engine
+# Argus Compute Engine 3 Mixed-Precision（ACE-3 MP）
 
-ACE-3 MP 是一个独立、证据优先的混合精度 Transformer 推理 RTL 项目。首个实现
-配置面向官方
+ACE-3 MP 是一个证据驱动、处于综合前阶段的混合精度 Transformer 推理加速器项目。
+它面向官方
 [`Qwen/Qwen2.5-0.5B-Instruct-AWQ`](https://huggingface.co/Qwen/Qwen2.5-0.5B-Instruct-AWQ)
-checkpoint 的原生 AWQ W4A16 执行：非对称打包 INT4 权重、128 group size，以及
-FP16 激活、残差和 K/V 状态。
+checkpoint 建立完整的原生 AWQ 系统边界：非对称打包 INT4 权重、128 group size、
+FP16 激活与残差、因果 K/V 状态、decoder 执行、Host 集成和可复现验证。
 
-本仓库遵循一条基本原则：**结果的可信度不能超过它实际执行的边界**。软件 oracle、
-RTL 仿真、综合、FPGA 和真实硬件测量必须分别报告。
+ACE-3 MP 是 ACE 硬件路线中的独立后继项目，不依赖 ACE-2 的源码树、build 目录、
+fixture 路径、runtime 或 evidence store。需要复用的架构思想必须重新实现，或复制
+为 ACE-3 自有且带 provenance 的资产。
 
 ACE-3 由开源长期运行 agent harness
 **[Argus](https://github.com/lbx154/Argus)** 持续规划、执行、独立审核和保存证据。
@@ -24,34 +25,34 @@ ACE-3 由开源长期运行 agent harness
 | 验证 | 独立 oracle、认证输入、Icarus 和 Verilator |
 | 交付等级 | 先完成可复现 RTL 仿真，再声明综合/PPA/FPGA |
 
-设计覆盖原生 AWQ 解包与反量化、完整 projection reduction、FP16 normalization
-和非线性算子、RoPE、因果 K/V 状态、attention 与 value composition、decoder-layer
-集成、indexed 24 层执行、经过认证的持久 simulator state，以及可读自回归生成所需
-的 Host 边界。
+设计覆盖 model-bound tensor loading、原生 AWQ 解包与反量化、完整 projection
+reduction、FP16 normalization 和非线性算子、RoPE、因果 K/V cache、attention 与
+value composition、decoder-layer 集成、indexed 24 层执行、经过认证的持久
+simulator state，以及可读自回归对话所需的 tokenizer/Host/generation 边界。
 
 ## 当前状态
 
 ACE-3 仍是活跃研发项目，不是已经综合、部署到 FPGA、流片或完成真实性能测量的
-实现。仓库已包含经过独立审核的 RTL 和 controller 驱动 24 层 decoder cascade
-证据。真实 Hybrid RTL 对话 traversal 正在运行，但在完整 transaction chain 和生成
-结果通过独立审核前，不能声明为已经验收的可读对话。
+实现。仓库已包含从原生 G128 W4A16 arithmetic lane，到完整官方 projection
+reduction、FP16 residual/RMSNorm/SiLU/RoPE、因果 K/V 状态、attention、单个集成
+decoder layer，再到全部 24 个 indexed decoder layers 执行的独立审核 RTL 与证据。
 
-| 层级 | 已公开边界 | 状态 |
-| --- | --- | --- |
-| 原生 AWQ 算术 | G128 W4A16 dot lane、准确 packing 与 FP16 舍入 | RTL 仿真已验收 |
-| Projection | 896/128/4864 几何和完整 896 输入官方 `q_proj` reduction | RTL 仿真已验收 |
-| FP16 adaptation | Residual、RMSNorm、SiLU/gate、RoPE 和 FP16 K/V 状态 | 有界 RTL 仿真已验收 |
-| Attention | Scaled QK、causal softmax 近似和 cached-value composition | 有界 RTL 仿真已验收 |
-| Decoder | Indexed decoder 执行及独立参考对照 | 有界 RTL 仿真已验收 |
-| Model24 | 无算术的 24 层 controller 和 layer-indexed Verilator cascade | 有界 RTL 仿真已验收 |
-| Host decision | accepted fixture 上的 final RMSNorm 与 tied-head top-10/argmax | Host/oracle 边界已验收 |
-| First Voice | 可保存 RTL 状态、认证 lineage、trusted tips 和紧凑 indexed-layer builder | 基础设施已验收；全层 runtime evidence 与完整 traversal 进行中 |
-| Implementation | 综合、时序、PPA、FPGA 和真实性能 | 尚未声明 |
+已验收的 full-24 fixture 使用了全部 624 个官方 decoder tensor。layer 23 后 Token 1
+hidden state 的最大绝对误差为 `0.08988498970425507`，满足公开的 `0.125` bound。
+Host final RMSNorm 与 tied software `lm_head` 重现了独立 reference 的 Top-10 排序，
+并为固定 `Hello world` fixture 选择 token ID `0`（`!`）。Token 0/global 最大误差仍为
+`2.3170627008770595`；这一 FP16 边界行为被明确披露，而不是隐藏。
 
-当前 Hybrid RTL 边界把 chat serialization、tokenization、embedding lookup、final
-RMSNorm、tied `lm_head`、greedy selection、decode 和 token feedback 保留在 Host。
-每个 prompt 或生成 token 都必须经过 indexed RTL decoder layers 0–23，并维持经过
-认证的逐层持久 K/V 状态。纯软件 hidden-state 路径不算完成。
+当前 First Voice milestone 正在把已经审核的 decoder 扩展为自回归系统。24 个紧凑
+indexed Verilator binary 已经完成 operational build，支持可保存状态、经过认证的
+predecessor lineage 和 caller-held trusted commitment。真实 Hybrid RTL 对话
+traversal 正在运行：每个 prompt token 和每个反馈生成 token 都必须通过 RTL layers
+0–23，同时保持逐层因果 K/V 状态。Host 只负责 chat serialization、tokenization、
+embedding lookup、final RMSNorm、tied-head selection、decode 和 feedback。
+
+目前还没有验收通过的可读 RTL 对话。RTL final RMSNorm、streaming tied
+`lm_head`/Top-K、W8A16、BF16/FP16、更大模型尺寸、综合、时序收敛、PPA、FPGA
+部署和真实硬件性能仍属于后续 milestone。
 
 ## 仓库结构
 

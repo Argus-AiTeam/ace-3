@@ -1,15 +1,17 @@
-# ACE-3 MP: ARGUS Mixed-Precision Engine
+# Argus Compute Engine 3 Mixed-Precision (ACE-3 MP)
 
-ACE-3 MP is a standalone, evidence-first RTL project for mixed-precision
-transformer inference. The first implementation profile targets native AWQ
-W4A16 execution for the official
+ACE-3 MP is an evidence-driven, pre-synthesis accelerator project for
+mixed-precision transformer inference. It develops a complete native-AWQ
+system boundary for the official
 [`Qwen/Qwen2.5-0.5B-Instruct-AWQ`](https://huggingface.co/Qwen/Qwen2.5-0.5B-Instruct-AWQ)
-checkpoint: packed asymmetric INT4 weights, group size 128, and FP16
-activations, residuals, and K/V state.
+checkpoint: packed asymmetric INT4 weights, group size 128, FP16 activations
+and residuals, causal K/V state, decoder execution, host integration, and
+reproducible verification.
 
-The repository follows one rule: **a result is only as strong as its execution
-boundary**. Software-oracle, RTL-simulation, synthesis, FPGA, and
-measured-hardware results are reported separately.
+ACE-3 MP is a standalone successor in the ACE hardware line. It does not
+depend on an ACE-2 source tree, build directory, fixture path, runtime, or
+evidence store. Reused architectural ideas are reimplemented or copied into
+ACE-3-owned, provenance-tracked assets.
 
 ACE-3 is developed with **[Argus](https://github.com/lbx154/Argus)**, the
 open-source long-running agent harness used to plan, execute, review, and
@@ -27,38 +29,43 @@ preserve evidence across this engineering campaign.
 | Verification | Independent oracle, authenticated inputs, Icarus and Verilator |
 | Delivery level | Reproducible RTL simulation before synthesis/PPA/FPGA claims |
 
-The design covers native AWQ unpacking and dequantization, complete projection
-reductions, FP16 normalization and nonlinear operators, RoPE, causal K/V state,
-attention and value composition, decoder-layer integration, indexed 24-layer
-execution, authenticated persistent simulator state, and the host boundary
-needed for readable autoregressive generation.
+The design covers model-bound tensor loading, native AWQ unpacking and
+dequantization, complete projection reductions, FP16 normalization and
+nonlinear operators, RoPE, causal K/V cache, attention and value composition,
+decoder-layer integration, indexed 24-layer execution, authenticated persistent
+simulator state, and the tokenizer/host/generation boundary needed for readable
+autoregressive dialogue.
 
 ## Current status
 
 ACE-3 is active research, not a synthesized implementation, FPGA deployment,
 fabricated chip, or measured-performance result. The repository contains
-independently reviewed RTL and evidence through a controller-driven 24-layer
-decoder cascade. A genuine Hybrid RTL dialogue traversal is currently running,
-but it is not an accepted readable-dialogue result until the complete
-transaction chain and generated output are independently reviewed.
+independently reviewed RTL and evidence from the native G128 W4A16 arithmetic
+lane through complete official projection reductions, FP16 residual/RMSNorm/
+SiLU/RoPE operators, causal K/V state, attention, one integrated decoder layer,
+and indexed execution across all 24 decoder layers.
 
-| Layer | Published boundary | Status |
-| --- | --- | --- |
-| Native AWQ arithmetic | G128 W4A16 dot lane, exact packing and FP16 rounding | Accepted RTL simulation |
-| Projection | 896/128/4864 geometries and complete 896-input official `q_proj` reductions | Accepted RTL simulation |
-| FP16 adaptation | Residual, RMSNorm, SiLU/gate, RoPE, and FP16 K/V state | Accepted bounded RTL simulation |
-| Attention | Scaled QK, causal softmax approximation, and cached-value composition | Accepted bounded RTL simulation |
-| Decoder | Indexed decoder execution with independent reference comparison | Accepted bounded RTL simulation |
-| Model24 | Arithmetic-free 24-layer controller and layer-indexed Verilator cascade | Accepted bounded RTL simulation |
-| Host decision | Final RMSNorm and tied-head top-10/argmax over the accepted fixture | Accepted host/oracle boundary |
-| First Voice | Savable RTL state, authenticated lineage, trusted tips, and compact indexed-layer builder | Infrastructure accepted; all-layer runtime evidence and full traversal in progress |
-| Implementation | Synthesis, timing, PPA, FPGA, and measured performance | Not claimed |
+The accepted full-24 fixture consumes all 624 official decoder tensors. Its
+post-layer-23 Token 1 hidden state has maximum absolute error
+`0.08988498970425507`, within the published `0.125` bound. Host final RMSNorm
+and the tied software `lm_head` reproduce the independent reference Top-10
+ordering and select token ID `0` (`!`) for the fixed `Hello world` fixture.
+The Token 0/global maximum error remains `2.3170627008770595`; this FP16
+boundary behavior is disclosed rather than hidden.
 
-The current Hybrid RTL boundary keeps chat serialization, tokenization,
-embedding lookup, final RMSNorm, tied `lm_head`, greedy selection, decoding,
-and token feedback on the host. Every represented prompt or generated token
-must traverse indexed RTL decoder layers 0–23 with authenticated persistent
-per-layer K/V state. A software-only hidden-state path is not completion.
+The current First Voice milestone extends that reviewed decoder into an
+autoregressive system. Twenty-four compact indexed Verilator binaries have
+been built operationally with savable state, authenticated predecessor
+lineage, and caller-held trusted commitments. A genuine Hybrid RTL dialogue
+traversal is in progress: every prompt token and every fed-back generated token
+must pass through RTL layers 0–23 while preserving causal per-layer K/V state.
+The host performs only chat serialization, tokenization, embedding lookup,
+final RMSNorm, tied-head selection, decode, and feedback.
+
+No readable RTL dialogue has been accepted yet. RTL final RMSNorm, a streaming
+tied `lm_head`/Top-K unit, W8A16, BF16/FP16, larger-model tiers, synthesis,
+timing closure, PPA, FPGA deployment, and measured hardware performance remain
+future milestones.
 
 ## Repository map
 
