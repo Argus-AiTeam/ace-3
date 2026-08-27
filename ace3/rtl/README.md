@@ -1,5 +1,8 @@
 # RTL
 
+`ace3_generation_feedback_chain.sv` connects the unchanged tied lm_head directly
+to the selected-token feedback stage; no Host-selected token port exists.
+
 `ace3_final_rmsnorm.sv` is the parameter-free 896-element final-layer wrapper
 around the accepted FP16 RMSNorm arithmetic core.
 

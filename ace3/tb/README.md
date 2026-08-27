@@ -1,5 +1,8 @@
 # Testbenches
 
+Generation-feedback benches cover reduced tie/backpressure/fault protocol cases
+and the official 151936-by-896 Verilator traversal.
+
 `ace3_final_rmsnorm_tb.sv` captures four-state Icarus output evidence without
 opening oracle files. `ace3_final_rmsnorm_main.cpp` provides the corresponding
 Verilator capture harness.

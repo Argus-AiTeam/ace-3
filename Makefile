@@ -34,6 +34,18 @@ STREAMING_LM_HEAD_RTL := $(ROOT)/ace3/rtl/ace3_streaming_tied_lm_head_topk.sv
 STREAMING_LM_HEAD_TB := $(ROOT)/ace3/tb/ace3_streaming_tied_lm_head_topk_tb.sv
 STREAMING_LM_HEAD_CPP_TB := $(ROOT)/ace3/tb/ace3_streaming_tied_lm_head_topk_main.cpp
 STREAMING_LM_HEAD_REFERENCE := $(ROOT)/ace3/model/streaming_lm_head_reference.py
+GENERATION_FEEDBACK_CHECKPOINT ?=
+GENERATION_FEEDBACK_TOKENIZER_DIR ?=
+GENERATION_FEEDBACK_DIR := $(BUILD_DIR)/generation_feedback
+GENERATION_FEEDBACK_VECTOR_DIR := $(GENERATION_FEEDBACK_DIR)/official_vectors
+GENERATION_FEEDBACK_IVERILOG_BIN := $(GENERATION_FEEDBACK_DIR)/protocol.vvp
+GENERATION_FEEDBACK_VERILATOR_DIR := $(GENERATION_FEEDBACK_DIR)/verilator
+GENERATION_FEEDBACK_VERILATOR_BIN := $(GENERATION_FEEDBACK_VERILATOR_DIR)/Vace3_generation_feedback_chain
+GENERATION_FEEDBACK_RTL := $(ROOT)/ace3/rtl/ace3_generated_token_feedback.sv $(ROOT)/ace3/rtl/ace3_generation_feedback_chain.sv
+GENERATION_FEEDBACK_TB := $(ROOT)/ace3/tb/ace3_generation_feedback_chain_tb.sv
+GENERATION_FEEDBACK_CPP := $(ROOT)/ace3/tb/ace3_generation_feedback_chain_main.cpp
+GENERATION_FEEDBACK_REFERENCE := $(ROOT)/ace3/model/generation_feedback_reference.py
+GENERATION_FEEDBACK_COMPARE := $(ROOT)/ace3/model/generation_feedback_compare.py
 
 .PHONY: final-rmsnorm-contract final-rmsnorm-acceptance
 
@@ -2076,3 +2088,42 @@ streaming-lm-head-official-verilator: streaming-lm-head-official-vectors \
 
 clean:
 	rm -rf "$(BUILD_DIR)"
+
+.PHONY: generation-feedback generation-feedback-validation generation-feedback-iverilog generation-feedback-reference generation-feedback-verilator-compile generation-feedback-official-run generation-feedback-compare generation-feedback-failure-gate
+generation-feedback: generation-feedback-validation generation-feedback-iverilog generation-feedback-compare
+generation-feedback-validation:
+	@$(PYTHON) -m json.tool $(ROOT)/ace3/contracts/generated_token_feedback.json >/dev/null
+	@$(PYTHON) -m py_compile $(GENERATION_FEEDBACK_REFERENCE) $(GENERATION_FEEDBACK_COMPARE)
+	@$(PYTHON) $(ROOT)/ace3/model/tests/test_generation_feedback.py
+generation-feedback-iverilog: generation-feedback-validation
+	@$(RM) -r $(GENERATION_FEEDBACK_DIR)/iverilog $(GENERATION_FEEDBACK_IVERILOG_BIN); mkdir -p $(GENERATION_FEEDBACK_DIR)/iverilog
+	@$(IVERILOG) -g2012 -Wall -s ace3_generation_feedback_chain_tb -o $(GENERATION_FEEDBACK_IVERILOG_BIN) $(STREAMING_LM_HEAD_FIXED_RTL) $(STREAMING_LM_HEAD_ROUNDER_RTL) $(STREAMING_LM_HEAD_RTL) $(GENERATION_FEEDBACK_RTL) $(GENERATION_FEEDBACK_TB) >$(GENERATION_FEEDBACK_DIR)/iverilog/compile.stdout 2>$(GENERATION_FEEDBACK_DIR)/iverilog/compile.stderr
+	@$(VVP) $(GENERATION_FEEDBACK_IVERILOG_BIN) >$(GENERATION_FEEDBACK_DIR)/iverilog/run.stdout 2>$(GENERATION_FEEDBACK_DIR)/iverilog/run.stderr
+	@grep -F 'GENERATION_FEEDBACK_PROTOCOL_PASS tie=ascending_token backpressure=pass malformed=3' $(GENERATION_FEEDBACK_DIR)/iverilog/run.stdout
+	@cat $(GENERATION_FEEDBACK_DIR)/iverilog/run.stdout
+generation-feedback-reference: generation-feedback-validation
+	@test -n "$(GENERATION_FEEDBACK_CHECKPOINT)" && test -n "$(GENERATION_FEEDBACK_TOKENIZER_DIR)"
+	@$(RM) -r $(GENERATION_FEEDBACK_VECTOR_DIR); mkdir -p $(GENERATION_FEEDBACK_VECTOR_DIR)
+	@$(PYTHON) $(GENERATION_FEEDBACK_REFERENCE) --checkpoint $(GENERATION_FEEDBACK_CHECKPOINT) --tokenizer-dir $(GENERATION_FEEDBACK_TOKENIZER_DIR) --output-dir $(GENERATION_FEEDBACK_VECTOR_DIR) >$(GENERATION_FEEDBACK_VECTOR_DIR)/reference.stdout 2>$(GENERATION_FEEDBACK_VECTOR_DIR)/reference.stderr
+	@grep -F 'GENERATION_FEEDBACK_REFERENCE_PASS token=2114 embedding=896' $(GENERATION_FEEDBACK_VECTOR_DIR)/reference.stdout
+generation-feedback-verilator-compile: generation-feedback-validation
+	@$(RM) -r $(GENERATION_FEEDBACK_VERILATOR_DIR); mkdir -p $(GENERATION_FEEDBACK_VERILATOR_DIR)
+	@$(VERILATOR) --cc --exe --build --Wall -Wno-fatal --top-module ace3_generation_feedback_chain --Mdir $(GENERATION_FEEDBACK_VERILATOR_DIR) $(STREAMING_LM_HEAD_FIXED_RTL) $(STREAMING_LM_HEAD_ROUNDER_RTL) $(STREAMING_LM_HEAD_RTL) $(GENERATION_FEEDBACK_RTL) $(GENERATION_FEEDBACK_CPP) >$(GENERATION_FEEDBACK_DIR)/verilator-compile.stdout 2>$(GENERATION_FEEDBACK_DIR)/verilator-compile.stderr
+	@test -x $(GENERATION_FEEDBACK_VERILATOR_BIN)
+generation-feedback-official-run: generation-feedback-reference generation-feedback-verilator-compile
+	@printf '%s\n' '$(GENERATION_FEEDBACK_VERILATOR_BIN) --checkpoint $(GENERATION_FEEDBACK_CHECKPOINT) --config $(GENERATION_FEEDBACK_VECTOR_DIR)/input.cfg --hidden $(GENERATION_FEEDBACK_VECTOR_DIR)/hidden.hex --raw $(GENERATION_FEEDBACK_DIR)/raw.txt --terminal $(GENERATION_FEEDBACK_DIR)/terminal.txt' >$(GENERATION_FEEDBACK_DIR)/official.command
+	@set -eu; status=0; $(GENERATION_FEEDBACK_VERILATOR_BIN) --checkpoint $(GENERATION_FEEDBACK_CHECKPOINT) --config $(GENERATION_FEEDBACK_VECTOR_DIR)/input.cfg --hidden $(GENERATION_FEEDBACK_VECTOR_DIR)/hidden.hex --raw $(GENERATION_FEEDBACK_DIR)/raw.txt --terminal $(GENERATION_FEEDBACK_DIR)/terminal.txt >$(GENERATION_FEEDBACK_DIR)/official.stdout 2>$(GENERATION_FEEDBACK_DIR)/official.stderr || status=$$?; printf '%s\n' "$$status" >$(GENERATION_FEEDBACK_DIR)/official.exit_code; test "$$status" -eq 0
+generation-feedback-compare: generation-feedback-official-run
+	@$(PYTHON) $(GENERATION_FEEDBACK_COMPARE) --terminal $(GENERATION_FEEDBACK_DIR)/terminal.txt --exit-code $(GENERATION_FEEDBACK_DIR)/official.exit_code --raw $(GENERATION_FEEDBACK_DIR)/raw.txt --oracle $(GENERATION_FEEDBACK_VECTOR_DIR)/oracle.json --embedding $(GENERATION_FEEDBACK_VECTOR_DIR)/oracle_embedding.hex --report $(GENERATION_FEEDBACK_DIR)/comparison.json >$(GENERATION_FEEDBACK_DIR)/comparison.stdout 2>$(GENERATION_FEEDBACK_DIR)/comparison.stderr
+	@grep -F 'GENERATION_FEEDBACK_COMPARE_PASS token=2114 embedding=896 next_position=1' $(GENERATION_FEEDBACK_DIR)/comparison.stdout
+	@cat $(GENERATION_FEEDBACK_DIR)/official.stdout $(GENERATION_FEEDBACK_DIR)/comparison.stdout
+generation-feedback-failure-gate: generation-feedback-official-run
+	@command -v strace >/dev/null
+	@$(RM) $(GENERATION_FEEDBACK_DIR)/failure.raw $(GENERATION_FEEDBACK_DIR)/failure.terminal $(GENERATION_FEEDBACK_DIR)/failure.exit_code $(GENERATION_FEEDBACK_DIR)/failure-comparison.json $(GENERATION_FEEDBACK_DIR)/failure-gate.trace
+	@set -eu; status=0; $(GENERATION_FEEDBACK_VERILATOR_BIN) --checkpoint $(GENERATION_FEEDBACK_CHECKPOINT) --config $(GENERATION_FEEDBACK_VECTOR_DIR)/input.cfg --hidden $(GENERATION_FEEDBACK_VECTOR_DIR)/hidden.hex --raw $(GENERATION_FEEDBACK_DIR)/failure.raw --terminal $(GENERATION_FEEDBACK_DIR)/failure.terminal --inject-after-feedback 8 >$(GENERATION_FEEDBACK_DIR)/failure.stdout 2>$(GENERATION_FEEDBACK_DIR)/failure.stderr || status=$$?; printf '%s\n' "$$status" >$(GENERATION_FEEDBACK_DIR)/failure.exit_code; test "$$status" -eq 1
+	@test "$$(grep -c '^feedback ' $(GENERATION_FEEDBACK_DIR)/failure.raw)" -eq 8
+	@grep -Fx 'natural_terminal=0' $(GENERATION_FEEDBACK_DIR)/failure.terminal >/dev/null
+	@set -eu; status=0; strace -f -e trace=openat -o $(GENERATION_FEEDBACK_DIR)/failure-gate.trace $(PYTHON) $(GENERATION_FEEDBACK_COMPARE) --terminal $(GENERATION_FEEDBACK_DIR)/failure.terminal --exit-code $(GENERATION_FEEDBACK_DIR)/failure.exit_code --raw $(GENERATION_FEEDBACK_DIR)/failure.raw --oracle $(GENERATION_FEEDBACK_VECTOR_DIR)/oracle.json --embedding $(GENERATION_FEEDBACK_VECTOR_DIR)/oracle_embedding.hex --report $(GENERATION_FEEDBACK_DIR)/failure-comparison.json >$(GENERATION_FEEDBACK_DIR)/failure-compare.stdout 2>$(GENERATION_FEEDBACK_DIR)/failure-compare.stderr || status=$$?; test "$$status" -ne 0
+	@test ! -e $(GENERATION_FEEDBACK_DIR)/failure-comparison.json
+	@! grep -E 'oracle\.json|oracle_embedding\.hex' $(GENERATION_FEEDBACK_DIR)/failure-gate.trace
+	@printf '%s\n' 'GENERATION_FEEDBACK_FAILURE_GATE_PASS partial_feedback=8 natural_terminal=0 oracle_opened=0 report_created=0'

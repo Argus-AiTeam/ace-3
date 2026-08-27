@@ -1,5 +1,8 @@
 # Contracts
 
+`generated_token_feedback.json` binds the accepted RTL rank-zero token to its
+tokenizer metadata, exact tied embedding row, and next-position state commitment.
+
 `final_rmsnorm.json` freezes the parameter-free `ace3_final_rmsnorm` public top,
 the fixed 896-element transaction, checkpoint provenance, arithmetic semantics,
 and bounded verification counts.

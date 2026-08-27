@@ -1,5 +1,8 @@
 # Reference models
 
+Generation-feedback comparison is gated on a natural simulator terminal before
+the independent selected-token, tokenizer, or embedding oracle is opened.
+
 `final_rmsnorm_model.py` authenticates the official checkpoint and emits four
 integer-exact 896-element vector cases. `final_rmsnorm_compare.py` gates raw
 simulator evidence before opening the generated oracle artifacts.

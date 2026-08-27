@@ -1,0 +1,40 @@
+{
+  "schema_version": 1,
+  "contract_id": "ace3-generated-token-feedback-v1",
+  "public_top": "ace3_generation_feedback_chain",
+  "source_boundary": {
+    "hidden": "896 accepted final-RMSNorm IEEE-754 binary16 words",
+    "selection": "rank zero of the directly connected accepted ace3_streaming_tied_lm_head_topk output",
+    "tie_break": "descending rounded finite FP16 logit, then ascending token ID",
+    "host_recomputation_allowed": false
+  },
+  "official_geometry": {"hidden_size": 896, "vocab_size": 151936, "top_k": 10},
+  "bindings": {
+    "checkpoint_sha256": "c50d807b7bed7ff314308972e0f4bcf4e5a70bc60ad88fc7df53940831ed0c1b",
+    "vocabulary_tokenizer_sha256": "c0382117ea329cdf097041132f6d735924b697924d6f6fc3945713e96ce87539",
+    "tokenizer_config_sha256": "5b5d4f65d0acd3b2d56a35b56d374a36cbc1c8fa5cf3b3febbbfabf22f359583",
+    "checkpoint_tensor": "model.embed_tokens.weight",
+    "tied_peer": "lm_head.weight",
+    "tied_value_sha256": "d74257dc547b48be5ae7b93f1c9af072c0c42dbbb85503078e25c59cd09e68d0",
+    "state_tip": "nonzero trusted and presented 256-bit values must match",
+    "position": "next_position must equal prior_position plus one without overflow"
+  },
+  "feedback_protocol": {
+    "top_k": "ranks 0 through 9 exactly once; rank zero is held as selected-token output",
+    "embedding_request": "issued only for the captured RTL rank-zero token",
+    "embedding": "exactly 896 ordered finite FP16 words for that same token",
+    "next_input": "ready/valid stream preserves token, feature, FP16 bits, last, and next position",
+    "commit": "emitted only after all 896 next-input words are accepted and carries prior state tip, selected token, and next position",
+    "error_recovery": "binding, order, framing, nonfinite, substitution, and duplicate faults are sticky until clear or reset"
+  },
+  "tokenizer_decode_metadata": {
+    "producer": "post-terminal comparator driven by the raw RTL-selected token",
+    "fields": ["token_id", "tokenizer_token", "decoded_text", "decoded_utf8_hex", "special"],
+    "oracle_role": "comparison only; never drives RTL selection or embedding address"
+  },
+  "causal_state_commitment": "SHA256(domain || prior_state_tip || selected_token_le32 || next_position_le32 || 896 little-endian FP16 words)",
+  "claim_boundary": {
+    "demonstrated": "standalone accepted final-RMSNorm hidden through RTL lm_head selection and exact tied-embedding feedback",
+    "excluded": ["full 24-layer dialogue", "readable dialogue completion", "synthesis", "PPA", "FPGA", "latency"]
+  }
+}
