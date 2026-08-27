@@ -153,7 +153,7 @@ module ace3_generated_token_feedback #(
             else if(embedding_request_ready_i===1'b1) begin expected_feature_q<='0;state_q<=ST_EMBED;end
           end
           ST_EMBED: begin
-            if((embedding_end_i===1'b1)&&!((embedding_valid_i===1'b1)&&embedding_ready_o)) begin state_q<=ST_ERROR;error_code_q<=ERROR_FRAMING;end
+            if((embedding_end_i===1'b1)&&(embedding_valid_i!==1'b1)) begin state_q<=ST_ERROR;error_code_q<=ERROR_FRAMING;end
             else if((embedding_valid_i===1'b1)&&embedding_ready_o) begin
               if(!known_token(embedding_token_index_i)||!known_feature(embedding_feature_index_i)||!known16(embedding_f16_i)||!known1(embedding_last_i)||!known1(embedding_end_i)) begin state_q<=ST_ERROR;error_code_q<=ERROR_UNKNOWN;end
               else if(embedding_token_index_i!=selected_token_q) begin state_q<=ST_ERROR;error_code_q<=ERROR_TOKEN;end

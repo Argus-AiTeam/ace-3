@@ -20,9 +20,19 @@ module ace3_generation_feedback_chain_tb;
  function [15:0] w(input [2:0] t,input [1:0] f);begin if(f!=0)w=0;else case(t)0:w=16'h3c00;1:w=16'h3c00;2:w=16'h3800;3:w=0;default:w=16'hbc00;endcase end endfunction
  task weights;integer t,f;begin for(t=0;t<5;t=t+1)for(f=0;f<4;f=f+1)begin @(negedge clk);weight_token=t;weight_feature=f;weight_f16=w(t,f);weight_last_feature=(f==3);weight_last_token=(t==4&&f==3);weight_end=weight_last_token;weight_valid=1;@(posedge clk);@(negedge clk);weight_valid=0;weight_end=0;if(f==3)begin wait(logit_valid===1);@(posedge clk);end end end endtask
  task reach_request;integer i;begin start;for(i=0;i<4;i=i+1)hidden(i);weights;wait(selected_valid===1);if(selected_token!==0)begin $display("TIE_SELECT_FAIL token=%0d",selected_token);failures=failures+1;end @(negedge clk);selected_ready=1;@(posedge clk);@(negedge clk);selected_ready=0;wait(request_valid===1);if(request_token!==0)failures=failures+1;request_ready=1;@(posedge clk);@(negedge clk);request_ready=0;end endtask
- task send_embedding(input [2:0] token,input [1:0] feature,input [15:0] bits,input last);begin @(negedge clk);embedding_token=token;embedding_feature=feature;embedding_f16=bits;embedding_last=last;embedding_end=last;embedding_valid=1;while(embedding_ready!==1)@(negedge clk);@(posedge clk);@(negedge clk);embedding_valid=0;embedding_end=0;end endtask
+ task send_embedding(input [2:0] token,input [1:0] feature,input [15:0] bits,input last);begin @(negedge clk);embedding_token=token;embedding_feature=feature;embedding_f16=bits;embedding_last=last;embedding_end=last;embedding_valid=1;@(posedge clk);while(embedding_ready!==1)@(posedge clk);@(negedge clk);embedding_valid=0;embedding_end=0;end endtask
  initial begin repeat(3)@(posedge clk);rst_n=1;repeat(2)@(posedge clk);
-  reach_request;next_ready=1;send_embedding(0,0,16'h3c00,0);next_ready=0;send_embedding(0,1,16'h4000,0);repeat(2)begin @(posedge clk);if(next_valid!==1||next_feature!==1||next_f16!==16'h4000)failures=failures+1;end next_ready=1;send_embedding(0,2,16'h4200,0);send_embedding(0,3,16'h4400,1);wait(commit_valid===1);if(commit_token!==0||commit_pos!==1||commit_tip!==TIP)failures=failures+1;commit_ready=1;@(posedge clk);commit_ready=0;pulse_clear;
+  reach_request;next_ready=1;send_embedding(0,0,16'h3c00,0);next_ready=0;
+  fork
+   begin repeat(2)begin @(posedge clk);if(next_valid!==1||next_feature!==0||next_f16!==16'h3c00)failures=failures+1;end @(negedge clk);next_ready=1;end
+   send_embedding(0,1,16'h4000,0);
+  join
+  send_embedding(0,2,16'h4200,0);next_ready=0;
+  fork
+   begin repeat(2)begin @(posedge clk);if(next_valid!==1||next_feature!==2||next_f16!==16'h4200)failures=failures+1;end @(negedge clk);next_ready=1;end
+   send_embedding(0,3,16'h4400,1);
+  join
+  if(next_valid!==1||next_feature!==3||next_f16!==16'h4400||next_last!==1)failures=failures+1;wait(commit_valid===1);if(commit_token!==0||commit_pos!==1||commit_tip!==TIP)failures=failures+1;commit_ready=1;@(posedge clk);commit_ready=0;pulse_clear;
   presented=256'h5;start;wait(error_valid===1);if(error_code!==2)failures=failures+1;malformed=malformed+1;pulse_clear;presented=TIP;
   reach_request;next_ready=1;send_embedding(1,0,16'h3c00,0);wait(error_valid===1);if(error_code!==4)failures=failures+1;malformed=malformed+1;pulse_clear;
   reach_request;next_ready=1;send_embedding(0,1,16'h3c00,0);wait(error_valid===1);if(error_code!==5)failures=failures+1;malformed=malformed+1;pulse_clear;
