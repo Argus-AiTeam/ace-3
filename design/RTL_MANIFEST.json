@@ -1414,28 +1414,116 @@
     "position1_model24_causal_traversal": {
       "contract": {
         "path": "ace3/contracts/position1_model24_causal_traversal.json",
-        "sha256": "undefined"
+        "sha256": "fe6eaadf22adad3cabf5c7aee67ea1894568367b372e77f47092ca71573b1794"
       },
-      "rtl_and_restore_harness": {
-        "rtl_path": "ace3/rtl/ace3_decoder_layer0_token_engine.sv",
-        "harness_path": "ace3/tb/ace3_decoder_layer0_token_engine_main.cpp",
-        "verilator_savable": true,
-        "restore_option": "--state-in"
+      "public_top": {
+        "path": "ace3/rtl/ace3_decoder_layer0_token_engine.sv",
+        "sha256": "68460fa8e085a6b891f0aba46de8efc70d904fcc6e0072f0a3d304ac1b665590",
+        "module": "ace3_decoder_layer0_token_engine",
+        "parameters": [
+          {"name": "LAYER_INDEX", "declaration": "parameter integer LAYER_INDEX = 0", "default": 0},
+          {"name": "ACCURATE_SILU", "declaration": "parameter integer ACCURATE_SILU = 1", "default": 1}
+        ],
+        "ports": [
+          {"name": "clk_i", "direction": "input", "declaration": "input wire clk_i"},
+          {"name": "rst_ni", "direction": "input", "declaration": "input wire rst_ni"},
+          {"name": "clear_i", "direction": "input", "declaration": "input wire clear_i"},
+          {"name": "load_valid_i", "direction": "input", "declaration": "input wire load_valid_i"},
+          {"name": "load_ready_o", "direction": "output", "declaration": "output wire load_ready_o"},
+          {"name": "load_kind_i", "direction": "input", "declaration": "input wire [1:0] load_kind_i"},
+          {"name": "load_index_i", "direction": "input", "declaration": "input wire [12:0] load_index_i"},
+          {"name": "load_f16_i", "direction": "input", "declaration": "input wire [15:0] load_f16_i"},
+          {"name": "start_valid_i", "direction": "input", "declaration": "input wire start_valid_i"},
+          {"name": "start_ready_o", "direction": "output", "declaration": "output wire start_ready_o"},
+          {"name": "start_cache_slot_i", "direction": "input", "declaration": "input wire [1:0] start_cache_slot_i"},
+          {"name": "start_position_i", "direction": "input", "declaration": "input wire [14:0] start_position_i"},
+          {"name": "projection_kind_o", "direction": "output", "declaration": "output wire [2:0] projection_kind_o"},
+          {"name": "projection_meta_valid_i", "direction": "input", "declaration": "input wire projection_meta_valid_i"},
+          {"name": "projection_meta_ready_o", "direction": "output", "declaration": "output wire projection_meta_ready_o"},
+          {"name": "projection_meta_output_channel_o", "direction": "output", "declaration": "output wire [12:0] projection_meta_output_channel_o"},
+          {"name": "projection_meta_group_o", "direction": "output", "declaration": "output wire [5:0] projection_meta_group_o"},
+          {"name": "projection_meta_word_o", "direction": "output", "declaration": "output wire [9:0] projection_meta_word_o"},
+          {"name": "projection_meta_lane_o", "direction": "output", "declaration": "output wire [2:0] projection_meta_lane_o"},
+          {"name": "projection_qzeros_i", "direction": "input", "declaration": "input wire [31:0] projection_qzeros_i"},
+          {"name": "projection_scale_f16_i", "direction": "input", "declaration": "input wire [15:0] projection_scale_f16_i"},
+          {"name": "projection_pair_valid_i", "direction": "input", "declaration": "input wire projection_pair_valid_i"},
+          {"name": "projection_pair_ready_o", "direction": "output", "declaration": "output wire projection_pair_ready_o"},
+          {"name": "projection_pair_input_o", "direction": "output", "declaration": "output wire [12:0] projection_pair_input_o"},
+          {"name": "projection_pair_output_o", "direction": "output", "declaration": "output wire [12:0] projection_pair_output_o"},
+          {"name": "projection_pair_group_o", "direction": "output", "declaration": "output wire [5:0] projection_pair_group_o"},
+          {"name": "projection_pair_word_o", "direction": "output", "declaration": "output wire [9:0] projection_pair_word_o"},
+          {"name": "projection_pair_lane_o", "direction": "output", "declaration": "output wire [2:0] projection_pair_lane_o"},
+          {"name": "projection_qweight_i", "direction": "input", "declaration": "input wire [31:0] projection_qweight_i"},
+          {"name": "projection_bias_valid_i", "direction": "input", "declaration": "input wire projection_bias_valid_i"},
+          {"name": "projection_bias_ready_o", "direction": "output", "declaration": "output wire projection_bias_ready_o"},
+          {"name": "projection_bias_output_channel_o", "direction": "output", "declaration": "output wire [12:0] projection_bias_output_channel_o"},
+          {"name": "projection_bias_f16_i", "direction": "input", "declaration": "input wire [15:0] projection_bias_f16_i"},
+          {"name": "rope_valid_i", "direction": "input", "declaration": "input wire rope_valid_i"},
+          {"name": "rope_ready_o", "direction": "output", "declaration": "output wire rope_ready_o"},
+          {"name": "rope_position_o", "direction": "output", "declaration": "output wire [14:0] rope_position_o"},
+          {"name": "rope_pair_o", "direction": "output", "declaration": "output wire [4:0] rope_pair_o"},
+          {"name": "rope_cos_f16_i", "direction": "input", "declaration": "input wire [15:0] rope_cos_f16_i"},
+          {"name": "rope_sin_f16_i", "direction": "input", "declaration": "input wire [15:0] rope_sin_f16_i"},
+          {"name": "trace_valid_o", "direction": "output", "declaration": "output wire trace_valid_o"},
+          {"name": "trace_ready_i", "direction": "input", "declaration": "input wire trace_ready_i"},
+          {"name": "trace_stage_o", "direction": "output", "declaration": "output wire [4:0] trace_stage_o"},
+          {"name": "trace_index_o", "direction": "output", "declaration": "output wire [12:0] trace_index_o"},
+          {"name": "trace_f16_o", "direction": "output", "declaration": "output wire [15:0] trace_f16_o"},
+          {"name": "trace_position_o", "direction": "output", "declaration": "output wire [14:0] trace_position_o"},
+          {"name": "final_valid_o", "direction": "output", "declaration": "output wire final_valid_o"},
+          {"name": "final_ready_i", "direction": "input", "declaration": "input wire final_ready_i"},
+          {"name": "final_index_o", "direction": "output", "declaration": "output wire [12:0] final_index_o"},
+          {"name": "final_f16_o", "direction": "output", "declaration": "output wire [15:0] final_f16_o"},
+          {"name": "final_last_o", "direction": "output", "declaration": "output wire final_last_o"},
+          {"name": "done_valid_o", "direction": "output", "declaration": "output wire done_valid_o"},
+          {"name": "done_ready_i", "direction": "input", "declaration": "input wire done_ready_i"},
+          {"name": "done_cache_slot_o", "direction": "output", "declaration": "output wire [1:0] done_cache_slot_o"},
+          {"name": "done_position_o", "direction": "output", "declaration": "output wire [14:0] done_position_o"},
+          {"name": "done_cycles_o", "direction": "output", "declaration": "output wire [31:0] done_cycles_o"},
+          {"name": "done_stall_cycles_o", "direction": "output", "declaration": "output wire [31:0] done_stall_cycles_o"},
+          {"name": "busy_o", "direction": "output", "declaration": "output wire busy_o"},
+          {"name": "phase_o", "direction": "output", "declaration": "output wire [5:0] phase_o"},
+          {"name": "layer_index_o", "direction": "output", "declaration": "output wire [4:0] layer_index_o"}
+        ],
+        "execution_parameterization": {
+          "LAYER_INDEX": "one exact value in 0..23 per compiled binary",
+          "ACCURATE_SILU": 1
+        }
+      },
+      "semantic_kv_preload_harness": {
+        "path": "ace3/tb/ace3_decoder_layer0_token_engine_main.cpp",
+        "sha256": "592bfeb1968547532f6bf54ead595476518ccbd5329c2303abc44c04565487cd",
+        "payload": "exactly 256 ordered records per layer: for each index 0..127, stage 6 rotated-key FP16 then stage 7 value FP16, bound to that layer, cache slot 0, source position 0, execution token 2114, checkpoint, tensor map, source trace, and parent-set digest",
+        "preconditions": [
+          "the corrected model has completed reset and is idle with busy_o=0, done_valid_o=0, phase_o=0",
+          "both context lengths are zero and every K/V cache valid bit is clear",
+          "--semantic-kv-preload and --semantic-kv-readback are both present, position is 1, and --state-in is absent"
+        ],
+        "persistent_state_initialized": [
+          "cache slot 0 position 0 K[0..127] from stage 6",
+          "cache slot 0 position 0 V[0..127] from stage 7",
+          "cache slot 0 position 0 valid bits",
+          "cache slot 0 context length set to 1"
+        ],
+        "readback_gate": "before any position-1 start, emit the same 256-record ordering and require every K, V, validity, untouched-cache, and context-length value to match exactly",
+        "preflight_mode": "--semantic-kv-preload-only performs reset, authenticated import, and exact readback without starting a transaction or consuming the official traversal",
+        "execution_flow": "reset corrected model; authenticate semantic payload; import and read back slot-0 position-0 K/V; load immutable n1/n2 and position-1 activation through public ports; start position 1; require natural terminal",
+        "compatibility_policy": "semantic preload never loads an opaque savestate and does not bypass generated-model compatibility checks"
       },
       "executor": {
         "path": "ace3/model/position1_model24_causal_traversal.py",
-        "sha256": "undefined"
+        "sha256": "1a7be564c326681b522bcfa4f66b557641e13b71358d998d0b15ffa5243be630"
       },
       "negative_tests": {
         "path": "ace3/model/tests/test_position1_model24_causal_traversal.py",
-        "sha256": "undefined"
+        "sha256": "9480dfd6f6cbde9000fd0bafa51fe65f18bf17f491106436d06bb2b7cdcd4f59"
       },
       "target": "make position1-model24-causal-traversal",
       "coverage_obligations": [
         "The accepted sealed token-2114 embedding is reused without rerunning lm_head or feedback.",
-        "Each exact layer-indexed Verilator binary restores its own pinned post-position-0 opaque state before executing position 1.",
-        "The ordered parent set binds checkpoint, tensor map, build manifest, binary, state, envelope, natural terminal, activation chain, and FP16 parent K/V hashes.",
-        "Every restored RTL layer is compared with the independent official-checkpoint PyTorch float64 causal oracle after that reference layer imports its own authenticated ordered position-0 FP16 K/V.",
+        "Each exact layer-indexed ACCURATE_SILU=1 Verilator binary resets and imports only its authenticated position-0 stage-6 K and stage-7 V cache values before executing position 1.",
+        "The ordered parent set binds checkpoint, tensor map, build manifest, binary, envelope, natural terminal, activation chain, source trace, and FP16 parent K/V hashes; the semantic path consumes only the bound K/V values.",
+        "Every semantically preloaded RTL layer is compared with the independent official-checkpoint PyTorch float64 causal oracle after that reference layer imports the same authenticated ordered position-0 FP16 K/V.",
         "The corrected execution build selects the accurate SiLU profile for all 24 indexed layers while the sealed parent build remains independently hash-bound.",
         "Dialogue, synthesis, PPA, FPGA, latency, throughput, and readability remain excluded."
       ]
