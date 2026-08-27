@@ -5,6 +5,11 @@ import sys
 import tempfile
 import unittest
 from pathlib import Path
+from types import SimpleNamespace
+from unittest import mock
+
+import numpy as np
+import torch
 
 MODEL = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(MODEL))
@@ -17,6 +22,7 @@ from position1_model24_causal_traversal import (
     TraversalError,
     SEMANTIC_KV_SCHEMA,
     _bound_file_matches,
+    _layer_reference_comparisons,
     _load_parent_kv,
     canonical_json,
     hash_file,
@@ -26,6 +32,55 @@ from position1_model24_causal_traversal import (
     validate_parent_document,
     write_json,
 )
+
+
+class LayerReferencePrecisionTests(unittest.TestCase):
+    def test_local_gate_uses_actual_prior_rtl_fp16_input(self):
+        state = SimpleNamespace(
+            reference_k=torch.empty((0, 2, 64), dtype=torch.float64),
+            reference_v=torch.empty((0, 2, 64), dtype=torch.float64),
+        )
+        parent_k = torch.zeros((1, 2, 64), dtype=torch.float64)
+        parent_v = torch.zeros((1, 2, 64), dtype=torch.float64)
+        input_bits = np.asarray([0x3C00, 0xC000], dtype="<u2")
+        output_bits = input_bits.copy()
+        cumulative_input = torch.tensor([0.5, -0.5], dtype=torch.float64)
+        seen_inputs = []
+        seen_cache_lengths = []
+
+        def fake_step(layer_state, hidden, position):
+            self.assertEqual(position, 1)
+            seen_inputs.append(hidden.clone())
+            seen_cache_lengths.append(layer_state.reference_k.shape[0])
+            layer_state.reference_k = torch.cat(
+                (layer_state.reference_k, parent_k), dim=0
+            )
+            if len(seen_inputs) == 1:
+                return torch.tensor([[1.2, -2.2]], dtype=torch.float64)
+            return torch.tensor([[1.01, -2.01]], dtype=torch.float64)
+
+        with mock.patch(
+            "position1_model24_causal_traversal._reference_layer_step",
+            side_effect=fake_step,
+        ):
+            _, _, cumulative, local = _layer_reference_comparisons(
+                state,
+                cumulative_input,
+                input_bits,
+                output_bits,
+                parent_k,
+                parent_v,
+                1,
+            )
+
+        self.assertEqual(seen_cache_lengths, [1, 1])
+        torch.testing.assert_close(seen_inputs[0][0], cumulative_input)
+        torch.testing.assert_close(
+            seen_inputs[1][0],
+            torch.tensor([1.0, -2.0], dtype=torch.float64),
+        )
+        self.assertGreater(cumulative["max_abs_error"], 0.125)
+        self.assertLessEqual(local["max_abs_error"], 0.125)
 
 
 def fixture() -> dict:

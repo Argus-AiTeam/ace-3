@@ -20,6 +20,7 @@ from model24_first_voice_hybrid import (
     BUILD_MANIFEST_KIND,
     HIDDEN_SIZE,
     _authenticate_tensor_map,
+    _bits_to_f16,
     _comparison,
     _f16_to_bits,
     _load_model,
@@ -124,6 +125,36 @@ def _load_parent_kv(
 
 def _trace_parent_kv(path: Path) -> dict[str, Any]:
     return _load_parent_kv(path)[0]
+
+
+def _layer_reference_comparisons(
+    reference_state: Any,
+    cumulative_input: torch.Tensor,
+    actual_input_bits: np.ndarray,
+    output_bits: np.ndarray,
+    reference_k: torch.Tensor,
+    reference_v: torch.Tensor,
+    position: int,
+) -> tuple[torch.Tensor, torch.Tensor, dict[str, Any], dict[str, Any]]:
+    reference_state.reference_k = reference_k.clone()
+    reference_state.reference_v = reference_v.clone()
+    cumulative_output = _reference_layer_step(
+        reference_state, cumulative_input.unsqueeze(0), position
+    )[0]
+    reference_state.reference_k = reference_k.clone()
+    reference_state.reference_v = reference_v.clone()
+    actual_input = torch.from_numpy(
+        _bits_to_f16(actual_input_bits).astype(np.float64)
+    )
+    local_output = _reference_layer_step(
+        reference_state, actual_input.unsqueeze(0), position
+    )[0]
+    return (
+        cumulative_output,
+        local_output,
+        _comparison(output_bits, cumulative_output),
+        _comparison(output_bits, local_output),
+    )
 
 
 def parse_semantic_kv_payload(path: Path, layer_index: int) -> dict[str, Any]:
@@ -706,6 +737,7 @@ def execute(
     tensor_manifests.mkdir()
     layers = []
     for layer_index, reference_state in enumerate(reference_states):
+        input_bits = hidden_bits.copy()
         parent = parent_document["layers"][layer_index]
         parent_kv, reference_k, reference_v = _load_parent_kv(
             sealed / f"transactions/position000/layer{layer_index:02d}/raw/trace.hex.gz",
@@ -718,8 +750,6 @@ def execute(
             and reference_state.reference_v.shape[0] == 0,
             f"layer {layer_index} reference cache was not empty before import",
         )
-        reference_state.reference_k = reference_k
-        reference_state.reference_v = reference_v
         preload_manifest, preload_payload = write_semantic_kv_preload(
             sealed / f"transactions/position000/layer{layer_index:02d}/raw/trace.hex.gz",
             preload_dir,
@@ -750,15 +780,25 @@ def execute(
             )
         finally:
             shutil.rmtree(vector_workspace, ignore_errors=True)
-        reference_hidden = _reference_layer_step(
-            reference_state, reference_hidden.unsqueeze(0), POSITION
-        )[0]
+        (
+            reference_hidden,
+            local_reference_hidden,
+            cumulative_comparison,
+            comparison,
+        ) = _layer_reference_comparisons(
+            reference_state,
+            reference_hidden,
+            input_bits,
+            hidden_bits,
+            reference_k,
+            reference_v,
+            POSITION,
+        )
         require(
             preload_readback.read_bytes() == preload_payload.read_bytes()
             and parse_semantic_kv_payload(preload_readback, layer_index) == parent["parent_kv"],
             f"layer {layer_index} semantic K/V readback mismatch",
         )
-        comparison = _comparison(hidden_bits, reference_hidden)
         require(
             comparison["max_abs_error"] <= TERMINAL_HIDDEN_ABSOLUTE_TOLERANCE,
             f"layer {layer_index} independent oracle mismatch",
@@ -777,9 +817,20 @@ def execute(
             "transaction": transaction,
             "independent_reference": {
                 **comparison,
+                "seed": "actual layer input from prior RTL FP16 output",
                 "inherited_parent_kv": parent_kv,
                 "absolute_tolerance": TERMINAL_HIDDEN_ABSOLUTE_TOLERANCE,
                 "within_tolerance": True,
+            },
+            "cumulative_reference": {
+                **cumulative_comparison,
+                "seed": "float64 reference propagated from token embedding",
+                "absolute_tolerance": TERMINAL_HIDDEN_ABSOLUTE_TOLERANCE,
+                "within_tolerance": (
+                    cumulative_comparison["max_abs_error"]
+                    <= TERMINAL_HIDDEN_ABSOLUTE_TOLERANCE
+                ),
+                "gating": False,
             },
         })
     result = {
