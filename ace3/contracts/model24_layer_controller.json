@@ -1,0 +1,77 @@
+{
+  "schema_version": 1,
+  "kind": "ace3_model24_checkpointed_layer_controller",
+  "geometry": {
+    "layer_count": 24,
+    "strict_layer_order": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5,
+      6,
+      7,
+      8,
+      9,
+      10,
+      11,
+      12,
+      13,
+      14,
+      15,
+      16,
+      17,
+      18,
+      19,
+      20,
+      21,
+      22,
+      23
+    ],
+    "cache_slots": 2,
+    "supported_positions": 128
+  },
+  "schedule": {
+    "initial_layer": 0,
+    "layer_launch": "retained valid/ready request for the active layer",
+    "layer_completion": "accept exactly one matching, fault-free completion",
+    "checkpoint": "emit and retain one checkpoint after every accepted layer completion",
+    "transition": "launch layer N+1 only after checkpoint N is accepted",
+    "terminal": "emit token completion only after checkpoint 23 is accepted"
+  },
+  "checkpoint_encoding": {
+    "word_bits": 16,
+    "completed_layer": [4, 0],
+    "next_layer": [9, 5],
+    "terminal": 10
+  },
+  "fault_policy": {
+    "latched_until": ["clear", "reset"],
+    "causes": [
+      "out-of-range start metadata",
+      "early, duplicate, mismatched, unknown, or faulted layer completion"
+    ],
+    "suppressed_outputs": [
+      "start_ready",
+      "layer_start",
+      "layer_done_ready",
+      "checkpoint",
+      "done"
+    ]
+  },
+  "verification_boundary": {
+    "established": [
+      "one checkpoint-gated RTL trajectory across all 24 layer indices",
+      "retained metadata under launch, checkpoint, and terminal backpressure",
+      "fail-closed protocol handling and clear recovery"
+    ],
+    "excluded": [
+      "decoder layer arithmetic",
+      "residual or KV payload storage",
+      "tensor loading",
+      "full-model numerical RTL execution",
+      "synthesis, timing, PPA, FPGA, or silicon"
+    ]
+  }
+}
