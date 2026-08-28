@@ -663,6 +663,11 @@ def indexed_layer_tensor_value_hashes(
     }
 
 
+def indexed_layer_uses_accurate_silu(layer_index: int) -> bool:
+    indexed_layer_binding(layer_index)
+    return layer_index >= 3
+
+
 def sampled_indexed_q_projection_rows(
     checkpoint_path: Path,
     tensor_map_path: Path,
@@ -728,6 +733,7 @@ def materialize_indexed_decoder_vectors(
     *,
     layer_index: int,
     expected_handoff_sha256: str | None = None,
+    accurate_silu: bool | None = None,
 ) -> dict[str, Any]:
     indexed_layer_binding(layer_index)
     if expected_handoff_sha256 is None:
@@ -786,6 +792,11 @@ def materialize_indexed_decoder_vectors(
 
     cache_k: list[list[int]] = []
     cache_v: list[list[int]] = []
+    use_accurate_silu = (
+        indexed_layer_uses_accurate_silu(layer_index)
+        if accurate_silu is None
+        else accurate_silu
+    )
     all_trace: list[tuple[int, int, int, int, int]] = []
     final_rows: list[list[int]] = []
     for token, activation in enumerate(handoff):
@@ -795,6 +806,7 @@ def materialize_indexed_decoder_vectors(
             token,
             cache_k,
             cache_v,
+            use_accurate_silu,
         )
         final_rows.append(final)
         all_trace.extend(
@@ -839,9 +851,16 @@ def materialize_indexed_decoder_vectors(
             "tensor_map_sha256": TENSOR_MAP_SHA256,
         },
         "layer_binding": binding,
-        "input_handoff": indexed_layer_input_handoff_binding(
-            layer_index,
-            handoff_binding,
+        "input_handoff": (
+            indexed_layer_input_handoff_binding(layer_index, handoff_binding)
+            if layer_index
+            else {
+                **handoff_binding,
+                "source": "authenticated official token embedding rows",
+                "source_layer_index": None,
+                "consumer_layer_index": 0,
+                "byte_preserved_as": "inputs.hex",
+            }
         ),
         "positions": [0, 1],
         "cache_slot": 0,
@@ -854,6 +873,11 @@ def materialize_indexed_decoder_vectors(
             "qzero_adjustment": "none",
             "activations": "FP16",
             "kv": "FP16",
+            "silu": (
+                "exp range-reduced degree-7 Q24"
+                if use_accurate_silu
+                else "accepted rational Q24"
+            ),
         },
     }
     (output_dir / "boundary_manifest.json").write_text(
