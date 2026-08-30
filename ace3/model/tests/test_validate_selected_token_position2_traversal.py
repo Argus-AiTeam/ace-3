@@ -277,7 +277,7 @@ class SelectedTokenPosition2ValidationTests(unittest.TestCase):
         target_source = make_source.split(
             "model24-selected-token-position2-tests:",
             1,
-        )[1].split("model24-selected-token-position2-lm-head-tests:", 1)[0]
+        )[1].split("\n\n", 1)[0]
         surfaces = (
             validator.read_text(encoding="utf-8"),
             Path(__file__).read_text(encoding="utf-8"),

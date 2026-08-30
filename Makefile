@@ -1350,3 +1350,15 @@ official-model24-systematic-continuations-tests: \
 
 clean:
 	rm -rf "$(BUILD_DIR)"
+
+MODEL24_SELECTED_TOKEN_POSITION2_VALIDATOR := ace3/model/validate_selected_token_position2_traversal.py
+MODEL24_SELECTED_TOKEN_POSITION2_TEST := ace3/model/tests/test_validate_selected_token_position2_traversal.py
+
+.PHONY: model24-selected-token-position2-tests
+
+model24-selected-token-position2-tests:
+	@cd "$(ROOT)" && "$(PYTHON)" -m py_compile \
+	    "$(MODEL24_SELECTED_TOKEN_POSITION2_VALIDATOR)" \
+	    "$(MODEL24_SELECTED_TOKEN_POSITION2_TEST)"
+	@cd "$(ROOT)" && "$(PYTHON)" -m unittest \
+	    ace3.model.tests.test_validate_selected_token_position2_traversal
