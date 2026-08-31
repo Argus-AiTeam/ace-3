@@ -155,6 +155,12 @@ MODEL24_VALIDATOR := $(ROOT)/ace3/model/validate_model24_execution_vectors.py
 MODEL24_TEST := $(ROOT)/ace3/model/tests/test_model24_execution.py
 MODEL24_LAYER_HANDOFF_TEST := $(ROOT)/ace3/tb/test_model24_layer_indexed_handoff.py
 MODEL24_TENSOR_MAP := $(ROOT)/ace3/contracts/model24_tensor_map.json
+MODEL24_RTL_CASCADE_DIR := $(BUILD_DIR)/model24_rtl_cascade
+MODEL24_RTL_LAYER_INDEX ?= 0
+MODEL24_RTL_ACCURATE_SILU ?= 1
+MODEL24_RTL_LAYER_DIR := $(MODEL24_RTL_CASCADE_DIR)/compiled/layer$(MODEL24_RTL_LAYER_INDEX)
+MODEL24_RTL_LAYER_OBJ_DIR := $(MODEL24_RTL_LAYER_DIR)/obj_dir
+MODEL24_RTL_LAYER_BIN := $(MODEL24_RTL_LAYER_OBJ_DIR)/Vace3_decoder_layer0_token_engine
 VL15_LAYER0_HANDOFF ?= $(BUILD_DIR)/model24-prep-worktree/build/freshlayer0execute37-vl15/raw-final.rows
 OFFICIAL_MODEL24_VECTOR_DIR := $(BUILD_DIR)/official_model24_next_token
 OFFICIAL_MODEL24_EXECUTOR := $(ROOT)/ace3/model/official_model24_next_token.py
@@ -212,7 +218,7 @@ export PYTHONDONTWRITEBYTECODE := 1
 	decoder-layer0-verilator-compile decoder-layer0-verilator-simulation \
 	model24-execution model24-execution-vectors \
 	model24-execution-validation model24-execution-tests \
-	model24-layer-indexed-handoff \
+	model24-layer-indexed-handoff model24-rtl-layer-compile \
 	official-model24-next-token official-model24-next-token-vectors \
 	official-model24-next-token-validation official-model24-next-token-tests \
 	official-model24-dialogue official-model24-dialogue-vectors \
@@ -1177,6 +1183,18 @@ model24-layer-indexed-handoff:
 	    --checkpoint "$(OFFICIAL_MODEL24_CHECKPOINT)" \
 	    --tensor-map "$(MODEL24_TENSOR_MAP)" \
 	    --handoff "$(VL15_LAYER0_HANDOFF)"
+
+model24-rtl-layer-compile:
+	@test "$(MODEL24_RTL_LAYER_INDEX)" -ge 0 -a "$(MODEL24_RTL_LAYER_INDEX)" -le 23
+	@rm -rf "$(MODEL24_RTL_LAYER_OBJ_DIR)"
+	@mkdir -p "$(MODEL24_RTL_LAYER_DIR)"
+	@cd "$(ROOT)" && "$(VERILATOR)" --cc --exe --build --savable --Wall -Wno-fatal \
+	    -GLAYER_INDEX="$(MODEL24_RTL_LAYER_INDEX)" \
+	    -GACCURATE_SILU="$(MODEL24_RTL_ACCURATE_SILU)" \
+	    --top-module ace3_decoder_layer0_token_engine \
+	    --Mdir "$(MODEL24_RTL_LAYER_OBJ_DIR)" $(DECODER_RTL) \
+	    "$(DECODER_CPP_TB)"
+	@test -x "$(MODEL24_RTL_LAYER_BIN)"
 
 official-model24-next-token: official-model24-next-token-validation \
 	official-model24-next-token-tests

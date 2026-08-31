@@ -4,9 +4,11 @@
 from __future__ import annotations
 
 import os
+import io
 from pathlib import Path
 import stat
 import sys
+import tarfile
 import tempfile
 import unittest
 
@@ -19,31 +21,48 @@ import preflight_argus_subagent_registry as preflight  # noqa: E402
 
 
 REPOSITORY = Path(__file__).resolve().parents[3]
-V5_TASK_ID = "ace3-position2-fresh-v5-20260831T032100Z"
-V5_AUTHORITY_CONSUMED = (
-    REPOSITORY
-    / "build/model24_selected_token_position2_authority_consumed"
-    / f"{V5_TASK_ID}.json"
-)
+PROBE_TASK_ID = "ace3-position2-fresh-source-archive-preflight-unit-00001"
+
+
+def write_source_archive(path: Path, files: dict[str, bytes]) -> None:
+    path.parent.mkdir(parents=True, exist_ok=True)
+    with tarfile.open(path, "w") as stream:
+        for name, payload in sorted(files.items()):
+            info = tarfile.TarInfo(name)
+            info.size = len(payload)
+            info.mode = 0o644
+            info.mtime = 0
+            stream.addfile(info, io.BytesIO(payload))
 
 
 class ArgusSubagentRegistryPreflightTests(unittest.TestCase):
     def test_real_project_root_passes_from_0555_evidence_cwd(self) -> None:
-        with tempfile.TemporaryDirectory() as directory:
+        scratch_parent = REPOSITORY / "build/preflight-source-archive-tests"
+        scratch_parent.mkdir(parents=True, exist_ok=True)
+        with tempfile.TemporaryDirectory(dir=scratch_parent) as directory:
             evidence_root = Path(directory) / "immutable-evidence"
             evidence_root.mkdir()
             evidence_root.chmod(0o555)
             runtime_output = Path(directory) / "runtime-output"
             validator_output = Path(directory) / "validator-output"
+            authority_consumed = Path(directory) / "future-authority-consumed.json"
+            source_archive = Path(directory) / "source-archive.tar"
+            write_source_archive(
+                source_archive,
+                {"Makefile": (REPOSITORY / "Makefile").read_bytes()},
+            )
+            build_root = Path(directory) / "intended-build-boundary"
             original_cwd = Path.cwd()
             try:
                 os.chdir(evidence_root)
                 result = preflight.preflight_registry(
                     REPOSITORY,
-                    V5_AUTHORITY_CONSUMED,
-                    canonical_task_id=V5_TASK_ID,
+                    authority_consumed,
+                    canonical_task_id=PROBE_TASK_ID,
                     evidence_root=evidence_root,
                     forbidden_paths=(runtime_output, validator_output),
+                    source_archive=source_archive.relative_to(REPOSITORY),
+                    build_root=build_root,
                 )
             finally:
                 os.chdir(original_cwd)
@@ -59,7 +78,31 @@ class ArgusSubagentRegistryPreflightTests(unittest.TestCase):
                 result["real_bootstrap"]["cwd"],
                 str(REPOSITORY),
             )
-            self.assertEqual(result["canonical_task_id"], V5_TASK_ID)
+            archive_gate = result["source_archive_preflight"]
+            self.assertEqual(archive_gate["status"], "PASS")
+            self.assertEqual(archive_gate["cwd"], str(REPOSITORY))
+            self.assertEqual(
+                archive_gate["source_archive"]["path"],
+                str(source_archive),
+            )
+            self.assertEqual(
+                archive_gate["make_target"],
+                "model24-rtl-layer-compile",
+            )
+            self.assertEqual(archive_gate["build_root"], str(build_root))
+            self.assertEqual(
+                set(archive_gate["make_target_resolution"]),
+                {"0", "23"},
+            )
+            for layer in ("0", "23"):
+                self.assertEqual(
+                    archive_gate["make_target_resolution"][layer]["exit_code"],
+                    0,
+                )
+            self.assertEqual(archive_gate["runtime_invocations"], 0)
+            self.assertEqual(archive_gate["validator_invocations"], 0)
+            self.assertFalse(build_root.exists())
+            self.assertEqual(result["canonical_task_id"], PROBE_TASK_ID)
             self.assertEqual(result["canonical_task_allocations"], 0)
             self.assertEqual(result["durable_runner_submissions"], 0)
             self.assertEqual(result["payload_invocations"], 0)
@@ -70,9 +113,50 @@ class ArgusSubagentRegistryPreflightTests(unittest.TestCase):
                 (evidence_root / ".argus_subagents").exists(),
                 "v4 regression: registry must not be created below evidence cwd",
             )
-            self.assertFalse(V5_AUTHORITY_CONSUMED.exists())
+            self.assertFalse(authority_consumed.exists())
             self.assertFalse(runtime_output.exists())
             self.assertFalse(validator_output.exists())
+
+    def test_missing_archive_target_fails_before_registry_or_authority(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            (root / "Makefile").write_text(
+                ".PHONY: model24-rtl-layer-compile\n"
+                "model24-rtl-layer-compile:\n"
+                "\t@echo live-root-target-would-mask-archive-drift\n",
+                encoding="ascii",
+            )
+            source_archive = root / "build/source-archive.tar"
+            write_source_archive(
+                source_archive,
+                {
+                    "Makefile": (
+                        b".PHONY: other-target\n"
+                        b"other-target:\n"
+                        b"\t@echo wrong archive\n"
+                    )
+                },
+            )
+            marker = root / "future-authority-consumed.json"
+            build_root = root / "build/preflight-boundary"
+
+            with self.assertRaisesRegex(
+                preflight.RegistryPreflightError,
+                "sealed source Makefile target is missing",
+            ):
+                preflight.preflight_registry(
+                    root,
+                    marker,
+                    canonical_task_id=(
+                        "ace3-position2-fresh-source-archive-preflight-unit-00002"
+                    ),
+                    source_archive=source_archive.relative_to(root),
+                    build_root=build_root,
+                )
+
+            self.assertFalse(marker.exists())
+            self.assertFalse((root / ".argus_subagents").exists())
+            self.assertFalse(build_root.exists())
 
     def test_real_bootstrap_creates_missing_project_registry(self) -> None:
         with tempfile.TemporaryDirectory() as directory:
