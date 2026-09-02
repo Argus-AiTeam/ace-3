@@ -1,0 +1,13 @@
+PASS transaction009 input-boundary readiness
+branch=argus/full-projection
+head=1dd88a946aa3f3f7ef7cc4b171a9a357bc377c6b
+note_sha256=35f13eb586ae244edbdbf27dfaf86978bf673a846223175c9475a1734a9e6fb9
+input_status=READY_INPUTS
+authority_status=NOT_READY
+cursor_generation=9
+checkpoint_index=8
+next_transaction_index=9
+would_be_bounds=transaction009/layer8/position3->state4
+fixture_serialized_files_verified=28
+transaction009_025_named_paths=0
+transaction009_025_artifacts_created_by_this_task=0
