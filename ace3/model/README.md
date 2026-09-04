@@ -26,6 +26,12 @@ bindings before simulation.
 native-AWQ projection oracle for two sequential tokens. The generated trace
 retains stage and tensor indices, including Qwen half-split RoPE handoffs, and
 the validator reruns the composition before either RTL simulator executes.
+The integrated RTL milestone compares all 46,676 trace rows and 1,792 final
+hidden rows under Verilator after authenticating every generated artifact.
+Icarus remains the four-state authority for the focused width, reset, clear,
+fault, preload, SiLU-streaming, and qzeros-address boundaries; a full two-token
+Icarus trace is not claimed because a fault-free bounded run reached its
+5,400-second limit after 7,000,000 controller cycles.
 
 `model24_execution_oracle.py` also provides the fixed tokenizer/host profile for
 `Qwen/Qwen2.5-0.5B-Instruct-AWQ` revision
@@ -66,12 +72,28 @@ bit-oracle checks, bounded comparisons to an independent PyTorch Qwen2 path, and
 an FP16 post-layer handoff. Layers 1 through 23 and a valid terminal hidden state
 remain explicitly outside this boundary.
 
+`controller_model24_rtl_cascade.py` authenticates the controller ordering and
+all 624 per-layer tensor bindings, then launches separately indexed Verilator
+decoder instances through layer 23. This full-model profile explicitly enables
+the range-reduced exponential SiLU in every layer; the default decoder profile
+remains available for the accepted layer-0-through-layer-2 regression.
+
 `official_model24_dialogue.py` runs the authenticated fixed chat prompt through
 all 24 layers and the tied head in a deterministic greedy loop. It extends the
 FP16 K/V cache at each generated position, records per-step hidden/logit hashes
 and cache parentage, and compares every selected token with a PyTorch CPU
 float64 dequantized-AWQ reference. Acceptance authenticates and preserves the
 actual official-tokenizer output instead of requiring a canned lexical result.
+
+`model24_host_runtime.py` is the prompt-driven software entry point over that
+executor. With no `--prompt` it uses the authenticated fixed chat; with
+`--prompt` it applies the authenticated official chat template to caller text.
+`make model24-host-runtime` freshly runs and validates both paths under
+`build/model24_host_runtime/`, provisioning the fixed-revision tokenizer inside
+that output tree and preserving prompt and generated token IDs, decoded output,
+source and artifact hashes, checkpoint/tokenizer metadata, and per-token FP16
+K/V and independent-argmax evidence. This is not an RTL, synthesis, PPA, FPGA,
+latency, throughput, or broad dialogue-quality result.
 
 `official_model24_showcase.py` reuses that authenticated 24-layer executor for
 six raw-continuation and official-chat-template prompts in English, Chinese,
@@ -90,3 +112,18 @@ states ACE-versus-PyTorch agreement or mismatch and retains FP16 K/V parentage.
 Diagnostic host wall time is preserved but is not product latency or throughput
 evidence. Unreviewed ancestry `486e5d848245` is excluded from acceptance and
 claim-bearing evidence.
+
+`measure_model24_latency.py` provides the one-command `model24-latency` path.
+It provisions the tokenizer from the fixed official revision, authenticates
+the checkpoint and tokenizer hashes, then measures one fresh four-token
+software dialogue process separately from a fresh controller-driven 24-layer
+Verilator cascade. The evidence preserves command logs, runtime state,
+controller and per-layer harness cycle counts, and SHA-256 records for every
+consumed source and result under ignored `build/` paths. These are diagnostic
+host/simulation measurements only: they are not synthesis, timing-closure,
+PPA, FPGA, hardware-latency, throughput, or bottleneck evidence.
+
+`generate_model24_layer_controller_vectors.py` independently derives the fixed
+24-layer checkpoint sequence from `model24_layer_controller.json`.
+`validate_model24_layer_controller_vectors.py` recomputes the sequence and
+authenticates the generated simulator input before each controller run.

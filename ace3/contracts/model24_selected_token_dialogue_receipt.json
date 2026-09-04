@@ -1,0 +1,100 @@
+{
+  "schema_version": 1,
+  "kind": "ace3_model24_selected_token_dialogue_receipt_contract",
+  "receipt": {
+    "schema_version": 1,
+    "kind": "ace3_model24_selected_token_dialogue_receipt",
+    "required_sections": [
+      "model_binding",
+      "tokenizer_binding",
+      "prompt_lineage",
+      "terminal_evidence",
+      "authority",
+      "selection"
+    ]
+  },
+  "fixed_model_lineage": {
+    "repository": "Qwen/Qwen2.5-0.5B-Instruct-AWQ",
+    "revision": "db09cd27ead7fee40cdee309693cf83601b9c899",
+    "checkpoint": {
+      "filename": "model.safetensors",
+      "sha256": "c50d807b7bed7ff314308972e0f4bcf4e5a70bc60ad88fc7df53940831ed0c1b",
+      "bytes": 730652248
+    },
+    "tokenizer_sha256": "c0382117ea329cdf097041132f6d735924b697924d6f6fc3945713e96ce87539",
+    "tokenizer_config_sha256": "5b5d4f65d0acd3b2d56a35b56d374a36cbc1c8fa5cf3b3febbbfabf22f359583"
+  },
+  "prompt_lineage": {
+    "required": [
+      "source",
+      "serialization_utf8_sha256",
+      "token_ids"
+    ],
+    "validation": "must equal the caller's already-authenticated prompt record"
+  },
+  "terminal_evidence_lineage": {
+    "validation": "must equal the caller-supplied accepted terminal evidence record",
+    "mutation": "not permitted by the bridge"
+  },
+  "selection": {
+    "vocab_size": 151936,
+    "top_k": 10,
+    "entry_fields": [
+      "rank",
+      "token_id",
+      "logit_f16_bits",
+      "logit_q24"
+    ],
+    "ordering": "descending rounded finite FP16 numeric logit; equal logits use ascending token ID",
+    "rank_zero": "must equal selected_token_id and selected_logit_f16_bits",
+    "numeric_binding": "each logit_q24 must be the exact decode of logit_f16_bits"
+  },
+  "authority": {
+    "kind": "ace3_model24_selected_token_dialogue_receipt_authority",
+    "lineage": "must equal the caller-supplied receipt-use authority lineage",
+    "receipt_use_authorized": true,
+    "authority_consumed": false,
+    "bridge_behavior": "read-only validation; authority is neither created nor consumed"
+  },
+  "receipt_chain": {
+    "minimum_receipts": 2,
+    "first_generation_ordinal": 0,
+    "ordering": "generation ordinals must increase by exactly one with no duplicates or gaps",
+    "prompt_record": "every receipt must carry the same authenticated prompt_lineage record",
+    "input_token_history": "each receipt must equal the authenticated prompt token IDs followed by all prior selected token IDs",
+    "terminal_evidence_chain": "the caller supplies one initial parent plus one accepted terminal-evidence record per receipt; each receipt must bind its indexed parent_terminal_evidence and terminal_evidence exactly",
+    "authority_chain": "the caller supplies one expected receipt-use authority lineage per receipt; every authority must be explicitly authorized and unconsumed",
+    "operation": "validate each receipt read-only, append each selected token in order, and decode the complete resulting token history with the supplied authenticated tokenizer"
+  },
+  "output": {
+    "kind": "ace3_model24_selected_token_dialogue_step",
+    "operation": "append the validated selected token ID to the authenticated prompt token history and decode that token with the supplied authenticated tokenizer"
+  },
+  "chain_output": {
+    "kind": "ace3_model24_selected_token_dialogue_chain",
+    "required_fields": [
+      "receipt_count",
+      "selected_tokens",
+      "generated_token_ids",
+      "resulting_token_history",
+      "decoded_dialogue_transcript",
+      "effect_boundary"
+    ]
+  },
+  "claim_boundary": {
+    "demonstrated": "validation-only single selected-token and ordered multi-receipt dialogue bridges",
+    "excluded": [
+      "runtime workload",
+      "durable submission",
+      "lifecycle invocation",
+      "controller invocation",
+      "Model24 model, oracle, or RTL invocation",
+      "authority creation or consumption",
+      "r20 execution",
+      "dialogue quality",
+      "synthesis",
+      "PPA",
+      "FPGA"
+    ]
+  }
+}
