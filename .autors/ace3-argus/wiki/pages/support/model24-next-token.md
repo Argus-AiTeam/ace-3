@@ -90,21 +90,50 @@ consume authority. In particular, this validation-only contract does not
 authorize or consume r20 execution authority and is not new dialogue execution
 or quality evidence.
 
+`model24_host_runtime.export_selected_token_receipt_chain_from_evidence` is a
+read-only exporter for an already accepted Model24 host-runtime or dialogue
+artifact. It consumes immutable evidence and manifest bytes plus caller-pinned
+source provenance and, for host-runtime evidence, an independently pinned
+accepted source-binding fixture. It verifies the evidence and manifest byte
+hashes, the manifest summary, and exact source-binding contents before
+validating the fixed checkpoint, tokenizer, prompt, generated-token, and full
+generation-record lineage. It does not regenerate the accepted evidence.
+
+Each accepted generation step is converted in memory to the existing
+selected-token receipt shape. The canonical terminal record binds its source
+provenance, ordinal, exact input-token history, full source-step hash,
+terminal-hidden hash, logits hash, and selected token. The exporter revalidates
+the deterministic FP16/Q24 Top-K payload and requires one caller-supplied,
+explicitly authorized, unconsumed receipt-use authority with an independently
+supplied expected lineage per step.
+
 The chain form requires at least two receipts starting at generation ordinal
 zero. Every receipt repeats the fixed checkpoint, tokenizer, and authenticated
 prompt record, binds the exact input token history assembled from all preceding
-selections, and names the preceding terminal-evidence record. The caller
-supplies the accepted terminal-evidence chain and a separately authorized,
-unconsumed receipt-use authority lineage for every receipt. Ordinal gaps,
-duplicates, reordered receipts, history discontinuities, stale parentage, and
-any per-receipt Top-K or authority failure are rejected.
+selections, and names the preceding terminal-evidence record. The exporter
+derives that terminal chain from the accepted source steps and validates a
+separately authorized, unconsumed receipt-use authority lineage for every
+receipt. Ordinal gaps, duplicates, reordered receipts, history
+discontinuities, stale parentage, and any per-receipt Top-K, provenance, or
+authority failure are rejected.
 
-After all receipts validate, the bridge returns the ordered selected tokens,
-the resulting complete token history, and a transcript decoded by the supplied
-authenticated tokenizer. This remains read-only assembly from existing
-receipts: it performs no runtime workload, lifecycle or controller action,
-Model24 model/oracle/RTL execution, durable submission, or authority creation
-or consumption.
+After all receipts validate, the exporter confirms that their selected-token
+history exactly equals the accepted generated-token history and that the
+authenticated tokenizer reproduces the accepted decoded text and UTF-8 hash.
+It also returns the complete prompt-plus-generation token history. This remains
+read-only assembly from existing evidence: it performs no runtime workload,
+workload replay, lifecycle or controller action, Model24 model/oracle/RTL
+execution, durable submission, or authority creation or consumption.
+
+`make model24-receipt-chain-validation` is the focused, read-only contract
+check for this path. It reads the accepted host evidence, manifest, and
+tokenizer already present under `build/host_dialogue_audit_20260829T182819Z`,
+authenticates its historical source-hash records against a separate accepted
+fixture, and exercises the required lineage, chain, transcript, Top-K,
+provenance, valid-form source-binding drift, replay-marker, and
+receipt-use-authority mutation failures. The target has no evidence-generation
+dependency and creates no authority, lifecycle state, receipt, or
+claim-bearing output.
 
 ## Systematic continuation first batch
 

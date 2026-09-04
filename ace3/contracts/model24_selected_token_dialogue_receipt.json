@@ -36,6 +36,30 @@
     "validation": "must equal the caller-supplied accepted terminal evidence record",
     "mutation": "not permitted by the bridge"
   },
+  "accepted_evidence_export": {
+    "schema_version": 1,
+    "kind": "ace3_model24_accepted_evidence_receipt_chain_export",
+    "operation": "read-only conversion of an existing authenticated Model24 host-runtime or dialogue artifact into ace3_model24_selected_token_dialogue_receipt records",
+    "source_provenance": {
+      "kind": "ace3_model24_accepted_evidence_provenance",
+      "required_fields": [
+        "manifest_name",
+        "manifest_sha256",
+        "evidence_name",
+        "evidence_sha256",
+        "evidence_kind"
+      ],
+      "validation": "must exactly equal the caller-supplied accepted provenance and the hashes recomputed from the consumed immutable bytes"
+    },
+    "source_validation": "the evidence manifest must authenticate the exact artifact bytes and summary; the evidence binding lineage must authenticate the fixed checkpoint, tokenizer, prompt, generated token IDs, and complete generation record",
+    "terminal_canonicalization": "each validated generation step is represented by its ordinal, input-token history, exact canonical step hash, terminal-hidden hash, logits hash, and selected token ID",
+    "continuity": "input history starts with the authenticated prompt token IDs and appends exactly one accepted rank-zero token per prior ordinal",
+    "parentage": "the first parent binds source provenance and prompt lineage; every later parent is the immediately preceding canonical terminal step",
+    "authority": "each caller-supplied receipt-use authority must be explicitly authorized, unconsumed, and exactly bound to its separately supplied expected lineage",
+    "selection": "the accepted step is converted to the existing deterministic FP16/Q24 Top-K receipt selection and revalidated",
+    "transcript": "the exported generated-token history must exactly equal the accepted history and its authenticated-tokenizer decode must equal the accepted decoded text and UTF-8 hash",
+    "effects": "no execution, submission, publication, workload replay, authority creation, or authority consumption"
+  },
   "selection": {
     "vocab_size": 151936,
     "top_k": 10,
@@ -62,7 +86,7 @@
     "ordering": "generation ordinals must increase by exactly one with no duplicates or gaps",
     "prompt_record": "every receipt must carry the same authenticated prompt_lineage record",
     "input_token_history": "each receipt must equal the authenticated prompt token IDs followed by all prior selected token IDs",
-    "terminal_evidence_chain": "the caller supplies one initial parent plus one accepted terminal-evidence record per receipt; each receipt must bind its indexed parent_terminal_evidence and terminal_evidence exactly",
+    "terminal_evidence_chain": "the export derives one source-bound initial parent plus one canonical terminal-step record per receipt; each receipt must bind its indexed parent_terminal_evidence and terminal_evidence exactly",
     "authority_chain": "the caller supplies one expected receipt-use authority lineage per receipt; every authority must be explicitly authorized and unconsumed",
     "operation": "validate each receipt read-only, append each selected token in order, and decode the complete resulting token history with the supplied authenticated tokenizer"
   },
@@ -82,7 +106,7 @@
     ]
   },
   "claim_boundary": {
-    "demonstrated": "validation-only single selected-token and ordered multi-receipt dialogue bridges",
+    "demonstrated": "validation-only accepted-evidence conversion plus single selected-token and ordered multi-receipt dialogue bridges",
     "excluded": [
       "runtime workload",
       "durable submission",

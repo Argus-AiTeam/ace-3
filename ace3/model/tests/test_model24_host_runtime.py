@@ -29,9 +29,12 @@ from model24_host_runtime import (  # noqa: E402
     HostRuntimeError,
     SELECTED_TOKEN_AUTHORITY_KIND,
     SELECTED_TOKEN_CHAIN_KIND,
+    SELECTED_TOKEN_EXPORT_KIND,
     SELECTED_TOKEN_POLICY,
     SELECTED_TOKEN_RECEIPT_KIND,
+    SELECTED_TOKEN_SOURCE_PROVENANCE_KIND,
     _model_binding,
+    export_selected_token_receipt_chain_from_evidence,
     form_dialogue_from_receipt_chain,
     form_next_dialogue_step_from_receipt,
     validate_directory,
@@ -45,6 +48,8 @@ from model24_oracle import (  # noqa: E402
 )
 from official_model24_dialogue import (  # noqa: E402
     DialogueExecutionError,
+    _canonical_json,
+    _sha256_bytes,
     create_binding_lineage,
     official_tokenizer_binding,
     validate_binding_lineage,
@@ -59,6 +64,71 @@ RECEIPT_AUTHORITY_LINEAGE = {
     "authority_id": "accepted-receipt-bridge-fixture",
     "scope": "selected-token-dialogue-receipt-read-only",
 }
+INITIAL_TERMINAL_PARENT = {
+    "kind": "ace3_model24_selected_token_initial_parent",
+    "sha256": "b" * 64,
+}
+DEFAULT_ACCEPTED_HOST_EVIDENCE_DIR = (
+    REPOSITORY_ROOT
+    / "build"
+    / "host_dialogue_audit_20260829T182819Z"
+    / "runtime"
+    / "default"
+)
+DEFAULT_ACCEPTED_HOST_TOKENIZER_DIR = (
+    REPOSITORY_ROOT
+    / "build"
+    / "host_dialogue_audit_20260829T182819Z"
+    / "tokenizer"
+)
+ACCEPTED_HOST_EVIDENCE_DIR = Path(
+    os.environ.get(
+        "ACE3_ACCEPTED_HOST_EVIDENCE_DIR",
+        DEFAULT_ACCEPTED_HOST_EVIDENCE_DIR,
+    )
+)
+ACCEPTED_HOST_TOKENIZER_DIR = Path(
+    os.environ.get(
+        "ACE3_ACCEPTED_HOST_TOKENIZER_DIR",
+        DEFAULT_ACCEPTED_HOST_TOKENIZER_DIR,
+    )
+)
+ACCEPTED_HOST_SOURCE_PROVENANCE = {
+    "schema_version": 1,
+    "kind": SELECTED_TOKEN_SOURCE_PROVENANCE_KIND,
+    "manifest_name": "manifest.json",
+    "manifest_sha256": (
+        "16947b607d46682afe8fac08bfb181f9a28ace2cb1cfd542dc307905b1b52263"
+    ),
+    "evidence_name": ARTIFACT_NAME,
+    "evidence_sha256": (
+        "af075eed0d2727543d004a0ed526e24dd15494396392af4da2521a2f6635ad2a"
+    ),
+    "evidence_kind": "ace3_model24_host_runtime",
+}
+ACCEPTED_HOST_SOURCE_BINDINGS = [
+    {
+        "path": "ace3/model/model24_host_runtime.py",
+        "bytes": 15532,
+        "sha256": (
+            "5153a1ef300cc12c0835f8e35e6e4abfe00e323843325c78ec03efe0d10425da"
+        ),
+    },
+    {
+        "path": "ace3/model/official_model24_dialogue.py",
+        "bytes": 64068,
+        "sha256": (
+            "8759221008bb2c09d97384af5a1c1592fa549cb8294db7ffe4ba8631d547514d"
+        ),
+    },
+    {
+        "path": "ace3/model/official_model24_showcase.py",
+        "bytes": 24477,
+        "sha256": (
+            "43da28644f827c67d73532d0060dbc824a90787936f630ea9692fae3fe192068"
+        ),
+    },
+]
 
 
 class _FixtureTokenizer:
@@ -159,6 +229,28 @@ def _selected_token_receipt(
     }
 
 
+def _receipt_authorities(count: int) -> tuple[list[dict], list[dict]]:
+    lineages = [
+        {
+            "source_evidence_sha256": ACCEPTED_HOST_SOURCE_PROVENANCE[
+                "evidence_sha256"
+            ],
+            "generation_ordinal": ordinal,
+        }
+        for ordinal in range(count)
+    ]
+    authorities = [
+        {
+            "kind": SELECTED_TOKEN_AUTHORITY_KIND,
+            "lineage": copy.deepcopy(lineage),
+            "receipt_use_authorized": True,
+            "authority_consumed": False,
+        }
+        for lineage in lineages
+    ]
+    return authorities, lineages
+
+
 def _receipt_chain(
     length: int = 3,
 ) -> tuple[list[dict], list[dict], list[dict]]:
@@ -236,6 +328,327 @@ def _binding_only_document() -> dict:
     }
     document["binding_lineage"] = create_binding_lineage(document)
     return document
+
+
+class AcceptedEvidenceReceiptExportTests(unittest.TestCase):
+    @classmethod
+    def setUpClass(cls) -> None:
+        cls.evidence_payload = (
+            ACCEPTED_HOST_EVIDENCE_DIR / ARTIFACT_NAME
+        ).read_bytes()
+        cls.manifest_payload = (
+            ACCEPTED_HOST_EVIDENCE_DIR / "manifest.json"
+        ).read_bytes()
+        cls.tokenizer = authenticate_tokenizer(ACCEPTED_HOST_TOKENIZER_DIR)
+        cls.authorities, cls.authority_lineages = _receipt_authorities(4)
+
+    def _export(
+        self,
+        *,
+        evidence_payload: bytes | None = None,
+        manifest_payload: bytes | None = None,
+        provenance: dict | None = None,
+        source_bindings: list[dict] | None = None,
+        authorities: list[dict] | None = None,
+        authority_lineages: list[dict] | None = None,
+    ) -> dict:
+        return export_selected_token_receipt_chain_from_evidence(
+            evidence_payload
+            if evidence_payload is not None
+            else self.evidence_payload,
+            manifest_payload
+            if manifest_payload is not None
+            else self.manifest_payload,
+            self.tokenizer,
+            provenance
+            if provenance is not None
+            else ACCEPTED_HOST_SOURCE_PROVENANCE,
+            source_bindings
+            if source_bindings is not None
+            else ACCEPTED_HOST_SOURCE_BINDINGS,
+            authorities if authorities is not None else self.authorities,
+            (
+                authority_lineages
+                if authority_lineages is not None
+                else self.authority_lineages
+            ),
+        )
+
+    def _rebundle(
+        self,
+        document: dict,
+    ) -> tuple[bytes, bytes, dict]:
+        evidence_payload = _canonical_json(document)
+        manifest = json.loads(self.manifest_payload)
+        manifest["artifacts"][ARTIFACT_NAME] = {
+            "bytes": len(evidence_payload),
+            "sha256": _sha256_bytes(evidence_payload),
+        }
+        manifest_payload = _canonical_json(manifest)
+        provenance = copy.deepcopy(ACCEPTED_HOST_SOURCE_PROVENANCE)
+        provenance["manifest_sha256"] = _sha256_bytes(manifest_payload)
+        provenance["evidence_sha256"] = _sha256_bytes(evidence_payload)
+        return evidence_payload, manifest_payload, provenance
+
+    @staticmethod
+    def _chain_inputs(
+        export: dict,
+    ) -> tuple[list[dict], list[dict], list[dict]]:
+        receipts = export["receipts"]
+        terminal_chain = [
+            receipts[0]["parent_terminal_evidence"],
+            *[receipt["terminal_evidence"] for receipt in receipts],
+        ]
+        lineages = [
+            receipt["authority"]["lineage"] for receipt in receipts
+        ]
+        return receipts, terminal_chain, lineages
+
+    def test_accepted_evidence_exports_receipt_chain_without_execution(
+        self,
+    ) -> None:
+        original_authorities = copy.deepcopy(self.authorities)
+        original_lineages = copy.deepcopy(self.authority_lineages)
+        with (
+            patch(
+                "model24_host_runtime.execute_host_runtime",
+                side_effect=AssertionError("runtime workload invoked"),
+            ) as runtime,
+            patch(
+                "model24_host_runtime._load_model",
+                side_effect=AssertionError("model workload invoked"),
+            ) as model,
+            patch(
+                "model24_host_runtime.execute_loaded_prompt",
+                side_effect=AssertionError("model or oracle invoked"),
+            ) as executor,
+            patch(
+                "controller_model24_rtl_cascade.execute",
+                side_effect=AssertionError("controller or RTL invoked"),
+            ) as controller,
+            patch(
+                "model24_r15_lifecycle.submit",
+                side_effect=AssertionError("lifecycle invoked"),
+            ) as lifecycle,
+            patch(
+                "subprocess.run",
+                side_effect=AssertionError("durable submission invoked"),
+            ) as submission,
+            patch(
+                "pathlib.Path.write_bytes",
+                side_effect=AssertionError("evidence or authority created"),
+            ) as file_write,
+        ):
+            exported = self._export()
+
+        for call in (
+            runtime,
+            model,
+            executor,
+            controller,
+            lifecycle,
+            submission,
+            file_write,
+        ):
+            call.assert_not_called()
+        self.assertEqual(exported["kind"], SELECTED_TOKEN_EXPORT_KIND)
+        self.assertEqual(len(exported["receipts"]), 4)
+        self.assertEqual(
+            exported["accepted_generated_token_history"],
+            [9707, 11, 311, 498],
+        )
+        self.assertEqual(
+            exported["receipt_chain"]["generated_token_ids"],
+            [9707, 11, 311, 498],
+        )
+        self.assertEqual(exported["decoded_transcript"], "Hello, to you")
+        self.assertEqual(self.authorities, original_authorities)
+        self.assertEqual(self.authority_lineages, original_lineages)
+        self.assertEqual(
+            exported["effect_boundary"],
+            {
+                "runtime_workload_invoked": False,
+                "lifecycle_invoked": False,
+                "controller_invoked": False,
+                "model_oracle_or_rtl_invoked": False,
+                "durable_submission_created": False,
+                "authority_created": False,
+                "authority_consumed": False,
+            },
+        )
+        self.assertTrue(
+            all(
+                receipt["kind"] == SELECTED_TOKEN_RECEIPT_KIND
+                and receipt["authority"]["authority_consumed"] is False
+                for receipt in exported["receipts"]
+            )
+        )
+
+    def test_stale_manifest_and_provenance_are_rejected(self) -> None:
+        manifest = json.loads(self.manifest_payload)
+        manifest["artifacts"][ARTIFACT_NAME]["sha256"] = "0" * 64
+        with self.assertRaisesRegex(
+            HostRuntimeError,
+            "manifest authentication",
+        ):
+            self._export(manifest_payload=_canonical_json(manifest))
+
+        provenance = copy.deepcopy(ACCEPTED_HOST_SOURCE_PROVENANCE)
+        provenance["manifest_sha256"] = "0" * 64
+        with self.assertRaisesRegex(
+            HostRuntimeError,
+            "source provenance",
+        ):
+            self._export(provenance=provenance)
+
+    def test_checkpoint_tokenizer_and_prompt_mutations_are_rejected(
+        self,
+    ) -> None:
+        cases = (
+            (
+                "source_hash_shape",
+                lambda document: document["source_bindings"][0].__setitem__(
+                    "sha256", "not-a-sha256"
+                ),
+                "source binding hash",
+            ),
+            (
+                "source_binding_drift",
+                lambda document: document["source_bindings"][0].__setitem__(
+                    "sha256", "0" * 64
+                ),
+                "source binding provenance",
+            ),
+            (
+                "checkpoint",
+                lambda document: document["model_binding"][
+                    "checkpoint"
+                ].__setitem__("sha256", "0" * 64),
+                "checkpoint lineage",
+            ),
+            (
+                "tokenizer",
+                lambda document: document["tokenizer_binding"].__setitem__(
+                    "tokenizer_sha256", "0" * 64
+                ),
+                "tokenizer lineage",
+            ),
+            (
+                "prompt",
+                lambda document: document["prompt"]["token_ids"].__setitem__(
+                    0, document["prompt"]["token_ids"][0] + 1
+                ),
+                "prompt encoding",
+            ),
+        )
+        for name, mutate, message in cases:
+            with self.subTest(name=name):
+                document = json.loads(self.evidence_payload)
+                mutate(document)
+                evidence, manifest, provenance = self._rebundle(document)
+                with self.assertRaisesRegex(HostRuntimeError, message):
+                    self._export(
+                        evidence_payload=evidence,
+                        manifest_payload=manifest,
+                        provenance=provenance,
+                    )
+
+    def test_replay_markers_are_rejected(self) -> None:
+        document = json.loads(self.evidence_payload)
+        document["transaction009_replay"] = True
+        evidence, manifest, provenance = self._rebundle(document)
+        with self.assertRaisesRegex(HostRuntimeError, "replay marker"):
+            self._export(
+                evidence_payload=evidence,
+                manifest_payload=manifest,
+                provenance=provenance,
+            )
+
+        authorities = copy.deepcopy(self.authorities)
+        authorities[1]["lineage"]["replay"] = False
+        lineages = copy.deepcopy(self.authority_lineages)
+        lineages[1]["replay"] = False
+        with self.assertRaisesRegex(HostRuntimeError, "replay marker"):
+            self._export(
+                authorities=authorities,
+                authority_lineages=lineages,
+            )
+
+    def test_history_and_terminal_parent_mutations_are_rejected(self) -> None:
+        for name in ("history", "parent"):
+            with self.subTest(name=name):
+                exported = self._export()
+                receipts, terminals, lineages = self._chain_inputs(exported)
+                if name == "history":
+                    receipts[1]["input_token_history"][-1] += 1
+                    message = "token history discontinuity"
+                else:
+                    receipts[1]["parent_terminal_evidence"][
+                        "selected_token_id"
+                    ] = 0
+                    message = "terminal evidence parent mismatch"
+                with self.assertRaisesRegex(HostRuntimeError, message):
+                    form_dialogue_from_receipt_chain(
+                        receipts,
+                        self.tokenizer,
+                        json.loads(self.evidence_payload)["prompt"],
+                        terminals,
+                        lineages,
+                    )
+
+    def test_selected_token_logit_and_top_k_mutations_are_rejected(
+        self,
+    ) -> None:
+        mutations = (
+            (
+                lambda receipt: receipt["selection"].__setitem__(
+                    "selected_token_id", 0
+                ),
+                "token ID does not match",
+            ),
+            (
+                lambda receipt: receipt["selection"].__setitem__(
+                    "selected_logit_f16_bits", 0x3C00
+                ),
+                "selected logit does not match",
+            ),
+            (
+                lambda receipt: receipt["selection"]["top_k"][1].__setitem__(
+                    "logit_q24", 0
+                ),
+                "top-k payload",
+            ),
+        )
+        for mutate, message in mutations:
+            exported = self._export()
+            receipts, terminals, lineages = self._chain_inputs(exported)
+            mutate(receipts[1])
+            with self.assertRaisesRegex(HostRuntimeError, message):
+                form_dialogue_from_receipt_chain(
+                    receipts,
+                    self.tokenizer,
+                    json.loads(self.evidence_payload)["prompt"],
+                    terminals,
+                    lineages,
+                )
+
+    def test_authority_mutations_are_rejected(self) -> None:
+        mutations = (
+            lambda authority: authority.__setitem__(
+                "receipt_use_authorized", False
+            ),
+            lambda authority: authority.__setitem__(
+                "authority_consumed", True
+            ),
+            lambda authority: authority["lineage"].__setitem__(
+                "generation_ordinal", 99
+            ),
+        )
+        for mutate in mutations:
+            authorities = copy.deepcopy(self.authorities)
+            mutate(authorities[1])
+            with self.assertRaises(HostRuntimeError):
+                self._export(authorities=authorities)
 
 
 class SelectedTokenDialogueReceiptBridgeTests(unittest.TestCase):

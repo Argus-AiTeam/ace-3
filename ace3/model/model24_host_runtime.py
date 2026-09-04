@@ -4,6 +4,7 @@
 from __future__ import annotations
 
 import argparse
+import copy
 import json
 from pathlib import Path
 from typing import Any, Mapping
@@ -29,7 +30,9 @@ from model24_oracle import (
     authenticate_checkpoint,
 )
 from official_model24_dialogue import (
+    ARTIFACT_NAME as DIALOGUE_ARTIFACT_NAME,
     DialogueExecutionError,
+    EVIDENCE_KIND as DIALOGUE_EVIDENCE_KIND,
     _authenticate_model24_binding,
     _binding_path,
     _canonical_json,
@@ -60,6 +63,21 @@ SELECTED_TOKEN_AUTHORITY_KIND = (
 )
 NEXT_DIALOGUE_STEP_KIND = "ace3_model24_selected_token_dialogue_step"
 SELECTED_TOKEN_CHAIN_KIND = "ace3_model24_selected_token_dialogue_chain"
+SELECTED_TOKEN_EXPORT_KIND = (
+    "ace3_model24_accepted_evidence_receipt_chain_export"
+)
+SELECTED_TOKEN_SOURCE_PROVENANCE_KIND = (
+    "ace3_model24_accepted_evidence_provenance"
+)
+SELECTED_TOKEN_SOURCE_PARENT_KIND = (
+    "ace3_model24_accepted_evidence_initial_parent"
+)
+SELECTED_TOKEN_SOURCE_TERMINAL_KIND = (
+    "ace3_model24_accepted_evidence_terminal_step"
+)
+DIALOGUE_MANIFEST_KIND = (
+    "ace3_official_model24_multitoken_dialogue_manifest"
+)
 SELECTED_TOKEN_POLICY = (
     "descending rounded finite FP16 numeric logit; "
     "equal logits use ascending token ID"
@@ -81,6 +99,22 @@ class HostRuntimeError(RuntimeError):
 def _require(condition: bool, message: str) -> None:
     if not condition:
         raise HostRuntimeError(message)
+
+
+def _reject_replay_markers(value: Any, context: str) -> None:
+    if isinstance(value, Mapping):
+        for key, item in value.items():
+            _require(
+                not (
+                    isinstance(key, str)
+                    and "replay" in key.casefold()
+                ),
+                f"{context} contains a replay marker",
+            )
+            _reject_replay_markers(item, context)
+    elif isinstance(value, list):
+        for item in value:
+            _reject_replay_markers(item, context)
 
 
 def _repository_root() -> Path:
@@ -234,6 +268,375 @@ def _receipt_prompt_lineage(prompt: Mapping[str, Any]) -> dict[str, Any]:
     }
 
 
+def _accepted_evidence_spec(
+    evidence_kind: object,
+) -> tuple[str, str]:
+    if evidence_kind == EVIDENCE_KIND:
+        return ARTIFACT_NAME, MANIFEST_KIND
+    if evidence_kind == DIALOGUE_EVIDENCE_KIND:
+        return DIALOGUE_ARTIFACT_NAME, DIALOGUE_MANIFEST_KIND
+    raise HostRuntimeError("accepted Model24 evidence kind mismatch")
+
+
+def _accepted_source_provenance(
+    evidence_payload: bytes,
+    manifest_payload: bytes,
+    evidence_name: str,
+    evidence_kind: str,
+) -> dict[str, Any]:
+    return {
+        "schema_version": 1,
+        "kind": SELECTED_TOKEN_SOURCE_PROVENANCE_KIND,
+        "manifest_name": MANIFEST_NAME,
+        "manifest_sha256": _sha256_bytes(manifest_payload),
+        "evidence_name": evidence_name,
+        "evidence_sha256": _sha256_bytes(evidence_payload),
+        "evidence_kind": evidence_kind,
+    }
+
+
+def _validate_accepted_asset_lineage(
+    document: Mapping[str, Any],
+) -> None:
+    model = document.get("model_binding", {})
+    _require(
+        isinstance(model, dict)
+        and {
+            key: model.get(key)
+            for key in ("repository", "revision", "checkpoint")
+        }
+        == _receipt_model_binding(),
+        "accepted Model24 checkpoint lineage mismatch",
+    )
+    try:
+        expected_execution_binding = _authenticate_model24_binding(
+            _binding_path()
+        )
+    except DialogueExecutionError as error:
+        raise HostRuntimeError(str(error)) from error
+    _require(
+        model.get("accepted_model24_execution_binding")
+        == expected_execution_binding,
+        "accepted Model24 execution lineage mismatch",
+    )
+
+    tokenizer_binding = document.get("tokenizer_binding", {})
+    expected_tokenizer = official_tokenizer_binding()
+    required_tokenizer_fields = {
+        "tokenizer_artifact",
+        "tokenizer_sha256",
+        "config_artifact",
+        "tokenizer_config_sha256",
+    }
+    _require(
+        isinstance(tokenizer_binding, dict)
+        and required_tokenizer_fields <= set(tokenizer_binding)
+        and all(
+            tokenizer_binding.get(field) == expected_tokenizer[field]
+            for field in required_tokenizer_fields
+        )
+        and all(
+            field not in tokenizer_binding
+            or tokenizer_binding[field] == expected_tokenizer[field]
+            for field in ("repository", "revision", "eos_token_id")
+        ),
+        "accepted Model24 tokenizer lineage mismatch",
+    )
+    if "binding_lineage" in document:
+        try:
+            validate_binding_lineage(document)
+        except DialogueExecutionError as error:
+            raise HostRuntimeError(str(error)) from error
+
+
+def _validate_accepted_source_hashes(
+    document: Mapping[str, Any],
+    expected_source_bindings: list[Mapping[str, Any]] | None,
+) -> None:
+    if document.get("kind") != EVIDENCE_KIND:
+        _require(
+            expected_source_bindings is None,
+            "accepted Model24 source bindings are not applicable",
+        )
+        return
+    bindings = document.get("source_bindings")
+    _require(
+        isinstance(bindings, list)
+        and all(isinstance(binding, dict) for binding in bindings)
+        and [binding.get("path") for binding in bindings] == list(SOURCE_PATHS),
+        "accepted Model24 source binding paths mismatch",
+    )
+    _require(
+        all(
+            isinstance(binding, dict)
+            and set(binding) == {"path", "bytes", "sha256"}
+            and type(binding["bytes"]) is int
+            and binding["bytes"] > 0
+            and isinstance(binding["sha256"], str)
+            and len(binding["sha256"]) == 64
+            and all(
+                character in "0123456789abcdef"
+                for character in binding["sha256"]
+            )
+            for binding in bindings
+        ),
+        "accepted Model24 source binding hash mismatch",
+    )
+    _require(
+        isinstance(expected_source_bindings, list)
+        and bindings == expected_source_bindings,
+        "accepted Model24 source binding provenance mismatch",
+    )
+
+
+def _validate_accepted_evidence_payloads(
+    evidence_payload: bytes,
+    manifest_payload: bytes,
+    tokenizer: Any,
+    expected_source_provenance: Mapping[str, Any],
+    expected_source_bindings: list[Mapping[str, Any]] | None,
+) -> tuple[dict[str, Any], dict[str, Any]]:
+    _require(
+        isinstance(evidence_payload, bytes)
+        and isinstance(manifest_payload, bytes),
+        "accepted Model24 evidence payloads must be bytes",
+    )
+    document = _json_without_duplicates(
+        evidence_payload,
+        "accepted Model24 evidence",
+    )
+    _reject_replay_markers(document, "accepted Model24 evidence")
+    _reject_replay_markers(
+        expected_source_bindings,
+        "accepted Model24 expected source bindings",
+    )
+    _validate_accepted_source_hashes(document, expected_source_bindings)
+    evidence_name, manifest_kind = _accepted_evidence_spec(
+        document.get("kind")
+    )
+    manifest = _json_without_duplicates(manifest_payload, MANIFEST_NAME)
+    _reject_replay_markers(manifest, "accepted Model24 manifest")
+    _reject_replay_markers(
+        expected_source_provenance,
+        "accepted Model24 source provenance",
+    )
+    _require(
+        manifest.get("schema_version") == 1
+        and manifest.get("kind") == manifest_kind,
+        "accepted Model24 manifest identity mismatch",
+    )
+    artifacts = manifest.get("artifacts")
+    _require(
+        isinstance(artifacts, dict)
+        and set(artifacts) == {evidence_name},
+        "accepted Model24 manifest artifact set mismatch",
+    )
+    artifact = artifacts[evidence_name]
+    _require(
+        isinstance(artifact, dict)
+        and set(artifact) == {"bytes", "sha256"}
+        and artifact.get("bytes") == len(evidence_payload)
+        and artifact.get("sha256") == _sha256_bytes(evidence_payload),
+        "accepted Model24 evidence manifest authentication failed",
+    )
+
+    source_provenance = _accepted_source_provenance(
+        evidence_payload,
+        manifest_payload,
+        evidence_name,
+        document["kind"],
+    )
+    _require(
+        isinstance(expected_source_provenance, dict)
+        and source_provenance == expected_source_provenance,
+        "accepted Model24 source provenance mismatch",
+    )
+    _validate_accepted_asset_lineage(document)
+    try:
+        summary = validate_dialogue_document(
+            document,
+            tokenizer,
+            expected_kind=document["kind"],
+            expected_prompt_serialization=document["prompt"]["serialization"],
+            expected_prompt_token_ids=document["prompt"]["token_ids"],
+        )
+    except DialogueExecutionError as error:
+        raise HostRuntimeError(str(error)) from error
+
+    if document["kind"] == EVIDENCE_KIND:
+        generation = document["generation"]
+        expected_summary = {
+            "prompt_source": document["prompt"]["source"],
+            "prompt_tokens": len(document["prompt"]["token_ids"]),
+            "generated_tokens": summary["steps"],
+            "generated_token_ids": summary["generated_token_ids"],
+            "decoded_text": summary["decoded_text"],
+            "decoded_utf8_sha256": generation["decoded_utf8_sha256"],
+            "stop_reason": summary["stop_reason"],
+        }
+    else:
+        expected_summary = summary
+    _require(
+        manifest.get("summary") == expected_summary,
+        "accepted Model24 manifest summary mismatch",
+    )
+    return document, source_provenance
+
+
+def export_selected_token_receipt_chain_from_evidence(
+    evidence_payload: bytes,
+    manifest_payload: bytes,
+    tokenizer: Any,
+    expected_source_provenance: Mapping[str, Any],
+    expected_source_bindings: list[Mapping[str, Any]] | None,
+    receipt_authorities: list[Mapping[str, Any]],
+    expected_authority_lineages: list[Mapping[str, Any]],
+) -> dict[str, Any]:
+    """Export receipts from authenticated existing evidence without execution."""
+
+    _reject_replay_markers(
+        receipt_authorities,
+        "selected-token receipt authority chain",
+    )
+    _reject_replay_markers(
+        expected_authority_lineages,
+        "selected-token expected authority chain",
+    )
+    document, source_provenance = _validate_accepted_evidence_payloads(
+        evidence_payload,
+        manifest_payload,
+        tokenizer,
+        expected_source_provenance,
+        expected_source_bindings,
+    )
+    prompt = document["prompt"]
+    prompt_lineage = _receipt_prompt_lineage(prompt)
+    steps = document["generation"]["steps"]
+    _require(
+        len(steps) >= 2
+        and isinstance(receipt_authorities, list)
+        and len(receipt_authorities) == len(steps)
+        and isinstance(expected_authority_lineages, list)
+        and len(expected_authority_lineages) == len(steps),
+        "accepted Model24 receipt authority chain mismatch",
+    )
+
+    initial_parent = {
+        "schema_version": 1,
+        "kind": SELECTED_TOKEN_SOURCE_PARENT_KIND,
+        "source_provenance": copy.deepcopy(source_provenance),
+        "prompt_lineage": copy.deepcopy(prompt_lineage),
+    }
+    terminal_evidence_chain: list[dict[str, Any]] = [initial_parent]
+    receipts: list[dict[str, Any]] = []
+    token_history = list(prompt_lineage["token_ids"])
+    for ordinal, step in enumerate(steps):
+        _require(
+            isinstance(step, dict) and step.get("ordinal") == ordinal,
+            "accepted Model24 terminal step ordering mismatch",
+        )
+        token = step["token"]
+        top_k = [
+            {
+                "rank": entry["rank"],
+                "token_id": entry["token_id"],
+                "logit_f16_bits": entry["logit_f16_bits"],
+                "logit_q24": entry["logit_q24"],
+            }
+            for entry in token["top_k"]
+        ]
+        terminal_evidence = {
+            "schema_version": 1,
+            "kind": SELECTED_TOKEN_SOURCE_TERMINAL_KIND,
+            "source_provenance": copy.deepcopy(source_provenance),
+            "generation_ordinal": ordinal,
+            "input_token_history": list(token_history),
+            "source_step_sha256": _sha256_bytes(_canonical_json(step)),
+            "terminal_hidden_sha256": step["terminal_hidden"]["sha256"],
+            "logits_sha256": step["logits"]["sha256"],
+            "selected_token_id": token["argmax_token_id"],
+        }
+        authority = receipt_authorities[ordinal]
+        expected_lineage = expected_authority_lineages[ordinal]
+        _require(
+            isinstance(authority, dict)
+            and set(authority)
+            == {
+                "kind",
+                "lineage",
+                "receipt_use_authorized",
+                "authority_consumed",
+            },
+            "selected-token receipt authority identity mismatch",
+        )
+        receipt = {
+            "schema_version": 1,
+            "kind": SELECTED_TOKEN_RECEIPT_KIND,
+            "model_binding": _receipt_model_binding(),
+            "tokenizer_binding": official_tokenizer_binding(),
+            "prompt_lineage": copy.deepcopy(prompt_lineage),
+            "input_token_history": list(token_history),
+            "parent_terminal_evidence": copy.deepcopy(
+                terminal_evidence_chain[-1]
+            ),
+            "terminal_evidence": terminal_evidence,
+            "authority": copy.deepcopy(authority),
+            "selection": {
+                "generation_ordinal": ordinal,
+                "vocab_size": token["vocab_size"],
+                "selection_policy": SELECTED_TOKEN_POLICY,
+                "selected_token_id": token["argmax_token_id"],
+                "selected_logit_f16_bits": top_k[0]["logit_f16_bits"],
+                "top_k": top_k,
+            },
+        }
+        validate_selected_token_receipt(
+            receipt,
+            prompt,
+            terminal_evidence,
+            expected_lineage,
+        )
+        receipts.append(receipt)
+        terminal_evidence_chain.append(terminal_evidence)
+        token_history.append(token["argmax_token_id"])
+
+    dialogue = form_dialogue_from_receipt_chain(
+        receipts,
+        tokenizer,
+        prompt,
+        terminal_evidence_chain,
+        expected_authority_lineages,
+    )
+    generation = document["generation"]
+    _require(
+        dialogue["generated_token_ids"] == generation["generated_token_ids"]
+        and dialogue["resulting_token_history"] == token_history,
+        "accepted Model24 generated token history mismatch",
+    )
+    decoded_transcript = tokenizer.decode(
+        generation["decoded_token_ids"],
+        skip_special_tokens=False,
+    )
+    _require(
+        decoded_transcript == generation["decoded_text"]
+        and _sha256_bytes(decoded_transcript.encode("utf-8"))
+        == generation["decoded_utf8_sha256"],
+        "accepted Model24 decoded transcript mismatch",
+    )
+    return {
+        "schema_version": 1,
+        "kind": SELECTED_TOKEN_EXPORT_KIND,
+        "source_provenance": source_provenance,
+        "receipts": receipts,
+        "receipt_chain": dialogue,
+        "accepted_generated_token_history": list(
+            generation["generated_token_ids"]
+        ),
+        "decoded_transcript": decoded_transcript,
+        "effect_boundary": copy.deepcopy(dialogue["effect_boundary"]),
+    }
+
+
 def validate_selected_token_receipt(
     receipt: Mapping[str, Any],
     expected_prompt: Mapping[str, Any],
@@ -242,6 +645,11 @@ def validate_selected_token_receipt(
 ) -> dict[str, Any]:
     """Validate a selected-token receipt without invoking or mutating runtime."""
 
+    _reject_replay_markers(receipt, "selected-token receipt")
+    _reject_replay_markers(
+        expected_authority_lineage,
+        "selected-token expected authority lineage",
+    )
     _require(
         receipt.get("schema_version") == 1
         and receipt.get("kind") == SELECTED_TOKEN_RECEIPT_KIND,
