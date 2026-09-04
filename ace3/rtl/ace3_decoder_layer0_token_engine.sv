@@ -6,7 +6,10 @@
  * projections serial makes the (very large) AWQ tensor port unambiguous:
  * every request describes precisely one word of one tensor.
  */
-module ace3_decoder_layer0_token_engine (
+module ace3_decoder_layer0_token_engine #(
+    parameter integer LAYER_INDEX = 0,
+    parameter integer ACCURATE_SILU = (LAYER_INDEX >= 3)
+) (
     input  wire clk_i, input wire rst_ni, input wire clear_i,
 
     input wire load_valid_i, output wire load_ready_o,
@@ -83,6 +86,8 @@ module ace3_decoder_layer0_token_engine (
     localparam integer KV_FLAT_MAX = KV_HEADS * HEAD_DIM - 1;
 
     initial begin
+        if ((LAYER_INDEX < 0) || (LAYER_INDEX > 23))
+            $error("decoder layer index must be in [0,23]");
         if (Q_FLAT_MAX != 895)
             $error("Q flattened geometry must end at index 895");
         if (KV_FLAT_MAX != 127)
