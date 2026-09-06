@@ -1,0 +1,104 @@
+{
+  "schema_version": 1,
+  "kind": "ace3_selected_completed_engineering_highlights",
+  "completed_result_cutoff_utc": "2026-09-06T10:40:51Z",
+  "selection_scope": "Selected reviewed local component milestones, not a comprehensive evaluation",
+  "model": {
+    "repository": "Qwen/Qwen2.5-0.5B-Instruct-AWQ",
+    "revision": "db09cd27ead7fee40cdee309693cf83601b9c899",
+    "hidden_size": 896
+  },
+  "decoder_integer_agreement": {
+    "layer_indices_zero_based": [16, 17, 18, 19, 20, 21, 22, 23],
+    "fixture_token_positions_per_layer": 2,
+    "trace_rows_per_layer": 46676,
+    "final_rows_per_layer": 1792,
+    "trace_and_final_bit_exact_to_integer_oracle": true,
+    "execution": "Separate local RTL component runs linked by authenticated predecessor handoffs",
+    "layer22_acceptance_reuses_completed_execution": true,
+    "decoder_weight_precision": "Asymmetric packed INT4 AWQ, G128",
+    "scale_activation_kv_precision": "FP16"
+  },
+  "selected_fp16_interstage_comparisons": {
+    "reference_scope": "Dequantized-AWQ component reference with round-to-nearest-even FP16 at implemented interstage boundaries",
+    "reference_is_independently_maintained_full_model": false,
+    "acceptance_rule": "abs_error <= 0.125 OR (relative_error < 0.001 AND ULP_distance <= 1)",
+    "relative_error_definition": "abs_error / max(abs(reference), 2**-14)",
+    "uniform_one_ulp_bound": false,
+    "records": [
+      {
+        "layer_index": 21,
+        "stage_token_groups": 38,
+        "trace_coordinates": 46676,
+        "max_abs_error": 0.015625,
+        "all_observed_errors_satisfy_absolute_branch": true,
+        "final_output_sha256": "5f2ebfe3e02958fbaebc18d29626358199f0c95f3139aafe73064c1487c89457"
+      },
+      {
+        "layer_index": 22,
+        "stage_token_groups": 38,
+        "trace_coordinates": 46676,
+        "max_abs_error": 0.015625,
+        "all_observed_errors_satisfy_absolute_branch": true,
+        "final_output_sha256": "7cefdaf7a80f229ffb1bdbb532e86acdf6d1d77b8315e7f339fbfefc58360f4e"
+      },
+      {
+        "layer_index": 23,
+        "stage_token_groups": 38,
+        "trace_coordinates": 46676,
+        "max_abs_error": 0.0234375,
+        "all_observed_errors_satisfy_absolute_branch": true,
+        "final_output_sha256": "97e729f6f905ecb62f498a6a144beecf6b695465d84fdbaf1de777ce9f5a39b6"
+      }
+    ]
+  },
+  "final_rmsnorm": {
+    "execution": "Local RTL simulation",
+    "output_rows": 1792,
+    "integer_output_and_rms_root_agreement": true,
+    "reference_operation_order": "Float32 mean-square/rsqrt with epsilon=1e-6; normalized activation rounded to FP16; official model.norm.weight multiply rounded to FP16",
+    "max_abs_error": 0.03125,
+    "all_observed_errors_satisfy_abs_le_0_125": true,
+    "output_sha256": "154495573a2ee5b007b1c5b753a2b0ec6c499be7c16c4afcd85038ed134bafa6"
+  },
+  "tied_head_top_k": {
+    "execution": "Local RTL simulation",
+    "consumed_final_rmsnorm_token_index": 1,
+    "weight_precision": "FP16, not INT4",
+    "tied_tensor_names": ["model.embed_tokens.weight", "lm_head.weight"],
+    "streamed_weight_values": 136134656,
+    "vocabulary_logits_compared": 151936,
+    "top_k": 10,
+    "accumulator_logits_and_ordered_top_k_agreement": true,
+    "component_policy": "Exact finite FP16 decode to Q16.24; exact Q32.48 product accumulation; one FP16 RNE per logit",
+    "tie_policy": "Ascending token ID for equal rounded logits",
+    "selected_token_id": 0,
+    "selected_logit_f16_bits": "4c1d",
+    "logits_sha256": "7b8de5d4c51171d686529dea1b64de7d20008b8ec74cc06c041209c84eb80829",
+    "top_k_output_sha256": "0b88d46298b6bcbb20826004a23a76ae3684929616ccb549122a019875a602eb"
+  },
+  "single_token_host_result": {
+    "execution": "Host software consumes the completed tied-head RTL selection",
+    "seed_format": "Plain text, not chat template",
+    "seed_text": "Hello world",
+    "input_token_history": [9707, 1879],
+    "appended_token_count": 1,
+    "selected_token_id": 0,
+    "decoded_selected_token": "!",
+    "result_token_history": [9707, 1879, 0],
+    "complete_one_token_fragment": "Hello world!",
+    "is_complete_dialogue_answer_claim": false,
+    "official_tokenizer_assets_authenticated": true
+  },
+  "publication_boundaries": {
+    "comprehensive_quality_evaluation": false,
+    "full_model_reference_equivalence_established": false,
+    "persistent_kv_second_token_acceptance_included": false,
+    "full_dialogue_completion_established": false,
+    "software_continuation_preview_included": false,
+    "hardware_or_performance_claims": false,
+    "runtime_source_release": false,
+    "self_contained_reproduction_package": false,
+    "raw_model_data_or_execution_archives_included": false
+  }
+}
