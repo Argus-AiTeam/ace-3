@@ -1,0 +1,88 @@
+{
+  "schema_version": 1,
+  "kind": "ace3_bounded_rtl_execution_feedback_example",
+  "date": "2026-09-06",
+  "scope_label": "BOUNDED LOCAL RTL EXECUTION / FEEDBACK EXAMPLE",
+  "certification_boundary": {
+    "independent_whole_trajectory_certification": "pending_not_established",
+    "formal_mission_review": "pending_at_publication_handoff",
+    "accepted_continuous_generation_seed": false,
+    "full_independent_numerical_certification": false,
+    "component_oracles_conditioned_on_supplied_rtl_inputs": true
+  },
+  "model": {
+    "repository": "Qwen/Qwen2.5-0.5B-Instruct-AWQ",
+    "revision": "db09cd27ead7fee40cdee309693cf83601b9c899",
+    "checkpoint_sha256": "c50d807b7bed7ff314308972e0f4bcf4e5a70bc60ad88fc7df53940831ed0c1b",
+    "decoder_precision": "Native asymmetric packed INT4 AWQ W4A16, G128",
+    "activation_and_kv_precision": "FP16",
+    "tied_head_weight_precision": "FP16, not INT4"
+  },
+  "input": {
+    "seed_format": "Plain text, not chat format",
+    "seed_text": "Hello world",
+    "seed_token_ids": [9707, 1879],
+    "token_history": [9707, 1879, 0],
+    "decoded_text": "Hello world!",
+    "consumed_token_id": 0,
+    "consumed_token_piece": "!",
+    "logical_position_zero_based": 2
+  },
+  "output": {
+    "selected_token_id": 358,
+    "selected_token_piece": " I",
+    "selected_logit_f16_bits": "4c1b",
+    "selected_logit_value": 16.421875,
+    "selected_generated_token_ordinal": 2,
+    "token_history": [9707, 1879, 0, 358],
+    "entire_bounded_decoded_text": "Hello world! I",
+    "pending_next_input_position_zero_based": 3,
+    "pending_next_input_token_id": 358,
+    "next_position_executed_in_this_example": false,
+    "third_generated_token_selected_in_this_example": false,
+    "eos_complete_response_claim": false,
+    "complete_chat_answer_claim": false
+  },
+  "local_component_coverage": {
+    "decoder_layer_indices": [
+      0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11,
+      12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23
+    ],
+    "decoder_target_position_zero_based": 2,
+    "decoder_natural_terminal_transactions": 24,
+    "decoder_local_exact_trace_and_output_agreement": true,
+    "final_rmsnorm_natural_terminal": true,
+    "final_rmsnorm_serialized_values_compared": 1792,
+    "final_rmsnorm_own_input_exact_values_and_roots_agree": true,
+    "tied_head_natural_terminal": true,
+    "tied_head_vocabulary_logits_compared": 151936,
+    "tied_head_complete_token_id_range": [0, 151935],
+    "tied_head_own_input_exact_logit_bits_and_accumulators_agree": true,
+    "top_k": 10,
+    "independent_software_top10_token_id_order_agrees": true,
+    "bit_identical_independent_software_logits_claim": false
+  },
+  "reuse": {
+    "completed_decoder_states_reused": true,
+    "decoder_transactions_reexecuted_during_tail_recovery": 0,
+    "source_artifacts_unchanged": true,
+    "fresh_final_rmsnorm_and_full_head_tail_execution": true,
+    "additional_prefill_or_24_layer_replay_during_recovery": false
+  },
+  "artifact_identities": {
+    "retained_execution_evidence_sha256": "d322ef47a3918e752bf79230866a42401a5ae5aaad15f09d9c21733b119ad58e",
+    "sealed_manifest_sha256": "9f7bb8f1112e5243cdd72ec28d5ce2005dccb6271e7fbe18fff43e88c37c45b4",
+    "actual_final_rmsnorm_raw_sha256": "37f6518d82684de5bb954b8b861c7f53706dbaf046b22f745a975ebcd1dd28b1",
+    "actual_full_rtl_head_logits_sha256": "f6c21a374dcf95d031d22c91e22c5928726d7381663ee790fa366b42020b88bc"
+  },
+  "publication_boundaries": {
+    "previous_32_token_preview_remains_software_only": true,
+    "continuous_rtl_driver_deployment_claim": false,
+    "general_dialogue_quality_certification": false,
+    "performance_or_hardware_benchmark_claim": false,
+    "runtime_code_changed": false,
+    "runtime_source_release": false,
+    "self_contained_reproduction_package": false,
+    "internal_reports_or_raw_model_data_included": false
+  }
+}

@@ -45,6 +45,16 @@ equivalence, persistent-KV second-token completion, dialogue, or hardware result
 The separate software preview demonstrates its own bounded software K/V
 continuation; it does not promote the RTL execution boundary.
 
+## Bounded execution examples
+
+| Example | Execution and certification boundary |
+| --- | --- |
+| [RTL second-token feedback](results/ACE3_RTL_TOKEN_FEEDBACK_20260906.md) / [Compact summary](results/ACE3_RTL_TOKEN_FEEDBACK_20260906.json) | Actual local RTL selection of token `358`: `Hello world! I`; retained decoder work and a fresh norm/head tail, with independent whole-trajectory certification still pending |
+
+This records completed bounded execution, not an accepted continuous-generation
+seed, full independent numerical certification, or deployment of a continuous
+RTL driver.
+
 ## Evidence ladder
 
 ACE-3 uses the following ordering:
