@@ -34,15 +34,13 @@ does not certify a later integration level.
 | [AWQ W4A16 G128](results/AWQ_W4A16_G128_CF01.md) | Native G128 arithmetic and protocol boundary |
 | [Full-input projection](results/AWQ_W4A16_PROJECTION_CF02.md) | Complete 896-input reduction for selected official outputs |
 | [Model24 systematic continuations](../results/model24-systematic-continuations/) | Independently reviewed software/oracle continuation evidence |
-| [Layers16-21 milestone](results/ACE3_LAYERS16_21_20260906.md) / [JSON receipts](results/ACE3_LAYERS16_21_20260906.json) | Dated layer evidence; retains the original layer21 failure and the FP16-interstage reference-policy distinction |
-| [Layer22-to-host milestone](results/ACE3_LAYER22_TO_HOST_20260906.md) / [JSON receipts](results/ACE3_LAYER22_TO_HOST_20260906.json) | Reviewed layer22 reuse, layer23, final RMSNorm, FP16 tied head/Top-K, and one host token producing `Hello world!` |
+| [Selected engineering highlights](results/ACE3_ENGINEERING_HIGHLIGHTS_20260906.md) / [Numeric summary](results/ACE3_ENGINEERING_HIGHLIGHTS_20260906.json) | Completed, bounded decoder/head/host milestones and one token producing `Hello world!` |
 
-The 2026-09-06 milestones are evidence-only snapshots, not a self-contained
-runtime source or reproduction release. Their metadata retains local
-preparation commit identifiers; this publication exports only the curated
-reports. They preserve numerical and provenance caveats and do not establish
-second-token/persistent-KV completion, full-model reference equivalence,
-dialogue, a uniform one-ULP guarantee, or hardware results.
+The 2026-09-06 highlights select completed local engineering results, with
+their actual precision and fixture boundaries. They are not a comprehensive
+evaluation or a self-contained runtime source/reproduction release. Component
+agreement and one host-token append do not establish full-model reference
+equivalence, persistent-KV second-token completion, dialogue, or hardware results.
 
 ## Evidence ladder
 
