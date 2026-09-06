@@ -33,6 +33,7 @@ does not certify a later integration level.
 | --- | --- |
 | [AWQ W4A16 G128](results/AWQ_W4A16_G128_CF01.md) | Native G128 arithmetic and protocol boundary |
 | [Full-input projection](results/AWQ_W4A16_PROJECTION_CF02.md) | Complete 896-input reduction for selected official outputs |
+| [Q-projection single-round RTL](results/ACE3_Q_PROJECTION_RTL_20260906.md) / [Compact summary](results/ACE3_Q_PROJECTION_RTL_20260906.json) | Bounded reviewed Icarus component: 16 official channels plus 13 directed cases; opt-in dot+bias single rounding, with full-model wiring still pending |
 | [Model24 systematic continuations](../results/model24-systematic-continuations/) | Independently reviewed software/oracle continuation evidence |
 | [Selected engineering highlights](results/ACE3_ENGINEERING_HIGHLIGHTS_20260906.md) / [Numeric summary](results/ACE3_ENGINEERING_HIGHLIGHTS_20260906.json) | Completed, bounded decoder/head/host milestones and one token producing `Hello world!` |
 | [Software continuation preview](results/ACE3_SOFTWARE_CONTINUATION_PREVIEW_20260906.md) / [Numeric summary](results/ACE3_SOFTWARE_CONTINUATION_PREVIEW_20260906.json) | Separate CPU-software reference example: all 32 generated tokens from a fixed plain-text seed, capped without EOS; not RTL-generated |

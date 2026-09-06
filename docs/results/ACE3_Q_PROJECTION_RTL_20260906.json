@@ -1,0 +1,101 @@
+{
+  "schema_version": 1,
+  "kind": "ace3_bounded_q_projection_single_round_rtl_milestone",
+  "date": "2026-09-06",
+  "scope_label": "BOUNDED COMPONENT IMPLEMENTATION / LOCAL ICARUS RTL SIMULATION",
+  "execution": {
+    "compiler": "Icarus Verilog",
+    "simulator": "vvp",
+    "actual_integer_fixed_point_rtl": true,
+    "software_expected_q_injected_as_dut_output": false,
+    "observed_q_outputs": 29,
+    "all_outputs_flags_and_prebias_accumulators_match_per_case_expectations": true
+  },
+  "arithmetic": {
+    "profile": "Native asymmetric AWQ W4A16",
+    "group_size": 128,
+    "activation_precision": "FP16",
+    "qzero_plus_one_adjustment": false,
+    "optional_component_mode": "SINGLE_ROUND_BIAS",
+    "mode_behavior": "Add bias to the exact fixed accumulator before one FP16 round-to-nearest-even conversion",
+    "prebias_accumulator_contract_preserved": true,
+    "q_selection_explicit_in_tested_qkv_cluster": true,
+    "default_mode": "Compatible legacy behavior",
+    "description_applies_to": "Frozen tested component, not a public runtime-source release"
+  },
+  "coverage": {
+    "official_layer_index_zero_based": 0,
+    "official_position_index_zero_based": 2,
+    "official_channel_count": 16,
+    "official_channels": [0, 1, 2, 3, 4, 5, 6, 7, 85, 95, 126, 137, 201, 207, 292, 392],
+    "all_packed_nibble_lanes_and_selected_channels": true,
+    "directed_case_count": 13,
+    "directed_case_names": [
+      "bias-before-round",
+      "normal-even-tie",
+      "normal-odd-tie",
+      "cross-group-cancellation",
+      "negative-underflow",
+      "subnormal-normal-tie",
+      "bias-rescues-intermediate-overflow",
+      "positive-overflow",
+      "negative-overflow",
+      "exact-zero",
+      "nonfinite-bias",
+      "nonfinite-activation",
+      "nonfinite-scale"
+    ],
+    "total_compiled_case_count": 29,
+    "all_896_q_channels_verified_in_rtl": false,
+    "overflow_nonfinite_cases_scope": "Handling semantics, not accepted finite model outputs",
+    "official_example": {
+      "channel": 85,
+      "fp16_bits": "c795",
+      "value": -7.58203125
+    }
+  },
+  "reference_method": {
+    "candidate": "Pre-existing independent binary64 dot-plus-bias software candidate",
+    "exact_oracle": "Integer exact accumulator",
+    "candidate_and_exact_oracle_compared_before_vector_selection": true,
+    "finite_arithmetic_and_directed_handling_expectations_distinguished": true
+  },
+  "bounded_review": {
+    "producer_role": "reviewer",
+    "round": 2,
+    "status": "done",
+    "completion_utc": "2026-09-06T17:26:59.975772+00:00",
+    "scope": "The bounded compiled Q component and its declared contract",
+    "chronology": "The engineer result's pending-review annotation predates this later review",
+    "original_result_unchanged": true
+  },
+  "artifact_identities": {
+    "result_sha256": "bdbbc9f36e92324016653d27503dbf04c981227a51a9667787a86e459c299556",
+    "frozen_manifest_sha256": "3d436cc21d84638383a33ff33c616501386686e490bb8070a81ea0dc0947dec6",
+    "actual_q_output_sha256": "7792bdd9a8f83298ecf687bec9ebc4a9643ab628bcca0edf4fb04fcec1eb72eb",
+    "compiled_q_simulation_artifact_sha256": "c99abefa9968b84d73afdc32430098af1e6050edf79b3c4e6994ab9748f183a8",
+    "later_component_review_handoff_sha256": "96db2884d625163f6fd8522427fbfd1f053cc9133923c66fdf9cdeac3c7648f0"
+  },
+  "integration_boundary": {
+    "full_model_decoder": "ace3_decoder_layer0_token_engine",
+    "full_model_bias_path": "p_bias",
+    "full_model_new_mode_wiring": "pending",
+    "actual_output_fed_full_model_traversal": "pending",
+    "compatible_kv_seed": "pending",
+    "dialogue": "pending",
+    "full_model_q_fixed_claim": false,
+    "full_24_layer_verification_claim": false,
+    "continuous_generation_started_claim": false,
+    "new_generated_tokens_from_this_test": 0,
+    "current_bounded_actual_rtl_transcript": "Hello world! I",
+    "previous_32_token_preview_remains_software_only": true
+  },
+  "publication_boundary": {
+    "documentation_only": true,
+    "new_runtime_source_released": false,
+    "public_tree_is_executable_reproduction": false,
+    "vectors_weights_raw_records_or_private_handoff_included": false,
+    "synthesis_ppa_fpga_or_hardware_performance_claim": false,
+    "full_model_numerical_certification_claim": false
+  }
+}
