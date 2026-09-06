@@ -1,0 +1,1657 @@
+{
+  "components": [
+    {
+      "artifact_directory": "diagnose_layer22_from_layer21",
+      "artifact_receipts": [
+        {
+          "bytes": 9028,
+          "path": "attempt.json",
+          "sha256": "a70478c1021faacc59e42e5751d1b77e402d5c7bc3c60c72cbc2f6b862630b1e"
+        },
+        {
+          "bytes": 901,
+          "path": "status.json",
+          "sha256": "0c36d614dbe019b112417c5f7683773a9b680a97713da0a783841af2ad1048fb"
+        },
+        {
+          "bytes": 7181,
+          "path": "adjudication.json",
+          "sha256": "844f2eef77ac43fda384c592526a102006b877c1ae151fc80543e6c70eb3a990"
+        },
+        {
+          "bytes": 15541,
+          "path": "sealed_output_manifest.json",
+          "sha256": "1832f299e4b1ea242dfaa83ff945970b83ef697c5249cb43cd2e531163a82c0c"
+        },
+        {
+          "bytes": 24371,
+          "path": "record.json",
+          "sha256": "17e64a542d98046a24375cc1fb7649db86fd1d9039da3247bd05f3a14f69f7d7"
+        },
+        {
+          "bytes": 16939,
+          "path": "comparison.json",
+          "sha256": "34a48553fe1e8c676cbe07ae89ac0808a5e9e874a4a5cc84329e5e36210eda68"
+        },
+        {
+          "bytes": 1258,
+          "path": "integer_comparison.json",
+          "sha256": "02fd714f4a25e6522340b4580dfafb38dde9068e2508f56f5b9c7767caf65c9c"
+        },
+        {
+          "bytes": 870,
+          "path": "compile.json",
+          "sha256": "20e3279bfd4ae1dd8d1c205cdfd02d5a755dee87a69c2b32236d0cf628bab249"
+        },
+        {
+          "bytes": 1020,
+          "path": "simulation.json",
+          "sha256": "9b16de0806e1610e0e67cca17ecca4719d563e2618a90d5f4a2f43147d690ac6"
+        },
+        {
+          "bytes": 222,
+          "path": "compiled_binary.json",
+          "sha256": "43240da84fc4de21619b3eb7272776f48838f4e6b06c7bdec3ece71835963aa5"
+        },
+        {
+          "bytes": 1188,
+          "path": "vector_generation.json",
+          "sha256": "18ee37c8f8f6cfafb281f6af600e460219040c0d987a2782a2cf93cf16154d7f"
+        },
+        {
+          "bytes": 833,
+          "path": "float_policy.json",
+          "sha256": "03541032f8c8f01975a355b64bf5adfca87019e59a8f7aaa9d1afe79a9769ad7"
+        },
+        {
+          "bytes": 457,
+          "path": "natural_terminal_gate.json",
+          "sha256": "b3848220453c614689a98c935ceb632e0cdbb0ff49d0e58e5053764e1ab6f07c"
+        },
+        {
+          "bytes": 572,
+          "path": "preservation.json",
+          "sha256": "e44249491e0c89dfe1dc6c76e2119cbf5e393da2969ff8af60ef44e2d6141bb1"
+        },
+        {
+          "bytes": 20706,
+          "path": "predecessor_before.json",
+          "sha256": "fee7f8c5eaef65d2f0ac0626d111143e7a515c2a4988fb2d7c8685e9bfd83c9c"
+        },
+        {
+          "bytes": 191,
+          "path": "execution_started.json",
+          "sha256": "4c91a0538b921e611219c9f484d11aa2a0c0e7cd46e9b20f5b98e4ce97b301d4"
+        },
+        {
+          "bytes": 127,
+          "path": "raw/terminal.txt",
+          "sha256": "f140587f5ab16f63ac1d502679684d433cf2ae0d857dbc4be0e8bd81ed626078"
+        },
+        {
+          "bytes": 19712,
+          "path": "raw/final.hex",
+          "sha256": "7cefdaf7a80f229ffb1bdbb532e86acdf6d1d77b8315e7f339fbfefc58360f4e"
+        },
+        {
+          "bytes": 793492,
+          "path": "raw/trace.hex",
+          "sha256": "8b1e69859be38ba196282690f5c2e73e4385802448f91352072d894ed4d559ca"
+        },
+        {
+          "bytes": 10374,
+          "path": "vectors/boundary_manifest.json",
+          "sha256": "63fd54b7b97f6506d09b0830d3c0c1d64350a507dd6f39b79d80611f43958159"
+        }
+      ],
+      "artifact_review_status": null,
+      "comparison": {
+        "failure_count": 0,
+        "max_abs_error": 0.015625,
+        "max_relative_error": 3.0537109375,
+        "max_ulp_distance": 7564,
+        "mean_abs_error": 0.0001454543518392663,
+        "reference_policy": {
+          "absolute_tolerance": 0.125,
+          "activation_boundaries": "round-to-nearest-even FP16 after every implemented stage",
+          "max_ulp_distance": 1,
+          "name": "w4a16_fp16_interstage",
+          "relative_tolerance": 0.001
+        },
+        "stage_token_groups": 38,
+        "trace_coordinates": 46676
+      },
+      "component": "layer22",
+      "consumed_predecessor_seal": {
+        "bytes": 19209,
+        "path": "$ARCHIVE_REPOSITORY/build/model24_layer21_attempt002/sealed_output_manifest.json",
+        "sha256": "53e4e8682af1674f19f0696124b475e7b338289bd4107220a1ebc70686a64b81"
+      },
+      "execution_class": "reused sealed diagnostic execution; acceptance task performed read-only review; duplicate official rerun superseded",
+      "host_timing": {
+        "attempt_total_wall_seconds": 516.387791958,
+        "compile": {
+          "ended_unix_ns": 1788686176100962292,
+          "exit_code": 0,
+          "recorded_command": [
+            "make",
+            "--no-print-directory",
+            "model24-rtl-layer-compile",
+            "MODEL24_RTL_LAYER_INDEX=22",
+            "MODEL24_RTL_ACCURATE_SILU=1",
+            "MODEL24_RTL_CASCADE_DIR=$ARCHIVE_REPOSITORY/build/diagnose_layer22_from_layer21"
+          ],
+          "started_unix_ns": 1788686163768931763,
+          "status": "PASS",
+          "wall_seconds": 12.332030529
+        },
+        "float_policy": {
+          "ended_unix_ns": 1788686644237879283,
+          "exit_code": 0,
+          "recorded_command": [
+            "python3",
+            "-B",
+            "$ARCHIVE_REPOSITORY/ace3/model/run_layer22_from_layer21.py",
+            "compare",
+            "--output-dir",
+            "$ARCHIVE_REPOSITORY/build/diagnose_layer22_from_layer21"
+          ],
+          "started_unix_ns": 1788686639601591870,
+          "status": "PASS",
+          "wall_seconds": 4.636287413
+        },
+        "simulation": {
+          "ended_unix_ns": 1788686639593191229,
+          "exit_code": 0,
+          "recorded_command": [
+            "$ARCHIVE_REPOSITORY/build/diagnose_layer22_from_layer21/compiled/layer22/obj_dir/Vace3_decoder_layer0_token_engine",
+            "--layer-index",
+            "22",
+            "--vector-dir",
+            "$ARCHIVE_REPOSITORY/build/diagnose_layer22_from_layer21/vectors",
+            "--raw-dir",
+            "$ARCHIVE_REPOSITORY/build/diagnose_layer22_from_layer21/raw",
+            "--progress-interval",
+            "1000000"
+          ],
+          "started_unix_ns": 1788686176101902535,
+          "status": "PASS",
+          "wall_seconds": 463.491288694
+        },
+        "vector_generation": {
+          "ended_unix_ns": 1788686163768654103,
+          "started_unix_ns": 1788686129914033563,
+          "status": "PASS",
+          "wall_seconds": 33.85462054
+        }
+      },
+      "input_handoff": {
+        "bytes": 19712,
+        "complete_rows": 1792,
+        "consumer_layer_index": 22,
+        "path": "$ARCHIVE_REPOSITORY/build/model24_layer21_attempt002/raw/final.hex",
+        "sha256": "5f2ebfe3e02958fbaebc18d29626358199f0c95f3139aafe73064c1487c89457",
+        "source_layer_index": 21
+      },
+      "integer_oracle_bit_exact": true,
+      "later_reviewer_status": "done",
+      "natural_terminal": "schema=ace3_decoder_layer_raw_v1 layer_index=22 natural_terminal=1 exit_code=0 trace_count=46676 final_count=1792 done_count=2",
+      "original_claim_boundary": {
+        "demonstrated": "fresh layer22 diagnostic RTL execution with independent integer and FP16-policy comparisons",
+        "dialogue": "not run",
+        "fpga": "not run",
+        "full_model": "not claimed",
+        "official_attempt": "not run",
+        "ppa": "not measured",
+        "synthesis": "not run"
+      },
+      "outputs": {
+        "final": {
+          "bytes": 19712,
+          "integer_oracle_sha256": "7cefdaf7a80f229ffb1bdbb532e86acdf6d1d77b8315e7f339fbfefc58360f4e",
+          "path": "raw/final.hex",
+          "rows": 1792,
+          "sha256": "7cefdaf7a80f229ffb1bdbb532e86acdf6d1d77b8315e7f339fbfefc58360f4e"
+        },
+        "trace": {
+          "bytes": 793492,
+          "integer_oracle_sha256": "8b1e69859be38ba196282690f5c2e73e4385802448f91352072d894ed4d559ca",
+          "path": "raw/trace.hex",
+          "rows": 46676,
+          "sha256": "8b1e69859be38ba196282690f5c2e73e4385802448f91352072d894ed4d559ca"
+        }
+      },
+      "predecessor_preservation": {
+        "byte_hash_discrepancies": [],
+        "files_rechecked": 125,
+        "ordered_file_set_sha256": "f159072e0b7c1a31be3299510e1900094e7e9a1dc87736b3d39e49785d38023c",
+        "original_baseline_file_count": 125,
+        "predecessor_directory": "model24_layer21_attempt002"
+      },
+      "review_task_id": "2200a1d4460b",
+      "runtime_status": "PASS",
+      "seal": {
+        "byte_hash_discrepancies": [],
+        "bytes": 15541,
+        "original_artifact_count": 89,
+        "path": "sealed_output_manifest.json",
+        "sealed_at_utc": "2026-09-06T09:24:15.471525+00:00",
+        "sha256": "1832f299e4b1ea242dfaa83ff945970b83ef697c5249cb43cd2e531163a82c0c"
+      },
+      "sealed_status": "PASS",
+      "source_records": [
+        {
+          "current_bytes": 55113,
+          "current_sha256": "95007f672a8ee9c145d040838908365a011f40e9ca3b4c625d12526ba2ed205f",
+          "matches_recorded_source": false,
+          "path": "$ARCHIVE_REPOSITORY/ace3/model/run_layer22_from_layer21.py",
+          "recorded_bytes": 49858,
+          "recorded_sha256": "c218b7810cbea42ccc3b82d858581021c9e37a527e312b575834e5386aab3f40"
+        },
+        {
+          "current_bytes": 34406,
+          "current_sha256": "272a9344759eddf44d6b1023f21512a0bd40d17e8c1e1fb2b18f46e37b91ff7a",
+          "matches_recorded_source": true,
+          "path": "$ARCHIVE_REPOSITORY/ace3/model/controller_model24_rtl_cascade.py",
+          "recorded_bytes": 34406,
+          "recorded_sha256": "272a9344759eddf44d6b1023f21512a0bd40d17e8c1e1fb2b18f46e37b91ff7a"
+        },
+        {
+          "current_bytes": 24998,
+          "current_sha256": "fea9f4fac4eb725cc2cfb235b1a63abbd0c13af0154b2a9c1cd4c5919d2828e5",
+          "matches_recorded_source": true,
+          "path": "$ARCHIVE_REPOSITORY/ace3/model/layer3_token0_diagnostic.py",
+          "recorded_bytes": 24998,
+          "recorded_sha256": "fea9f4fac4eb725cc2cfb235b1a63abbd0c13af0154b2a9c1cd4c5919d2828e5"
+        },
+        {
+          "current_bytes": 37584,
+          "current_sha256": "ac08fffae89305e68a8dea667027ebe75fae2235b03544a04d699ce830c9b1ab",
+          "matches_recorded_source": true,
+          "path": "$ARCHIVE_REPOSITORY/ace3/model/official_model24_next_token.py",
+          "recorded_bytes": 37584,
+          "recorded_sha256": "ac08fffae89305e68a8dea667027ebe75fae2235b03544a04d699ce830c9b1ab"
+        }
+      ]
+    },
+    {
+      "artifact_directory": "model24_layer23_attempt001",
+      "artifact_receipts": [
+        {
+          "bytes": 9044,
+          "path": "attempt.json",
+          "sha256": "9113d51c6b2b6061961e9f606320af14452bd22ad29c57fda35413786d316db2"
+        },
+        {
+          "bytes": 880,
+          "path": "status.json",
+          "sha256": "7b92d7b73110d1ccf98c2b195a56791216e1be21ca4bf1ae2c6287a8b451c4b1"
+        },
+        {
+          "bytes": 7146,
+          "path": "adjudication.json",
+          "sha256": "89dee7cf2dd709af695651773d925cbbf42de39f3cc38eb6c27ddc6b229a04cb"
+        },
+        {
+          "bytes": 15521,
+          "path": "sealed_output_manifest.json",
+          "sha256": "2c7adde9827e16ddd9f495df502788aa2d3ef8a09fc307723281bf43a49c3646"
+        },
+        {
+          "bytes": 24262,
+          "path": "record.json",
+          "sha256": "cc7c7902f29a6bf720d5cae8719a13b4d4bb1f2b3d4dfa35b6bcf4ad63df68ec"
+        },
+        {
+          "bytes": 16847,
+          "path": "comparison.json",
+          "sha256": "573eeb33fbe106faa0fdb9902dd3a3e43f8bbdee96d70dd0c6ac9a26e9fd09b1"
+        },
+        {
+          "bytes": 1248,
+          "path": "integer_comparison.json",
+          "sha256": "cc1947a63fbfe9508d60d08dd134f23eb5e0dbbd9e9360f84920fb24c366bca3"
+        },
+        {
+          "bytes": 860,
+          "path": "compile.json",
+          "sha256": "873052bbbec123ac5a36f83bf0fd63d0214c71906294b7af461cc3b4b74fa217"
+        },
+        {
+          "bytes": 1005,
+          "path": "simulation.json",
+          "sha256": "635ec27028a0ccc0b4e9f80caa1768c042e8cd6d5759443e6ec254cb42a1becc"
+        },
+        {
+          "bytes": 222,
+          "path": "compiled_binary.json",
+          "sha256": "f0e5b24e340ec93d01427c21cb61863bd2decda805b8fc651c58c78e579243ce"
+        },
+        {
+          "bytes": 1177,
+          "path": "vector_generation.json",
+          "sha256": "099687ffcc6f71159755591f1ab00281c7e5e74af9e0ebbf41f3dd72b78037cd"
+        },
+        {
+          "bytes": 845,
+          "path": "float_policy.json",
+          "sha256": "82dc8d3452d4214562e62356ce1743da1d8fa529e9ef856619b307851006c9d9"
+        },
+        {
+          "bytes": 451,
+          "path": "natural_terminal_gate.json",
+          "sha256": "6837568afc7812b9fde6b93c73e3773845827916a0b13115bb666771c6c98c3e"
+        },
+        {
+          "bytes": 571,
+          "path": "preservation.json",
+          "sha256": "bfe967e5c3cadd6cb7a6ba5201ba0672cac9140225ddb9c99d1c70b22aa79bf2"
+        },
+        {
+          "bytes": 15644,
+          "path": "predecessor_before.json",
+          "sha256": "e4a11190a13ef5169bd2a6027b1b2011cd1628697c09aeac14d64d5a4fb8a640"
+        },
+        {
+          "bytes": 191,
+          "path": "execution_started.json",
+          "sha256": "d93142bbbb74b32ff5cbec23801dcb959b0a24310ff9849204daf1c49a04ca8a"
+        },
+        {
+          "bytes": 127,
+          "path": "raw/terminal.txt",
+          "sha256": "e698787e2a1125d77e70de7d24f0ae5ae219014ab1bd54ad16925d3cd87f830b"
+        },
+        {
+          "bytes": 19712,
+          "path": "raw/final.hex",
+          "sha256": "97e729f6f905ecb62f498a6a144beecf6b695465d84fdbaf1de777ce9f5a39b6"
+        },
+        {
+          "bytes": 793492,
+          "path": "raw/trace.hex",
+          "sha256": "aa76ed9c2bfdf82888b491e284354aaa4b6e6f61fc128c007479e083aa66c1d9"
+        },
+        {
+          "bytes": 10374,
+          "path": "vectors/boundary_manifest.json",
+          "sha256": "d89438eee5d57963b19f781266da40f0889ff033451bd51434310d4bea3d73c7"
+        }
+      ],
+      "artifact_review_status": null,
+      "comparison": {
+        "failure_count": 0,
+        "max_abs_error": 0.0234375,
+        "max_relative_error": 8.4716796875,
+        "max_ulp_distance": 10985,
+        "mean_abs_error": 0.0004086901541934932,
+        "reference_policy": {
+          "absolute_tolerance": 0.125,
+          "activation_boundaries": "round-to-nearest-even FP16 after every implemented stage",
+          "max_ulp_distance": 1,
+          "name": "w4a16_fp16_interstage",
+          "relative_tolerance": 0.001
+        },
+        "stage_token_groups": 38,
+        "trace_coordinates": 46676
+      },
+      "component": "layer23",
+      "consumed_predecessor_seal": {
+        "bytes": 15541,
+        "path": "$ARCHIVE_REPOSITORY/build/diagnose_layer22_from_layer21/sealed_output_manifest.json",
+        "sha256": "1832f299e4b1ea242dfaa83ff945970b83ef697c5249cb43cd2e531163a82c0c"
+      },
+      "execution_class": "fresh layer23 attempt001 execution",
+      "host_timing": {
+        "attempt_total_wall_seconds": 384.428518227,
+        "compile": {
+          "ended_unix_ns": 1788687644202254106,
+          "exit_code": 0,
+          "recorded_command": [
+            "make",
+            "--no-print-directory",
+            "model24-rtl-layer-compile",
+            "MODEL24_RTL_LAYER_INDEX=23",
+            "MODEL24_RTL_ACCURATE_SILU=1",
+            "MODEL24_RTL_CASCADE_DIR=$ARCHIVE_REPOSITORY/build/model24_layer23_attempt001"
+          ],
+          "started_unix_ns": 1788687635823655310,
+          "status": "PASS",
+          "wall_seconds": 8.378598796
+        },
+        "float_policy": {
+          "ended_unix_ns": 1788687993592462796,
+          "exit_code": 0,
+          "recorded_command": [
+            "python3",
+            "-B",
+            "$ARCHIVE_REPOSITORY/ace3/model/run_layer22_from_layer21.py",
+            "compare",
+            "--layer-index",
+            "23",
+            "--output-dir",
+            "$ARCHIVE_REPOSITORY/build/model24_layer23_attempt001"
+          ],
+          "started_unix_ns": 1788687990322298388,
+          "status": "PASS",
+          "wall_seconds": 3.270164408
+        },
+        "simulation": {
+          "ended_unix_ns": 1788687990314116958,
+          "exit_code": 0,
+          "recorded_command": [
+            "$ARCHIVE_REPOSITORY/build/model24_layer23_attempt001/compiled/layer23/obj_dir/Vace3_decoder_layer0_token_engine",
+            "--layer-index",
+            "23",
+            "--vector-dir",
+            "$ARCHIVE_REPOSITORY/build/model24_layer23_attempt001/vectors",
+            "--raw-dir",
+            "$ARCHIVE_REPOSITORY/build/model24_layer23_attempt001/raw",
+            "--progress-interval",
+            "1000000"
+          ],
+          "started_unix_ns": 1788687644203170412,
+          "status": "PASS",
+          "wall_seconds": 346.110946546
+        },
+        "vector_generation": {
+          "ended_unix_ns": 1788687635823243638,
+          "started_unix_ns": 1788687610719676494,
+          "status": "PASS",
+          "wall_seconds": 25.103567144
+        }
+      },
+      "input_handoff": {
+        "bytes": 19712,
+        "complete_rows": 1792,
+        "consumer_layer_index": 23,
+        "path": "$ARCHIVE_REPOSITORY/build/diagnose_layer22_from_layer21/raw/final.hex",
+        "sha256": "7cefdaf7a80f229ffb1bdbb532e86acdf6d1d77b8315e7f339fbfefc58360f4e",
+        "source_layer_index": 22
+      },
+      "integer_oracle_bit_exact": true,
+      "later_reviewer_status": "done",
+      "natural_terminal": "schema=ace3_decoder_layer_raw_v1 layer_index=23 natural_terminal=1 exit_code=0 trace_count=46676 final_count=1792 done_count=2",
+      "original_claim_boundary": {
+        "demonstrated": "fresh layer23 RTL execution with independent integer and FP16-policy comparisons",
+        "dialogue": "not run",
+        "fpga": "not run",
+        "full_model": "not claimed",
+        "official_attempt": "not run",
+        "ppa": "not measured",
+        "synthesis": "not run"
+      },
+      "outputs": {
+        "final": {
+          "bytes": 19712,
+          "integer_oracle_sha256": "97e729f6f905ecb62f498a6a144beecf6b695465d84fdbaf1de777ce9f5a39b6",
+          "path": "raw/final.hex",
+          "rows": 1792,
+          "sha256": "97e729f6f905ecb62f498a6a144beecf6b695465d84fdbaf1de777ce9f5a39b6"
+        },
+        "trace": {
+          "bytes": 793492,
+          "integer_oracle_sha256": "aa76ed9c2bfdf82888b491e284354aaa4b6e6f61fc128c007479e083aa66c1d9",
+          "path": "raw/trace.hex",
+          "rows": 46676,
+          "sha256": "aa76ed9c2bfdf82888b491e284354aaa4b6e6f61fc128c007479e083aa66c1d9"
+        }
+      },
+      "predecessor_preservation": {
+        "byte_hash_discrepancies": [],
+        "files_rechecked": 90,
+        "ordered_file_set_sha256": "704ca8232035fbe6f916c30108cec10b55fcb2bb145fa4fe0f599b5a0c6d8c93",
+        "original_baseline_file_count": 90,
+        "predecessor_directory": "diagnose_layer22_from_layer21"
+      },
+      "review_task_id": "584e7ea085a7",
+      "runtime_status": "PASS",
+      "seal": {
+        "byte_hash_discrepancies": [],
+        "bytes": 15521,
+        "original_artifact_count": 89,
+        "path": "sealed_output_manifest.json",
+        "sealed_at_utc": "2026-09-06T09:49:55.142591+00:00",
+        "sha256": "2c7adde9827e16ddd9f495df502788aa2d3ef8a09fc307723281bf43a49c3646"
+      },
+      "sealed_status": "PASS",
+      "source_records": [
+        {
+          "current_bytes": 55113,
+          "current_sha256": "95007f672a8ee9c145d040838908365a011f40e9ca3b4c625d12526ba2ed205f",
+          "matches_recorded_source": true,
+          "path": "$ARCHIVE_REPOSITORY/ace3/model/run_layer22_from_layer21.py",
+          "recorded_bytes": 55113,
+          "recorded_sha256": "95007f672a8ee9c145d040838908365a011f40e9ca3b4c625d12526ba2ed205f"
+        },
+        {
+          "current_bytes": 34406,
+          "current_sha256": "272a9344759eddf44d6b1023f21512a0bd40d17e8c1e1fb2b18f46e37b91ff7a",
+          "matches_recorded_source": true,
+          "path": "$ARCHIVE_REPOSITORY/ace3/model/controller_model24_rtl_cascade.py",
+          "recorded_bytes": 34406,
+          "recorded_sha256": "272a9344759eddf44d6b1023f21512a0bd40d17e8c1e1fb2b18f46e37b91ff7a"
+        },
+        {
+          "current_bytes": 24998,
+          "current_sha256": "fea9f4fac4eb725cc2cfb235b1a63abbd0c13af0154b2a9c1cd4c5919d2828e5",
+          "matches_recorded_source": true,
+          "path": "$ARCHIVE_REPOSITORY/ace3/model/layer3_token0_diagnostic.py",
+          "recorded_bytes": 24998,
+          "recorded_sha256": "fea9f4fac4eb725cc2cfb235b1a63abbd0c13af0154b2a9c1cd4c5919d2828e5"
+        },
+        {
+          "current_bytes": 37584,
+          "current_sha256": "ac08fffae89305e68a8dea667027ebe75fae2235b03544a04d699ce830c9b1ab",
+          "matches_recorded_source": true,
+          "path": "$ARCHIVE_REPOSITORY/ace3/model/official_model24_next_token.py",
+          "recorded_bytes": 37584,
+          "recorded_sha256": "ac08fffae89305e68a8dea667027ebe75fae2235b03544a04d699ce830c9b1ab"
+        }
+      ]
+    },
+    {
+      "artifact_directory": "model24_final_rmsnorm_attempt001",
+      "artifact_receipts": [
+        {
+          "bytes": 1014,
+          "path": "attempt.json",
+          "sha256": "2eef582d08180b4237ffdd36e4cbcdb16aad1519e69d14a44f0645367207b663"
+        },
+        {
+          "bytes": 881,
+          "path": "status.json",
+          "sha256": "1bc95d38421de12e16ddeda63bb6b15e3d7d49c2a8ec3def592375c8d0752b48"
+        },
+        {
+          "bytes": 623,
+          "path": "adjudication.json",
+          "sha256": "ae577c1c504132a72ef17c210114c8180918345f8ddbee57a49cb71c441d8098"
+        },
+        {
+          "bytes": 6026,
+          "path": "sealed_output_manifest.json",
+          "sha256": "f5cfac5693b75bb2a570ff2ce90c8fcfa68b3e5c8c86bb71f73b8c8618f78a67"
+        },
+        {
+          "bytes": 3790,
+          "path": "input_manifest.json",
+          "sha256": "74417b82b6d7b7f2ef0ebfecbb5157e6750a41d2de3fa433e949d24534e382da"
+        },
+        {
+          "bytes": 1418,
+          "path": "integer_comparison.json",
+          "sha256": "11bc8f19fc19ce643affe868ee2fa65cdf75f1c0023e3b775dae422c9d8de219"
+        },
+        {
+          "bytes": 1224,
+          "path": "fp16_policy_comparison.json",
+          "sha256": "cf7281a68af57e2a9e13c1aed5ae25558dc06f830e6032cf7a042aa9521336a6"
+        },
+        {
+          "bytes": 1417,
+          "path": "compile.json",
+          "sha256": "a284b5ce7c23b1ac6161bd3996e6ba30e8a302abeab1bdd5b02aeeb8b6efff43"
+        },
+        {
+          "bytes": 884,
+          "path": "simulation.json",
+          "sha256": "aa8d4c658efd7a92ce8116f76ba594f973c07b6eb86f91fa07291b403ea2c299"
+        },
+        {
+          "bytes": 876,
+          "path": "natural_terminal_gate.json",
+          "sha256": "e057b439d80b379a7fd666cbfb70013e21fee0e510deb268f0e6c38ff382add8"
+        },
+        {
+          "bytes": 439,
+          "path": "preservation.json",
+          "sha256": "cb6b383241934bffd31eedd351e48d03146e7be647c343bfe4b307de7619630f"
+        },
+        {
+          "bytes": 26128,
+          "path": "predecessor_before.json",
+          "sha256": "c377420eb01d5625da57dc958ef50a2d2254ccff86e94f96458eea5e9e839604"
+        },
+        {
+          "bytes": 381,
+          "path": "execution_started.json",
+          "sha256": "7d0b89d65c5d65ced0a5cd74730f5429ede7f14cb3bd8d21a45637e3ecd0893e"
+        },
+        {
+          "bytes": 179,
+          "path": "raw/terminal.txt",
+          "sha256": "393082e73fdf72678aaf9990442b99031c76f5c169209bf61e99886e3c683e19"
+        },
+        {
+          "bytes": 19712,
+          "path": "raw/final.hex",
+          "sha256": "154495573a2ee5b007b1c5b753a2b0ec6c499be7c16c4afcd85038ed134bafa6"
+        },
+        {
+          "bytes": 4901,
+          "path": "source/final_rmsnorm_main.cpp",
+          "sha256": "7345d501b7080d0f1b22f1ad2f215e5eb51451b1533ad168541404d0fb58d00c"
+        },
+        {
+          "bytes": 8960,
+          "path": "oracle/fp16_policy_expected.hex",
+          "sha256": "74ab389c8d8d3a40866e1fc107e381da83f9f7ec934ef5f6bd87e95fba7fdc0b"
+        },
+        {
+          "bytes": 8960,
+          "path": "oracle/integer_expected.hex",
+          "sha256": "5f6e2c230e02ffa7fb84b1f6b041ea67f2576f5e0e47f07fccf5783284865ea0"
+        }
+      ],
+      "artifact_review_status": "PENDING_INDEPENDENT_REVIEW",
+      "comparator_caveat": "The archived RMSNorm report declares fail iff abs>0.125 AND rel>0.001 AND ULP>1 (OR acceptance), not the decoder's combined relative/ULP branch. Current producer uses denominator max(abs(reference),2**-24). All observed errors also pass the stricter absolute branch.",
+      "comparison": {
+        "failure_count": 0,
+        "implementation": {
+          "independent_from_integer_oracle": true,
+          "library": "NumPy",
+          "version": "1.26.4"
+        },
+        "max_abs_error": 0.03125,
+        "max_relative_error": 0.0009652509652509653,
+        "max_ulp_distance": 1,
+        "mean_abs_error": 0.0007600741727011544,
+        "reference_policy": {
+          "absolute_tolerance": 0.125,
+          "material_failure_rule": "absolute, relative, and ULP thresholds must all be exceeded",
+          "max_ulp_distance": 1,
+          "name": "qwen2_fp16_interstage_final_rmsnorm",
+          "operation_order": "FP16 input decode; float32 mean-square and rsqrt with epsilon=1e-6; normalized activation rounded to FP16; model.norm.weight multiply rounded to FP16",
+          "relative_tolerance": 0.001
+        }
+      },
+      "component": "final_rmsnorm",
+      "consumed_predecessor_seal": {
+        "bytes": 15521,
+        "path": "$ARCHIVE_REPOSITORY/build/model24_layer23_attempt001/sealed_output_manifest.json",
+        "sha256": "2c7adde9827e16ddd9f495df502788aa2d3ef8a09fc307723281bf43a49c3646"
+      },
+      "host_timing": {
+        "compile": {
+          "ended_unix_ns": 1788688850767695885,
+          "exit_code": 0,
+          "recorded_command": [
+            "verilator",
+            "--cc",
+            "--exe",
+            "--build",
+            "-Wno-fatal",
+            "--top-module",
+            "ace3_fp16_rmsnorm_core",
+            "-GHIDDEN_SIZE=896",
+            "--Mdir",
+            "$ARCHIVE_REPOSITORY/build/model24_final_rmsnorm_attempt001/tmp/obj_dir",
+            "$FROZEN_R20_SOURCE/ace3/rtl/ace3_fp16_fixed.sv",
+            "$FROZEN_R20_SOURCE/ace3/rtl/ace3_fp16_rmsnorm_core.sv",
+            "$ARCHIVE_REPOSITORY/build/model24_final_rmsnorm_attempt001/source/final_rmsnorm_main.cpp"
+          ],
+          "started_unix_ns": 1788688848335060524,
+          "status": "PASS",
+          "wall_seconds": 2.432635361
+        },
+        "simulation": {
+          "ended_unix_ns": 1788688850773420872,
+          "exit_code": 0,
+          "recorded_command": [
+            "$ARCHIVE_REPOSITORY/build/model24_final_rmsnorm_attempt001/compiled/Vace3_fp16_rmsnorm_core",
+            "--vector-dir",
+            "$ARCHIVE_REPOSITORY/build/model24_final_rmsnorm_attempt001/vectors",
+            "--raw-dir",
+            "$ARCHIVE_REPOSITORY/build/model24_final_rmsnorm_attempt001/raw"
+          ],
+          "started_unix_ns": 1788688850769203411,
+          "status": "PASS",
+          "wall_seconds": 0.004217461
+        }
+      },
+      "input_handoff": {
+        "bytes": 19712,
+        "consumer_stage": "final_rmsnorm",
+        "dtype": "F16",
+        "path": "$ARCHIVE_REPOSITORY/build/model24_layer23_attempt001/raw/final.hex",
+        "record_format": "token[7:0] index[15:0] f16[15:0]",
+        "rows": 1792,
+        "sha256": "97e729f6f905ecb62f498a6a144beecf6b695465d84fdbaf1de777ce9f5a39b6",
+        "shape": [
+          2,
+          896
+        ],
+        "source_stage": "layer23_mlp_residual"
+      },
+      "integer_oracle_bit_exact": true,
+      "integer_rms_root_bit_exact": true,
+      "later_reviewer_status": "done",
+      "natural_terminal": "schema=ace3_final_rmsnorm_raw_v1 natural_terminal=1 exit_code=0 input_count=1792 output_count=1792 transaction_count=2 cycles=3681 rms_q24_token0=41325878 rms_q24_token1=34989526",
+      "no_decoder_replay": true,
+      "official_tensor": {
+        "absolute_file_offsets": [
+          730650456,
+          730652248
+        ],
+        "bytes": 1792,
+        "descriptor_sha256": "e26d80c9eb6e2bab95106bdb480ae43232b17d77ebdecbae7b94209bdd635561",
+        "dtype": "F16",
+        "name": "model.norm.weight",
+        "sha256": "1dd25d7720c68bc10838374200238c26626a624119cac0b45bff44bc43c354fe",
+        "shape": [
+          896
+        ]
+      },
+      "output": {
+        "bytes": 19712,
+        "path": "raw/final.hex",
+        "rows": 1792,
+        "sha256": "154495573a2ee5b007b1c5b753a2b0ec6c499be7c16c4afcd85038ed134bafa6"
+      },
+      "predecessor_preservation": {
+        "byte_hash_discrepancies": [],
+        "files_rechecked": 90,
+        "ordered_file_set_sha256": "b633b0b8ef478405cddb6001fe0e899904b504d45a0ec572e7231ac81fcfdde6",
+        "original_baseline_file_count": 90,
+        "predecessor_directory": "model24_layer23_attempt001"
+      },
+      "review_task_id": "2ba4205c8938",
+      "runtime_status": "PASS",
+      "seal": {
+        "byte_hash_discrepancies": [],
+        "bytes": 6026,
+        "original_artifact_count": 24,
+        "path": "sealed_output_manifest.json",
+        "sealed_at_utc": "2026-09-06T10:00:50.825662+00:00",
+        "sha256": "f5cfac5693b75bb2a570ff2ce90c8fcfa68b3e5c8c86bb71f73b8c8618f78a67"
+      },
+      "sealed_status": "ENGINEERING_PASS_REVIEW_REQUIRED",
+      "source_records": [
+        {
+          "current_bytes": 6944,
+          "current_sha256": "46cca463299196915a52d09419d26e8bf826f5c8840ed37407335e337a163b81",
+          "matches_recorded_source": true,
+          "path": "$FROZEN_R20_SOURCE/ace3/model/fp16_adaptation_oracle.py",
+          "recorded_bytes": 6944,
+          "recorded_sha256": "46cca463299196915a52d09419d26e8bf826f5c8840ed37407335e337a163b81"
+        },
+        {
+          "current_bytes": 5870,
+          "current_sha256": "e7f38a3434b60849896a0a5bab549bd6d4b6a4908280a2860a33fc8e839c86c8",
+          "matches_recorded_source": true,
+          "path": "$FROZEN_R20_SOURCE/ace3/rtl/ace3_fp16_fixed.sv",
+          "recorded_bytes": 5870,
+          "recorded_sha256": "e7f38a3434b60849896a0a5bab549bd6d4b6a4908280a2860a33fc8e839c86c8"
+        },
+        {
+          "current_bytes": 8927,
+          "current_sha256": "f302975fa91aefc20bb48f768fc08ffbddc088e83ca9cdb23b219c2f70d9fc2a",
+          "matches_recorded_source": true,
+          "path": "$FROZEN_R20_SOURCE/ace3/rtl/ace3_fp16_rmsnorm_core.sv",
+          "recorded_bytes": 8927,
+          "recorded_sha256": "f302975fa91aefc20bb48f768fc08ffbddc088e83ca9cdb23b219c2f70d9fc2a"
+        },
+        {
+          "current_bytes": 4901,
+          "current_sha256": "7345d501b7080d0f1b22f1ad2f215e5eb51451b1533ad168541404d0fb58d00c",
+          "matches_recorded_source": true,
+          "path": "$ARCHIVE_REPOSITORY/build/model24_final_rmsnorm_attempt001/source/final_rmsnorm_main.cpp",
+          "recorded_bytes": 4901,
+          "recorded_sha256": "7345d501b7080d0f1b22f1ad2f215e5eb51451b1533ad168541404d0fb58d00c"
+        }
+      ],
+      "stricter_policy_absolute_branch_recheck": {
+        "failure_count": 0,
+        "max_abs_error": 0.03125,
+        "records": 1792
+      }
+    },
+    {
+      "artifact_directory": "model24_tied_lm_head_topk_attempt002",
+      "artifact_receipts": [
+        {
+          "bytes": 417,
+          "path": "attempt.json",
+          "sha256": "42ccb00d6d0297b73308be74e8fefdada19d8ff3d6ad39baae0f2a11cf9244bd"
+        },
+        {
+          "bytes": 1120,
+          "path": "status.json",
+          "sha256": "0a053acfaea9e2b1cdc5897f25f3d0ef9939cfd10551700f9b2b5778067bafb9"
+        },
+        {
+          "bytes": 878,
+          "path": "adjudication.json",
+          "sha256": "1905404dd8a110a6a29204b374ea9b62d0aad69842b2d27e065856be589d26f7"
+        },
+        {
+          "bytes": 16153,
+          "path": "sealed_output_manifest.json",
+          "sha256": "c701c116343609d84c894b9c14fbeca3d37075d527c9a28bcaccb196a8557190"
+        },
+        {
+          "bytes": 5364,
+          "path": "input_manifest.json",
+          "sha256": "c58ac57098936e37cf268d3b7530a6cba6c16f08391d243037b87b490b24d42e"
+        },
+        {
+          "bytes": 1799,
+          "path": "comparison.json",
+          "sha256": "f76eed16c733314c14f4e69b50c73af9a5d34f339e239634896775b472b89707"
+        },
+        {
+          "bytes": 1379,
+          "path": "compile.json",
+          "sha256": "2116261d54289c9cb42e10755315c97082298a9906e217451b230c4933d3c602"
+        },
+        {
+          "bytes": 1341,
+          "path": "simulation.json",
+          "sha256": "57a0a0b2e063da55033db6e38690554e5672493b00a2573bde6adf6b4c87d439"
+        },
+        {
+          "bytes": 1153,
+          "path": "natural_terminal_gate.json",
+          "sha256": "3c5dc7c226de2e444c6181b758a30603fb855fe6f3cc7e41621f7a5d09f3e420"
+        },
+        {
+          "bytes": 805,
+          "path": "preservation.json",
+          "sha256": "f2919a7f36d6a763769f26ea5dc28c517731f385b2221b3fcc54f0aaf1bb8ea8"
+        },
+        {
+          "bytes": 6241,
+          "path": "predecessor_before.json",
+          "sha256": "199f752f4be08ebdf5b768fc24982c347e61cbf533b99772ebfd5101dc20f489"
+        },
+        {
+          "bytes": 947,
+          "path": "execution_started.json",
+          "sha256": "cc148b2da0c0d22e92cddc2d90ee5d02df4bfa356de0792ad136f45d558f3362"
+        },
+        {
+          "bytes": 543,
+          "path": "timing.json",
+          "sha256": "2a98bf5327fe8b9f1327d109edb7af31d4da538ed72633ce0a06d981d090bb86"
+        },
+        {
+          "bytes": 2907,
+          "path": "negative_gate_checks.json",
+          "sha256": "a680fe1cf942dba980efccb3ef85a5c26fbecbd2afff1d7e18f789127c9a6716"
+        },
+        {
+          "bytes": 1368,
+          "path": "protocol_simulation.json",
+          "sha256": "5570d48bc48fc0991d21c0c0af82e7f0c3f2ccc9eb8bc8a7c1ea4e5533ac0cd6"
+        },
+        {
+          "bytes": 152,
+          "path": "raw/terminal.txt",
+          "sha256": "0ac92be4e84c028947cf1595888dbf1126edfa9f27a002fa210a4659cdf01371"
+        },
+        {
+          "bytes": 5510522,
+          "path": "raw/logits.txt",
+          "sha256": "7b8de5d4c51171d686529dea1b64de7d20008b8ec74cc06c041209c84eb80829"
+        },
+        {
+          "bytes": 109,
+          "path": "raw/topk.txt",
+          "sha256": "0b88d46298b6bcbb20826004a23a76ae3684929616ccb549122a019875a602eb"
+        },
+        {
+          "bytes": 4480,
+          "path": "vectors/hidden.hex",
+          "sha256": "c6f94699dee97c28c82b3d294394dde6b2a9683623c99f4240de07afc97245e4"
+        },
+        {
+          "bytes": 10615,
+          "path": "source/tied_lm_head_main.cpp",
+          "sha256": "e5fecaad4ab231a51de3bb82feb9224c3d4514cbcddb57e07363ef682a46e298"
+        },
+        {
+          "bytes": 2126,
+          "path": "oracle/oracle.json",
+          "sha256": "7eb068fdea23f604e0c88ec264eab237a8abd8aeb363a73e1696e392a3d55656"
+        },
+        {
+          "bytes": 209,
+          "path": "oracle/topk.txt",
+          "sha256": "ff4ad12831092e87cabfcd0e60f1421acc1d1573df567a6ea7b71cd290603384"
+        }
+      ],
+      "artifact_review_status": "PENDING_INDEPENDENT_REVIEW",
+      "comparison": {
+        "accumulator_mismatch_count": 0,
+        "complete_streamed_vocabulary_coverage": true,
+        "deterministic_tie_policy": "ascending token ID for equal rounded logits",
+        "failure_count": 0,
+        "logit_bit_mismatch_count": 0,
+        "records_compared": 151936,
+        "selected_logit_f16_bits": "4c1d",
+        "selected_token_id": 0,
+        "top_k_mismatch_count": 0
+      },
+      "component": "tied_head",
+      "consumed_predecessor_seal": {
+        "bytes": 6026,
+        "path": "$ARCHIVE_REPOSITORY/build/model24_final_rmsnorm_attempt001/sealed_output_manifest.json",
+        "sha256": "f5cfac5693b75bb2a570ff2ce90c8fcfa68b3e5c8c86bb71f73b8c8618f78a67"
+      },
+      "design_record_sources": {
+        "frozen_contract": {
+          "current_bytes": 3492,
+          "current_sha256": "c98f1541787a879a3ce9c28ad7cc2a5fe83a8b41421f44058469530a3493f2d4",
+          "matches_recorded_source": true,
+          "path": "$ARCHIVE_REPOSITORY/ace3/contracts/streaming_tied_lm_head_topk.json",
+          "recorded_bytes": 3492,
+          "recorded_sha256": "c98f1541787a879a3ce9c28ad7cc2a5fe83a8b41421f44058469530a3493f2d4"
+        },
+        "human_traceability": {
+          "current_bytes": 41058,
+          "current_sha256": "cc4017b412cbafecaebfcbe00e47536f2fbd0700dba3423d7f14c3e05b2fc71b",
+          "matches_recorded_source": true,
+          "path": "$ARCHIVE_REPOSITORY/design/RTL_TRACEABILITY.md",
+          "recorded_bytes": 41058,
+          "recorded_sha256": "cc4017b412cbafecaebfcbe00e47536f2fbd0700dba3423d7f14c3e05b2fc71b"
+        },
+        "rtl_manifest": {
+          "current_bytes": 73226,
+          "current_sha256": "567f0884cf48056b4594e2a0c5c72f7fa3a2fd0ef611ea6e2b559e19db9c0025",
+          "matches_recorded_source": true,
+          "path": "$ARCHIVE_REPOSITORY/design/RTL_MANIFEST.json",
+          "recorded_bytes": 73226,
+          "recorded_sha256": "567f0884cf48056b4594e2a0c5c72f7fa3a2fd0ef611ea6e2b559e19db9c0025"
+        }
+      },
+      "geometry": {
+        "hidden_size": 896,
+        "streamed_weight_values": 136134656,
+        "top_k": 10,
+        "vocab_size": 151936
+      },
+      "host_timing": {
+        "compile": {
+          "exit_code": 0,
+          "recorded_command": [
+            "/usr/bin/verilator",
+            "--cc",
+            "--exe",
+            "--build",
+            "-j",
+            "8",
+            "-Wno-fatal",
+            "--top-module",
+            "ace3_streaming_tied_lm_head_topk",
+            "--Mdir",
+            "$ARCHIVE_REPOSITORY/build/model24_tied_lm_head_topk_attempt002/tmp/obj",
+            "-CFLAGS",
+            "-O3",
+            "$ARCHIVE_REPOSITORY/ace3/rtl/ace3_fp16_fixed.sv",
+            "$ARCHIVE_REPOSITORY/ace3/rtl/ace3_q47_48_to_f16_rne.sv",
+            "$ARCHIVE_REPOSITORY/ace3/rtl/ace3_streaming_tied_lm_head_topk.sv",
+            "$ARCHIVE_REPOSITORY/build/model24_tied_lm_head_topk_attempt002/source/tied_lm_head_main.cpp"
+          ],
+          "status": "PASS",
+          "wall_seconds": 1.6474415400298312
+        },
+        "phase_details": {
+          "clock": "time.monotonic",
+          "kind": "ace3_tied_lm_head_phase_timing",
+          "official_simulation_wall_seconds": 122.020757175982,
+          "performance_claim": "measurement only; no bottleneck or hardware claim",
+          "phases_seconds": {
+            "authentication": 1.4389339039335027,
+            "compile_and_protocol_simulation": 1.713745111017488,
+            "independent_oracle_and_comparison": 1.7098804319975898,
+            "natural_terminal_gate": 0.2374701799126342,
+            "negative_gate_probes": 0.017058967030607164,
+            "official_rtl_simulation": 122.02120881003793
+          },
+          "reported_simulation_cycles": 136287502,
+          "schema_version": 1
+        },
+        "simulation": {
+          "exit_code": 0,
+          "recorded_command": [
+            "$ARCHIVE_REPOSITORY/build/model24_tied_lm_head_topk_attempt002/compiled/Vace3_streaming_tied_lm_head_topk",
+            "--checkpoint",
+            "$ARCHIVE_REPOSITORY/build/model24_rtl_cascade/checkpoint/model.safetensors",
+            "--config",
+            "$ARCHIVE_REPOSITORY/build/model24_tied_lm_head_topk_attempt002/vectors/run.cfg",
+            "--hidden",
+            "$ARCHIVE_REPOSITORY/build/model24_tied_lm_head_topk_attempt002/vectors/hidden.hex",
+            "--raw-logits",
+            "$ARCHIVE_REPOSITORY/build/model24_tied_lm_head_topk_attempt002/raw/logits.txt",
+            "--raw-topk",
+            "$ARCHIVE_REPOSITORY/build/model24_tied_lm_head_topk_attempt002/raw/topk.txt",
+            "--terminal",
+            "$ARCHIVE_REPOSITORY/build/model24_tied_lm_head_topk_attempt002/raw/terminal.txt",
+            "--fail-after-logits",
+            "0"
+          ],
+          "status": "PASS",
+          "wall_seconds": 122.020757175982
+        }
+      },
+      "input_handoff": {
+        "bytes": 19712,
+        "consumed_hidden_sha256": "2d91e3186341fc498183ce751db8411723a3e27932b3eb0d60523daa84621720",
+        "consumed_token_index": 1,
+        "dtype": "F16",
+        "path": "$ARCHIVE_REPOSITORY/build/model24_final_rmsnorm_attempt001/raw/final.hex",
+        "sha256": "154495573a2ee5b007b1c5b753a2b0ec6c499be7c16c4afcd85038ed134bafa6",
+        "shape": [
+          2,
+          896
+        ]
+      },
+      "later_reviewer_status": "done",
+      "natural_terminal": "schema=ace3_tied_lm_head_raw_v1 natural_terminal=1 exit_code=0 hidden_count=896 weight_count=136134656 logit_count=151936 top_count=10 cycles=136287502",
+      "negative_gate_receipts": {
+        "comparison_created_after_injected_failure": false,
+        "duplicate_terminal_rejected": true,
+        "injected_failure_exit_code": 2,
+        "simulator_oracle_opens": 0
+      },
+      "no_decoder_replay": true,
+      "numeric_policy": {
+        "accumulation": "exact row dot product with no intermediate rounding",
+        "operand_decode": "exact finite binary16 to signed Q16.24",
+        "product": "exact signed Q32.48",
+        "row_rounding": "binary16 round-to-nearest ties-to-even",
+        "top_k": "descending rounded-FP16 value, then ascending token ID"
+      },
+      "official_tied_tensor": {
+        "binding": "distinct checkpoint tensors with identical authenticated FP16 values; RTL streams model.embed_tokens.weight as tied lm_head.weight",
+        "streamed_tensor": {
+          "absolute_offset": 452648792,
+          "bytes": 272269312,
+          "dtype": "F16",
+          "name": "model.embed_tokens.weight",
+          "sha256": "d74257dc547b48be5ae7b93f1c9af072c0c42dbbb85503078e25c59cd09e68d0",
+          "shape": [
+            151936,
+            896
+          ]
+        },
+        "tied_peer": {
+          "absolute_offset": 180379480,
+          "bytes": 272269312,
+          "dtype": "F16",
+          "name": "lm_head.weight",
+          "sha256": "d74257dc547b48be5ae7b93f1c9af072c0c42dbbb85503078e25c59cd09e68d0",
+          "shape": [
+            151936,
+            896
+          ]
+        }
+      },
+      "oracle_independence_scope": "Python/NumPy exact Q24 decode, integer dot accumulation, and single FP16 RNE conversion; no RTL output is used to rank candidates",
+      "predecessor_preservation": {
+        "byte_hash_discrepancies": [],
+        "files_rechecked": 25,
+        "ordered_file_set_sha256": "dff0838c7d97e33859e71c4ceafb001262c22cbcbb78dd7ddfb74955ab2267ae",
+        "original_baseline_file_count": 25,
+        "predecessor_directory": "model24_final_rmsnorm_attempt001"
+      },
+      "prior_attempt001": {
+        "metadata_caveat": "input_manifest.prior_official_attempt.attempt_id says attempt002, but its root and seal identify attempt001; the copied label is not rewritten",
+        "retained_status": "engineering PASS, reviewer requested provenance repair before acceptance",
+        "seal_sha256": "16701796aa8ddac6c28383639135f3e8c9648f448ea4106e443bfda7d33a6c72"
+      },
+      "review_task_id": "0f784a0c042c",
+      "runtime_status": "PASS",
+      "seal": {
+        "byte_hash_discrepancies": [],
+        "bytes": 16153,
+        "original_artifact_count": 58,
+        "path": "sealed_output_manifest.json",
+        "sealed_at_utc": "2026-09-06T10:28:44.546161+00:00",
+        "sha256": "c701c116343609d84c894b9c14fbeca3d37075d527c9a28bcaccb196a8557190"
+      },
+      "sealed_status": "ENGINEERING_PASS_REVIEW_REQUIRED",
+      "source_records": [
+        {
+          "current_bytes": 5870,
+          "current_sha256": "e7f38a3434b60849896a0a5bab549bd6d4b6a4908280a2860a33fc8e839c86c8",
+          "matches_recorded_source": true,
+          "path": "$ARCHIVE_REPOSITORY/ace3/rtl/ace3_fp16_fixed.sv",
+          "recorded_bytes": 5870,
+          "recorded_sha256": "e7f38a3434b60849896a0a5bab549bd6d4b6a4908280a2860a33fc8e839c86c8"
+        },
+        {
+          "current_bytes": 3949,
+          "current_sha256": "c7a98c521b37971c0d0e11a00380f87fdc09ad65c7466198b36e8e0fa0fd7056",
+          "matches_recorded_source": true,
+          "path": "$ARCHIVE_REPOSITORY/ace3/rtl/ace3_q47_48_to_f16_rne.sv",
+          "recorded_bytes": 3949,
+          "recorded_sha256": "c7a98c521b37971c0d0e11a00380f87fdc09ad65c7466198b36e8e0fa0fd7056"
+        },
+        {
+          "current_bytes": 19816,
+          "current_sha256": "15285a3c5f151f03ae75ac95598775418684dd0fd8ce16f3487aca84c5cb5b99",
+          "matches_recorded_source": true,
+          "path": "$ARCHIVE_REPOSITORY/ace3/rtl/ace3_streaming_tied_lm_head_topk.sv",
+          "recorded_bytes": 19816,
+          "recorded_sha256": "15285a3c5f151f03ae75ac95598775418684dd0fd8ce16f3487aca84c5cb5b99"
+        },
+        {
+          "current_bytes": 15770,
+          "current_sha256": "785f6c4537e6a1e678813a5cc90c1652a7bbf4d095a7776833c352c7c3b9a19b",
+          "matches_recorded_source": true,
+          "path": "$ARCHIVE_REPOSITORY/ace3/tb/ace3_streaming_tied_lm_head_topk_tb.sv",
+          "recorded_bytes": 15770,
+          "recorded_sha256": "785f6c4537e6a1e678813a5cc90c1652a7bbf4d095a7776833c352c7c3b9a19b"
+        },
+        {
+          "current_bytes": 13833,
+          "current_sha256": "4449d713882bd64aae02ff23a9cb4c9496bcee7a439229ae2ee1f6b62bb7c43d",
+          "matches_recorded_source": true,
+          "path": "$ARCHIVE_REPOSITORY/ace3/model/streaming_lm_head_reference.py",
+          "recorded_bytes": 13833,
+          "recorded_sha256": "4449d713882bd64aae02ff23a9cb4c9496bcee7a439229ae2ee1f6b62bb7c43d"
+        }
+      ]
+    }
+  ],
+  "evidence_cutoff_utc": "2026-09-06T10:40:51.127588+00:00",
+  "frozen_r20_source": {
+    "files_sha256": {
+      "Makefile": "f9062fba17016dbf6b3ca6e9343df4748836c6f2c9988126b1c12c50ffe568f2",
+      "ace3/model/attention_oracle.py": "0d18f27c4c01e4c7f9397958ca52f63960308374a2baf35e96e730cce15a6acd",
+      "ace3/model/awq_bit_oracle.py": "485f5a55a7372b280f45d62721fbf5d13a77121bddc73a818b74337b40d5a89b",
+      "ace3/model/controller_model24_cascade.py": "f3486c8b9cbeb4bcbd2f4d7f1a4341ef22541aee823693076126920a742fbd78",
+      "ace3/model/controller_model24_rtl_cascade.py": "8753fe47bf26961e7c437a54ac2aeac390d08827a0485e64691d227c961d5912",
+      "ace3/model/decoder_layer0_oracle.py": "33ff7d93ecad077d4d6f88442f70ccc52450892dc65a976b17de882bce953128",
+      "ace3/model/fp16_adaptation_oracle.py": "46cca463299196915a52d09419d26e8bf826f5c8840ed37407335e337a163b81",
+      "ace3/model/model24_execution_oracle.py": "2a15280363ff21824985e582878e722dc6fd44986cdca0e063022a7686c238b0",
+      "ace3/model/model24_oracle.py": "7e8bd638e630d56c08f82b891028a1a70ed0c10ec82e2bc0ba02be4d119119da",
+      "ace3/model/official_model24_next_token.py": "d8b65ca1460b60a1f38e0669135e390ddb2b94598e2c282cf4171a4cd3979b6f",
+      "ace3/model/projection_oracle.py": "d7b9da1f61e275af89cb752ca9e5dc6075442b1d58c9fd439af651017d5f1033",
+      "ace3/model/qwen2_rope_oracle.py": "59d7508463973f8a92de48c105df1aa26845b0fe4d05ff7cb9b723e5a6708cde",
+      "ace3/rtl/ace3_attention_score_core.sv": "35db39940444c3f286c0110c94f46347e7192511b162a7ef4d10a6b299be5221",
+      "ace3/rtl/ace3_attention_softmax_core.sv": "899220e73557cbbb46f4e409551b2396e59ad230b126b2f3fc4809fd8d9d11ca",
+      "ace3/rtl/ace3_attention_value_core.sv": "17beacde641684df7f87c03d62c8187e43f6b8a6a928734cd8a3916ce8d14201",
+      "ace3/rtl/ace3_awq_w4a16_g128_dot_lane.sv": "5cb3e3534cb0f556010c91c9888d2634cffc46410296227a5c2e524de3745e7c",
+      "ace3/rtl/ace3_awq_w4a16_projection_engine.sv": "ecc6ebb730d41a7250f8e43b9db2e4cf25b90d5d1106804373ad4bb470e6daab",
+      "ace3/rtl/ace3_decoder_layer0_token_engine.sv": "34ba6fdf14079dba327cadab708f8102881551c202fbca1f9d1e233c2f43b986",
+      "ace3/rtl/ace3_decoder_qzeros_address.sv": "cf5f8e9d41cc82eb5082046566665cbd14be48e3c2e7ae60b4753ae9409ec344",
+      "ace3/rtl/ace3_fp16_fixed.sv": "e7f38a3434b60849896a0a5bab549bd6d4b6a4908280a2860a33fc8e839c86c8",
+      "ace3/rtl/ace3_fp16_kv_cache.sv": "fa2b30ca6f22fcc0e2f1fb7ac91761c1aa3d2440d3b9abed28bb76a0569ed179",
+      "ace3/rtl/ace3_fp16_residual_add_core.sv": "335954e0bf6909f3aa27330c241cc002f777e6eb5ef483e0b1f684c2fe35ba89",
+      "ace3/rtl/ace3_fp16_rmsnorm_core.sv": "f302975fa91aefc20bb48f768fc08ffbddc088e83ca9cdb23b219c2f70d9fc2a",
+      "ace3/rtl/ace3_fp16_silu_gate_core.sv": "c5f26b50ba2396852e966a430719a6170df9adf5546903ec018049e9e084cf43",
+      "ace3/rtl/ace3_q47_48_to_f16_rne.sv": "c7a98c521b37971c0d0e11a00380f87fdc09ad65c7466198b36e8e0fa0fd7056",
+      "ace3/rtl/ace3_qwen2_rope_pair.sv": "d6da922485f1f9818a08e604b3559d56fe407ad42fc2f7605d3bfdded3ee36b8",
+      "ace3/tb/ace3_decoder_layer0_token_engine_main.cpp": "e130d2f785728c4face0c784d79ca77106a20dfd0cffcf66cdd0335e8179d158"
+    },
+    "hashes_rechecked": true,
+    "source_release_included": false
+  },
+  "limitations": [
+    "Bounded component comparisons from authenticated predecessor handoffs do not establish independently maintained full-model reference equivalence.",
+    "A single appended token decoding to Hello world! is not full dialogue or semantic-quality coverage.",
+    "Persistent-KV full-24-layer second-token task is outside this milestone; its active attempt was not inspected.",
+    "Artifact engineering/sealed status predates later bounded-task reviewer verdicts; originals were not rewritten.",
+    "Hardware, synthesis, PPA and FPGA are cancelled and not claimed; all timing is host-side only.",
+    "W4A16 end-to-end persistent-KV/dialogue completion is not claimed; future precisions are separate later work."
+  ],
+  "milestone": "ACE-3 reviewed layer22 continuation through one tokenizer-host token",
+  "model": {
+    "bindings": {
+      "bytes": 174255,
+      "sha256": "667648d0f3c499fc41215eb8bbdf7fc3707f95804bd74e2d3f4e011ab949f0e8"
+    },
+    "checkpoint": {
+      "bytes": 730652248,
+      "sha256": "c50d807b7bed7ff314308972e0f4bcf4e5a70bc60ad88fc7df53940831ed0c1b"
+    },
+    "profile": {
+      "activations": "FP16",
+      "kv": "FP16",
+      "nibble_order": "native GEMM",
+      "qweight_qzeros": "G128 asymmetric packed INT4",
+      "qzero_adjustment": "none",
+      "scales": "FP16"
+    },
+    "repository": "Qwen/Qwen2.5-0.5B-Instruct-AWQ",
+    "revision": "db09cd27ead7fee40cdee309693cf83601b9c899",
+    "tensor_map": {
+      "bytes": 269692,
+      "sha256": "11a03bed8049cd815ac2c37384a7ba15d71d2f69ee397110d1cd443193474624"
+    }
+  },
+  "numeric_boundaries": {
+    "component_oracles_are_full_model_reference": false,
+    "decoder_acceptance": "abs_error <= 0.125 OR (relative_error < 0.001 AND ulp_distance <= 1)",
+    "decoder_policy_reference": "independent PyTorch CPU float64 dequantized AWQ with RNE FP16 at implemented interstage boundaries",
+    "decoder_profile": {
+      "activations": "FP16",
+      "kv": "FP16",
+      "nibble_order": "native GEMM",
+      "qweight_qzeros": "G128 asymmetric packed INT4",
+      "qzero_adjustment": "none",
+      "scales": "FP16"
+    },
+    "decoder_relative_error": "abs_error / max(abs(reference), 2**-14)",
+    "layer22_layer23_reference_policy": "w4a16_fp16_interstage",
+    "tied_head_weight_precision": "FP16, not INT4; exact fixed-point product accumulation followed by one FP16 RNE per logit",
+    "uniform_one_ulp_bound_claimed": false,
+    "unrestricted_float64_equivalence_claimed": false
+  },
+  "parent_milestone": {
+    "commit": "eff0b38feff42628f67e00d6ba702d4997be2a86",
+    "inherited_caveats": [
+      "layer19 seal_retry.stdout differs from its original seal; core evidence matched",
+      "631-file layer21 predecessor baseline covers layer17 attempt001, not accepted attempt002",
+      "layer21 attempt001 remains FAIL under its unrounded-interstage reference policy"
+    ],
+    "summary": {
+      "bytes": 66348,
+      "path": "docs/results/ACE3_LAYERS16_21_20260906.json",
+      "sha256": "fd271b0d65d39cf886d27f52ac559d825e9f0bf7c3a398724f37d7ce4b8d7ec9"
+    }
+  },
+  "publication_audit": {
+    "active_second_token_attempt_inspected": false,
+    "all_assigned_output_seal_hashes_match": true,
+    "host_manifest_entries_rehashed": 1,
+    "predecessor_baseline_entries_rehashed": 330,
+    "push_performed": false,
+    "runtime_source_files_published": 0,
+    "sealed_entries_rehashed": 260,
+    "timestamp_utc": "2026-09-06T11:07:20.251395+00:00"
+  },
+  "publication_kind": "evidence-only documentation; no runtime source or self-contained reproduction release",
+  "review_event_provenance": {
+    "association": "review events associated with the preceding life.mission.started item_id in the same sequential mission window",
+    "full_log_hash_claimed": false,
+    "hash_definition": "SHA256 of original event line bytes including newline; raw private event payloads are not published",
+    "source_alias": "project events.jsonl",
+    "superseded_layer22_duplicate": {
+      "action": "supersede_duplicate_pending_simulation",
+      "event_type": "life.operator.note",
+      "line_number": 73811,
+      "original_line_bytes": 503,
+      "original_line_sha256": "3da614ea32bf4274207cb646a6eaaeeba8803c365d74031b325901b3c9c682a2",
+      "task_id": "0c6f4745fefb",
+      "timestamp_utc": "2026-09-06T09:27:19.848145+00:00"
+    },
+    "tasks": {
+      "0f784a0c042c": {
+        "mission_completed": {
+          "event_type": "life.mission.completed",
+          "line_number": 74781,
+          "original_line_bytes": 2749,
+          "original_line_sha256": "25081dfb29032f56d2ed5250830b10a286ef526e4256cb486160180746ce39ba",
+          "outcome": {
+            "execution_status": "completed",
+            "interruption_kind": "none",
+            "resumable": false,
+            "review_status": "done",
+            "stage_certification": "deferred"
+          },
+          "status": "done",
+          "success": true,
+          "timestamp_utc": "2026-09-06T10:31:03.030509+00:00"
+        },
+        "mission_started": {
+          "event_type": "life.mission.started",
+          "line_number": 74488,
+          "original_line_bytes": 943,
+          "original_line_sha256": "091989353574b11fd77b511711bcf25888d8428f7f34cf6039dd753d1530f7a2",
+          "timestamp_utc": "2026-09-06T10:08:01.664583+00:00"
+        },
+        "review_events": [
+          {
+            "event_type": "round.review.completed",
+            "line_number": 74622,
+            "original_line_bytes": 2309,
+            "original_line_sha256": "fcc28fd2ecda6726ba48ac3aa6805bd25ef78c8d19401801addaff4be4fd1976",
+            "reason": "The official-shape RTL run is functionally correct, but the new synthesizable lm_head/Top-K module and frozen contract are absent from design/RTL_MANIFEST.json and RTL_TRACEABILITY.md, leaving rtl.contract-traceability and rtl.ip-provenance uncertified.",
+            "review_skipped": false,
+            "review_source": "reviewer",
+            "round_index": 1,
+            "status": "continue",
+            "timestamp_utc": "2026-09-06T10:22:08.613102+00:00"
+          },
+          {
+            "event_type": "round.review.completed",
+            "line_number": 74770,
+            "original_line_bytes": 1584,
+            "original_line_sha256": "eab66e0ef644dbb82bf6078984f14e85ab8b06a7ddf36ddde245beafcf9a8ade",
+            "reason": "requested outcome is materially complete",
+            "review_skipped": false,
+            "review_source": "reviewer",
+            "round_index": 2,
+            "status": "done",
+            "timestamp_utc": "2026-09-06T10:30:54.040851+00:00"
+          }
+        ],
+        "task_id": "0f784a0c042c"
+      },
+      "177b77ce57da": {
+        "mission_completed": {
+          "event_type": "life.mission.completed",
+          "line_number": 75012,
+          "original_line_bytes": 2689,
+          "original_line_sha256": "2d28141b824ec0c9b3d1e65a33ab962856e6b5ea72dcb519507dec2d231d478a",
+          "outcome": {
+            "execution_status": "completed",
+            "interruption_kind": "none",
+            "resumable": false,
+            "review_status": "done",
+            "stage_certification": "deferred"
+          },
+          "status": "done",
+          "success": true,
+          "timestamp_utc": "2026-09-06T10:40:51.127588+00:00"
+        },
+        "mission_started": {
+          "event_type": "life.mission.started",
+          "line_number": 74858,
+          "original_line_bytes": 929,
+          "original_line_sha256": "ac41e64198022159477a202b198d4404b397cb226d25fe9cc65392f1638cf2e9",
+          "timestamp_utc": "2026-09-06T10:34:07.080795+00:00"
+        },
+        "review_events": [
+          {
+            "event_type": "round.review.completed",
+            "line_number": 75001,
+            "original_line_bytes": 1575,
+            "original_line_sha256": "8f86e61959d2d83bfabcea2f4535d6bbb3395fc3343568f7db8026d64ccd6aa4",
+            "reason": "requested outcome is materially complete",
+            "review_skipped": false,
+            "review_source": "reviewer",
+            "round_index": 1,
+            "status": "done",
+            "timestamp_utc": "2026-09-06T10:40:42.189241+00:00"
+          }
+        ],
+        "task_id": "177b77ce57da"
+      },
+      "2200a1d4460b": {
+        "mission_completed": {
+          "event_type": "life.mission.completed",
+          "line_number": 74054,
+          "original_line_bytes": 2818,
+          "original_line_sha256": "c46f94d2d06563fead17bcb613aa75e5ee039919d3b631fd9db12c204a11c238",
+          "outcome": {
+            "execution_status": "completed",
+            "interruption_kind": "none",
+            "resumable": false,
+            "review_status": "done",
+            "stage_certification": "deferred"
+          },
+          "status": "done",
+          "success": true,
+          "timestamp_utc": "2026-09-06T09:37:05.861490+00:00"
+        },
+        "mission_started": {
+          "event_type": "life.mission.started",
+          "line_number": 73923,
+          "original_line_bytes": 1098,
+          "original_line_sha256": "64ade570d7825b8763656e95da269fd79b268786a84aece42b3ad756f9cb23cc",
+          "timestamp_utc": "2026-09-06T09:31:54.501239+00:00"
+        },
+        "review_events": [
+          {
+            "event_type": "round.review.completed",
+            "line_number": 74043,
+            "original_line_bytes": 1576,
+            "original_line_sha256": "da230234e288eb0287bffd72c9793290703238cf1a3a1610e43b34e108788c95",
+            "reason": "requested outcome is materially complete",
+            "review_skipped": false,
+            "review_source": "reviewer",
+            "round_index": 1,
+            "status": "done",
+            "timestamp_utc": "2026-09-06T09:36:56.315360+00:00"
+          }
+        ],
+        "task_id": "2200a1d4460b"
+      },
+      "2ba4205c8938": {
+        "mission_completed": {
+          "event_type": "life.mission.completed",
+          "line_number": 74424,
+          "original_line_bytes": 2694,
+          "original_line_sha256": "b8d1683ffa3e0ead76bfa9f1f638a212db2e484802b75179b3822dc2be327135",
+          "outcome": {
+            "execution_status": "completed",
+            "interruption_kind": "none",
+            "resumable": false,
+            "review_status": "done",
+            "stage_certification": "deferred"
+          },
+          "status": "done",
+          "success": true,
+          "timestamp_utc": "2026-09-06T10:05:15.554516+00:00"
+        },
+        "mission_started": {
+          "event_type": "life.mission.started",
+          "line_number": 74296,
+          "original_line_bytes": 862,
+          "original_line_sha256": "2a85a1e61f2b0adecf76cd8deb5cb008f24c6b3c2dfe3a1c2c7733722bde0ea1",
+          "timestamp_utc": "2026-09-06T09:57:28.183586+00:00"
+        },
+        "review_events": [
+          {
+            "event_type": "round.review.completed",
+            "line_number": 74413,
+            "original_line_bytes": 1576,
+            "original_line_sha256": "8f6a7ea638c3a4801e88c34a360388d7d7fb6525622180bbc39418495ebc75bc",
+            "reason": "requested outcome is materially complete",
+            "review_skipped": false,
+            "review_source": "reviewer",
+            "round_index": 1,
+            "status": "done",
+            "timestamp_utc": "2026-09-06T10:05:04.855718+00:00"
+          }
+        ],
+        "task_id": "2ba4205c8938"
+      },
+      "584e7ea085a7": {
+        "mission_completed": {
+          "event_type": "life.mission.completed",
+          "line_number": 74201,
+          "original_line_bytes": 2489,
+          "original_line_sha256": "e7b0de5248699fe600da0a885c729185dc9a9c17443886728da42a75d7e93890",
+          "outcome": {
+            "execution_status": "completed",
+            "interruption_kind": "none",
+            "resumable": false,
+            "review_status": "done",
+            "stage_certification": "deferred"
+          },
+          "status": "done",
+          "success": true,
+          "timestamp_utc": "2026-09-06T09:53:32.197365+00:00"
+        },
+        "mission_started": {
+          "event_type": "life.mission.started",
+          "line_number": 74056,
+          "original_line_bytes": 754,
+          "original_line_sha256": "0c562d22cdb7334d0af761083ba1eb5a2d938ab7099bb5309551804ae7d5a9fb",
+          "timestamp_utc": "2026-09-06T09:37:06.384993+00:00"
+        },
+        "review_events": [
+          {
+            "event_type": "round.review.completed",
+            "line_number": 74190,
+            "original_line_bytes": 1575,
+            "original_line_sha256": "14cf6f3b21ea1a783fbdd0deb282a2e9224116b6e0233fc37da647881697ee7c",
+            "reason": "requested outcome is materially complete",
+            "review_skipped": false,
+            "review_source": "reviewer",
+            "round_index": 1,
+            "status": "done",
+            "timestamp_utc": "2026-09-06T09:53:22.771828+00:00"
+          }
+        ],
+        "task_id": "584e7ea085a7"
+      }
+    }
+  },
+  "schema_version": 1,
+  "tokenizer_host": {
+    "artifact_directory": "model24_tokenizer_host_integration_attempt001",
+    "artifact_receipts": [
+      {
+        "bytes": 3364,
+        "path": "integration.json",
+        "sha256": "831c4d8b2e839f9b9eae6f1af82eaa39bb03d1e857f99ff317f8e251b5d031b5"
+      },
+      {
+        "bytes": 498,
+        "path": "manifest.json",
+        "sha256": "5c48df9ff106ebac5bed326694f77bda84c4c7996e69d74acb2a758827fdf201"
+      }
+    ],
+    "chat_template_probe": {
+      "not_used_as_generation_prompt": true,
+      "serialization_utf8_sha256": "bcb24a217bf8685a03837318db43c76e342e3d948010fb8bf7e6ba7249f197b5"
+    },
+    "claim_boundary": {
+      "demonstrated": "authenticated current-lineage token-0 transfer from the accepted 24-layer/final-RMSNorm/tied-head RTL evidence into official tokenizer host history",
+      "fpga": "not run",
+      "generated_tokens": 1,
+      "persistent_kv_feedback": "not run",
+      "ppa": "not measured",
+      "readable_fragment": "Hello world!",
+      "rtl_reexecution": "not run by this host integration",
+      "synthesis": "not run"
+    },
+    "command_receipts": [
+      {
+        "bytes": 321,
+        "path": "model24_tokenizer_host_integration_attempt001_command_evidence/artifacts.sha256",
+        "sha256": "ec6e2eb1937ddedd554fcdc81df9699dc814be7e8b481a872d66fe0e72c11996"
+      },
+      {
+        "bytes": 273,
+        "path": "model24_tokenizer_host_integration_attempt001_command_evidence/generate.command.txt",
+        "sha256": "0b7ea23e0b9e0d3401e51dbd8d8be3becb3afa0143c11cd3a12d9afbc54483f1"
+      },
+      {
+        "bytes": 2,
+        "path": "model24_tokenizer_host_integration_attempt001_command_evidence/generate.status",
+        "sha256": "9a271f2a916b0b6ee6cecb2426f0b3206ef074578be55d9bc94f6f3fe3ab86aa"
+      },
+      {
+        "bytes": 0,
+        "path": "model24_tokenizer_host_integration_attempt001_command_evidence/generate.stderr",
+        "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+      },
+      {
+        "bytes": 180,
+        "path": "model24_tokenizer_host_integration_attempt001_command_evidence/generate.stdout",
+        "sha256": "bc246b78d1202901a20520fb87586df223e98a669d87cc5d24e59b3606950468"
+      },
+      {
+        "bytes": 286,
+        "path": "model24_tokenizer_host_integration_attempt001_command_evidence/validate.command.txt",
+        "sha256": "9b08e9bd92fd89aec803da660e8aaed4cb886f565451725cfcc4645821c337c3"
+      },
+      {
+        "bytes": 2,
+        "path": "model24_tokenizer_host_integration_attempt001_command_evidence/validate.status",
+        "sha256": "9a271f2a916b0b6ee6cecb2426f0b3206ef074578be55d9bc94f6f3fe3ab86aa"
+      },
+      {
+        "bytes": 0,
+        "path": "model24_tokenizer_host_integration_attempt001_command_evidence/validate.stderr",
+        "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+      },
+      {
+        "bytes": 191,
+        "path": "model24_tokenizer_host_integration_attempt001_command_evidence/validate.stdout",
+        "sha256": "e9ac8295780e26beefb465f29318a611ecd2a8b186faead54ebc56ec10c04fb1"
+      }
+    ],
+    "host_result": {
+      "appended_token_id": 0,
+      "decoded_token": "!",
+      "decoded_transcript_fragment": "Hello world!",
+      "input_token_history": [
+        9707,
+        1879
+      ],
+      "resulting_token_history": [
+        9707,
+        1879,
+        0
+      ]
+    },
+    "host_wall_seconds": null,
+    "later_reviewer_status": "done",
+    "manifest": {
+      "bytes": 498,
+      "path": "manifest.json",
+      "sha256": "5c48df9ff106ebac5bed326694f77bda84c4c7996e69d74acb2a758827fdf201"
+    },
+    "official_tokenizer_assets": {
+      "repository": "Qwen/Qwen2.5-0.5B-Instruct-AWQ",
+      "revision": "db09cd27ead7fee40cdee309693cf83601b9c899",
+      "tokenizer": {
+        "bytes": 7031645,
+        "filename": "tokenizer.json",
+        "sha256": "c0382117ea329cdf097041132f6d735924b697924d6f6fc3945713e96ce87539"
+      },
+      "tokenizer_config": {
+        "bytes": 7305,
+        "filename": "tokenizer_config.json",
+        "sha256": "5b5d4f65d0acd3b2d56a35b56d374a36cbc1c8fa5cf3b3febbbfabf22f359583"
+      }
+    },
+    "recorded_commands": {
+      "generate": "python3 ace3/model/model24_host_runtime.py integrate-tied-head --output-dir build/model24_tokenizer_host_integration_attempt001 --tied-head-attempt-dir build/model24_tied_lm_head_topk_attempt002 --official-tokenizer-dir build/host_dialogue_audit_20260829T182819Z/tokenizer",
+      "validate": "python3 ace3/model/model24_host_runtime.py validate-tied-head-integration --evidence-dir build/model24_tokenizer_host_integration_attempt001 --tied-head-attempt-dir build/model24_tied_lm_head_topk_attempt002 --official-tokenizer-dir build/host_dialogue_audit_20260829T182819Z/tokenizer"
+    },
+    "review_task_id": "177b77ce57da",
+    "seed_prompt": {
+      "serialization_kind": "plain_text_seed_not_chat_template",
+      "text": "Hello world",
+      "token_ids": [
+        9707,
+        1879
+      ]
+    },
+    "selection": {
+      "ordered_top_k_count": 10,
+      "policy": "descending rounded finite FP16 numeric logit; equal logits use ascending token ID",
+      "selected_logit_f16_bits": "4c1d",
+      "selected_token_id": 0
+    },
+    "source_limit": {
+      "current_sha256": "812af5f3c8301d9e91a4e16ff9335c4bc6cb6b1378e1a8be1e7c135340440cae",
+      "note": "current source observation only, not an immutable execution-source receipt",
+      "original_run_source_hash_bound_by_host_manifest": false,
+      "path": "ace3/model/model24_host_runtime.py"
+    },
+    "source_lineage": {
+      "final_rmsnorm": {
+        "attempt_id": "model24_final_rmsnorm_attempt001",
+        "consumed_token_index": 1,
+        "runtime_status": "PASS",
+        "seal_sha256": "f5cfac5693b75bb2a570ff2ce90c8fcfa68b3e5c8c86bb71f73b8c8618f78a67"
+      },
+      "layer23": {
+        "attempt_id": "model24_layer23_attempt001",
+        "runtime_status": "PASS",
+        "seal_sha256": "2c7adde9827e16ddd9f495df502788aa2d3ef8a09fc307723281bf43a49c3646"
+      },
+      "predecessors_preserved": true,
+      "tied_head": {
+        "adjudication_review_status": "PENDING",
+        "attempt_id": "model24_tied_lm_head_topk_attempt002",
+        "review_status": "PENDING_INDEPENDENT_REVIEW",
+        "runtime_status": "PASS",
+        "seal_sha256": "c701c116343609d84c894b9c14fbeca3d37075d527c9a28bcaccb196a8557190",
+        "sealed_status": "ENGINEERING_PASS_REVIEW_REQUIRED"
+      }
+    },
+    "timing_note": "host integration command receipts do not record wall time; no duration inferred from file mtimes or reviewer time"
+  }
+}
