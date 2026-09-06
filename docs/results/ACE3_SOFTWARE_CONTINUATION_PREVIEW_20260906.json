@@ -1,0 +1,91 @@
+{
+  "schema_version": 1,
+  "kind": "ace3_bounded_software_reference_continuation_preview",
+  "date": "2026-09-06",
+  "scope_label": "SOFTWARE REFERENCE PREVIEW NOT RTL-GENERATED CONTINUATION",
+  "model": {
+    "repository": "Qwen/Qwen2.5-0.5B-Instruct-AWQ",
+    "revision": "db09cd27ead7fee40cdee309693cf83601b9c899",
+    "checkpoint_sha256": "c50d807b7bed7ff314308972e0f4bcf4e5a70bc60ad88fc7df53940831ed0c1b",
+    "tokenizer_sha256": "c0382117ea329cdf097041132f6d735924b697924d6f6fc3945713e96ce87539"
+  },
+  "numerical_policy": {
+    "description": "Custom mathematical FP16 stage policy",
+    "document_sha256": "19cc511f564037c61a0d50849f23364e9db6a4fb6dc755e438c20c48173b1a18",
+    "stage_bias_rounding": "Bias before output FP16 rounding",
+    "final_rmsnorm": "Float32 mean-square/rsqrt with epsilon=1e-6; normalized activation rounded to FP16; official FP16 model.norm.weight multiply rounded to FP16",
+    "selection": "Greedy full-vocabulary exact Q48 dot product; one FP16 RNE per logit; lowest token ID for equal rounded finite logits",
+    "stock_hugging_face_generation_claim": false,
+    "full_model_numerical_certification": false
+  },
+  "fixture": {
+    "seed_format": "Plain text, not chat format",
+    "seed_text": "Hello world",
+    "seed_token_ids": [9707, 1879]
+  },
+  "resume_boundary": {
+    "own_software_kv_layers": 24,
+    "processed_positions_at_start": 3,
+    "pending_input_token_id": 358,
+    "starting_history_including_pending": [9707, 1879, 0, 358],
+    "starting_generated_token_count": 2,
+    "new_generated_token_count": 30,
+    "total_generated_token_count": 32,
+    "own_software_kv_used": true,
+    "rtl_state_used": false,
+    "prefill_replayed": false,
+    "processed_positions_at_end": 33,
+    "pending_selected_token_id_at_end": 30
+  },
+  "termination": {
+    "generated_token_cap": 32,
+    "stop_reason": "TOTAL_32_TOKEN_CAP",
+    "eos_token_id": 151645,
+    "eos_token": "<|im_end|>",
+    "eos_observed": false,
+    "model_completed_answer_claim": false
+  },
+  "output": {
+    "all_token_ids": [
+      9707, 1879, 0, 358, 2776, 264, 48948, 304, 13027, 323, 358, 2776,
+      4460, 311, 1855, 264, 2025, 429, 646, 5508, 264, 914, 311, 264,
+      1140, 315, 4244, 13, 2585, 646, 358, 11075, 419, 30
+    ],
+    "generated_token_ids": [
+      0, 358, 2776, 264, 48948, 304, 13027, 323, 358, 2776, 4460, 311,
+      1855, 264, 2025, 429, 646, 5508, 264, 914, 311, 264, 1140, 315,
+      4244, 13, 2585, 646, 358, 11075, 419, 30
+    ],
+    "complete_decoded_text_including_seed": "Hello world! I'm a beginner in Python and I'm trying to create a program that can convert a string to a list of words. How can I achieve this?",
+    "is_selected_excerpt": false,
+    "utf8_no_trailing_newline": {
+      "bytes": 142,
+      "sha256": "5b91602ad19a5a3e2696e275cbb4d7ddb7908175246f09278bd0a6eb96775b18"
+    },
+    "utf8_followed_by_exactly_one_lf": {
+      "bytes": 143,
+      "sha256": "8f5a8c54f96bd3d6bdc64daabfcbd02126a36c264d6bfc3b4a9c44bf80a3dfd1"
+    }
+  },
+  "timing": {
+    "new_cpu_computation_seconds": 319.94626382,
+    "decimal_places": 8,
+    "cpu_threads": 2,
+    "new_generated_tokens_timed": 30,
+    "scope": "New computation after resuming own software KV; excludes computation of the two starting generated tokens",
+    "cold_start_or_total_end_to_end_timing": false,
+    "rtl_or_hardware_latency": false,
+    "general_performance_benchmark": false
+  },
+  "publication_boundaries": {
+    "host_software_demo_only": true,
+    "rtl_generated_continuation": false,
+    "continuous_rtl_driver_deployment_claim": false,
+    "general_dialogue_quality_certification": false,
+    "hardware_result": false,
+    "runtime_source_release": false,
+    "self_contained_reproduction_package": false,
+    "raw_model_or_kv_data_included": false,
+    "internal_reports_included": false
+  }
+}

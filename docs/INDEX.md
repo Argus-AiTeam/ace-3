@@ -35,12 +35,15 @@ does not certify a later integration level.
 | [Full-input projection](results/AWQ_W4A16_PROJECTION_CF02.md) | Complete 896-input reduction for selected official outputs |
 | [Model24 systematic continuations](../results/model24-systematic-continuations/) | Independently reviewed software/oracle continuation evidence |
 | [Selected engineering highlights](results/ACE3_ENGINEERING_HIGHLIGHTS_20260906.md) / [Numeric summary](results/ACE3_ENGINEERING_HIGHLIGHTS_20260906.json) | Completed, bounded decoder/head/host milestones and one token producing `Hello world!` |
+| [Software continuation preview](results/ACE3_SOFTWARE_CONTINUATION_PREVIEW_20260906.md) / [Numeric summary](results/ACE3_SOFTWARE_CONTINUATION_PREVIEW_20260906.json) | Separate CPU-software reference example: all 32 generated tokens from a fixed plain-text seed, capped without EOS; not RTL-generated |
 
 The 2026-09-06 highlights select completed local engineering results, with
 their actual precision and fixture boundaries. They are not a comprehensive
 evaluation or a self-contained runtime source/reproduction release. Component
 agreement and one host-token append do not establish full-model reference
 equivalence, persistent-KV second-token completion, dialogue, or hardware results.
+The separate software preview demonstrates its own bounded software K/V
+continuation; it does not promote the RTL execution boundary.
 
 ## Evidence ladder
 
