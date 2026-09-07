@@ -1,0 +1,122 @@
+{
+  "schema_version": 1,
+  "kind": "ace3_bounded_q_only_rope_rtl_milestone",
+  "date": "2026-09-07",
+  "scope_label": "INDEPENDENTLY REVIEWED CANDIDATE / BOUNDED RTL SIMULATION",
+  "execution": {
+    "result_status": "PASS_BOUNDED_RTL_CANDIDATE",
+    "decoder_simulator": "Verilator",
+    "actual_rtl_execution": true,
+    "layer_indices_zero_based": [0, 1, 2, 3, 4, 5, 6, 7, 8],
+    "position_indices_zero_based": [0, 1, 2],
+    "stage_indices_zero_based": [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18],
+    "transactions": 27,
+    "independent_stage_comparisons": 513,
+    "material_failures": 0,
+    "operator_simulator": "Icarus Verilog / vvp",
+    "operator_cases_passed": 5640,
+    "operator_coverage": "Q arithmetic boundaries and baseline K-rotation preservation"
+  },
+  "arithmetic": {
+    "change": "Q-only exact Q48 rotary multiply-add followed by one FP16 round-to-nearest-even conversion",
+    "sign_extended_sum": true,
+    "signed_nonzero_underflow_preserved": true,
+    "exact_cancellation": "positive zero",
+    "experimental_base": "Earlier general softmax-exponential candidate configuration, not the original production baseline",
+    "unchanged_relative_to_experimental_base": [
+      "K rotation two-round path",
+      "V",
+      "SiLU",
+      "public interface",
+      "handshake"
+    ],
+    "all_original_production_baseline_behaviors_repaired_claim": false,
+    "distinct_from_q_projection_dot_plus_bias_component": true
+  },
+  "model": {
+    "repository": "Qwen/Qwen2.5-0.5B-Instruct-AWQ",
+    "revision": "db09cd27ead7fee40cdee309693cf83601b9c899",
+    "checkpoint_sha256": "c50d807b7bed7ff314308972e0f4bcf4e5a70bc60ad88fc7df53940831ed0c1b",
+    "decoder_weights": "Native packed asymmetric INT4",
+    "group_size": 128,
+    "activations_scales_kv": "FP16",
+    "tied_embedding_head": "FP16, not INT4",
+    "model_layers": 24,
+    "hidden_size": 896
+  },
+  "lineage": {
+    "fixed_input_token_ids": [9707, 1879, 0],
+    "candidate_hidden_and_kv_regenerated_in_rtl": true,
+    "next_layer_consumes_actual_previous_layer_output": true,
+    "position0_starts_with_empty_state": true,
+    "later_positions_use_same_binary_previous_candidate_state": true,
+    "old_binary_or_state_imported": false,
+    "independent_reference": "Independently propagated FP16-interstage history",
+    "reference_q_hidden_or_kv_substituted_into_execution": false,
+    "separate_candidate_local_exact_trace_and_final_checks_passed": true,
+    "independent_reference_full_bit_exactness_claim": false
+  },
+  "numerical_gate": {
+    "unchanged": true,
+    "finite_required": true,
+    "accept": "finite AND (abs_error <= 0.125 OR (relative_error < 0.001 AND ordered_FP16_ULP <= 1))",
+    "relative_denominator": "max(abs(reference), 2^-14)",
+    "absolute_tolerance_inclusive": 0.125,
+    "relative_tolerance_strict": 0.001,
+    "ordered_fp16_ulp_limit_inclusive": 1
+  },
+  "layer8_position2_stage8": {
+    "scores": 42,
+    "finite_scores": 42,
+    "material_failures": 0,
+    "maximum_absolute_error": 0.09375,
+    "bit_exact_scores": 18,
+    "indices_9_10_11_meet_unchanged_gate": true,
+    "full_bit_exactness_claim": false
+  },
+  "bounded_review": {
+    "independent": true,
+    "status": "done",
+    "completion_utc": "2026-09-07T17:41:06.776253+00:00",
+    "scope": "Completed actual RTL candidate for layers0-8, positions0-2 under the unchanged FP16-interstage gate",
+    "chronology": "Later independent review supersedes the immutable execution result's earlier pending-review annotation",
+    "original_result_unchanged": true
+  },
+  "timing": {
+    "experimental_elapsed_seconds": 7549.627699077013,
+    "scope": "Bounded experiment including setup, compilation, reference work, and comparison",
+    "per_token_latency_claim": false,
+    "hardware_speed_or_throughput_benchmark": false
+  },
+  "artifact_identities": {
+    "result_sha256": "d7c1b382baaa232d04a2ccacf49309d0645d390e8cb9025d14e443bd62d11c19",
+    "frozen_manifest_sha256": "03ab838054fe8318d369e8f260801c1e0193ad1c43720133afb96fbb5b90f785",
+    "operator_result_sha256": "7795baf65472dbd0f1d0753253af3d429017fb1c10d48ee7922dfbe28f4eac9c",
+    "layer8_position2_result_sha256": "b3147bf59e4835fe83aea607af6229597e4746de1e818e6033eb13c8f887fc5e",
+    "later_independent_review_sha256": "62283b01b32f9152c7c00bf99d0e285f6aa6f0374dfab49697aae9b79437299c"
+  },
+  "claim_boundary": {
+    "full_24_layer_repaired_generation": false,
+    "candidate_native_greedy_history_approved": false,
+    "position3_executed": false,
+    "new_generated_tokens_claimed": 0,
+    "third_generated_token_claim": false,
+    "useful_dialogue_claim": false,
+    "binary64_profile_adoption": false,
+    "binary64_or_final_layer_fidelity_acceptance": false,
+    "separate_quantization_aware_binary64_profile_requirements_waived": false,
+    "driver_seed_certified": false,
+    "production_adoption": false,
+    "synthesis_ppa_fpga_hardware_or_timing_closure": false,
+    "throughput_benchmark": false,
+    "historical_two_generated_token_text": "Hello world! I",
+    "historical_text_lineage": "Different earlier complete execution lineage, not this candidate",
+    "combined_with_historical_layer23_tail_or_kv": false
+  },
+  "publication_boundary": {
+    "documentation_only": true,
+    "candidate_source_promoted": false,
+    "public_tree_is_executable_reproduction": false,
+    "weights_raw_traces_simulator_state_or_review_documents_included": false
+  }
+}
