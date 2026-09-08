@@ -2,6 +2,11 @@
 
 **INDEPENDENTLY REVIEWED CANDIDATE / BOUNDED RTL SIMULATION**
 
+> **Bounded RTL arithmetic and state-conformance success only; no support for
+> numerical promotion.** Separate binary64-v1 eligibility remains
+> **unsatisfied**, with position 3 unbound. No production, full-tail, or
+> model-admission claim follows.
+
 Date: 2026-09-08. An isolated uniform residual-association candidate completed
 actual RTL execution and **538 independent FP16-interstage comparisons** under
 the unchanged numerical gate, with zero material failures. Separate

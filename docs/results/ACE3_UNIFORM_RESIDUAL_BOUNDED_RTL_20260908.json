@@ -3,6 +3,7 @@
   "kind": "ace3_bounded_uniform_residual_association_rtl_milestone",
   "date": "2026-09-08",
   "scope_label": "INDEPENDENTLY REVIEWED CANDIDATE / BOUNDED RTL SIMULATION",
+  "claim_summary": "Bounded RTL arithmetic and state-conformance success only; no support for numerical promotion. Separate binary64-v1 eligibility remains unsatisfied, with position3 unbound. No production, full-tail, or model-admission claim follows.",
   "arithmetic": {
     "association": "RNE16(RNE16(attention_O + MLP_down) + incoming_hidden)",
     "RNE16": "FP16 round-to-nearest-even",
@@ -142,6 +143,7 @@
     "separate_software_eligibility_result_sha256": "28a4838a6a3f5ebed708ce400a07de988ebb492558fb17667be88389377f87fa"
   },
   "claim_boundary": {
+    "numerical_promotion_supported": false,
     "full_nine_layer_position3_pass": false,
     "complete_attention_blocker_repair": false,
     "whole_trajectory_repair": false,
