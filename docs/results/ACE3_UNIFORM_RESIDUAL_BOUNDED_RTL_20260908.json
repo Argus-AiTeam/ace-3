@@ -1,0 +1,164 @@
+{
+  "schema_version": 1,
+  "kind": "ace3_bounded_uniform_residual_association_rtl_milestone",
+  "date": "2026-09-08",
+  "scope_label": "INDEPENDENTLY REVIEWED CANDIDATE / BOUNDED RTL SIMULATION",
+  "arithmetic": {
+    "association": "RNE16(RNE16(attention_O + MLP_down) + incoming_hidden)",
+    "RNE16": "FP16 round-to-nearest-even",
+    "uniform": true,
+    "coordinate_patch": false,
+    "reference_injection": false,
+    "extra_fp16_companion": false,
+    "stage12_and_mlp_path_unchanged": true,
+    "experimental_base_retained": "Q-only fused-Q48 RoPE, general exponential candidate, native asymmetric G128 AWQ, FP16 activations and K/V",
+    "distinct_from_earlier_q_only_rope_milestone": true
+  },
+  "execution": {
+    "result_status": "PASS_BOUNDED_RTL_CANDIDATE",
+    "actual_rtl_execution": true,
+    "indices_zero_based": true,
+    "layer0_changed_stage18": {
+      "positions": [0, 1, 2, 3],
+      "actual_output_comparisons": 4,
+      "simulator": "Icarus Verilog / vvp",
+      "positions0_to2_stages0_to17": "Authenticated unchanged RTL reused",
+      "position3_stages0_to17": "New unchanged-base-binary execution from its own position2 state",
+      "old_association_stage18_used_as_candidate_hidden": false,
+      "operands": "Actual incoming hidden, attention O, and MLP down"
+    },
+    "layers1_to7": {
+      "positions": [0, 1, 2, 3],
+      "actual_transactions": 28,
+      "stages_per_transaction": 19,
+      "independent_stage_comparisons": 532,
+      "simulator": "Verilator",
+      "candidate_local_exact_stage_checks_passed": true
+    },
+    "layer8_endpoint": {
+      "logical_position": 3,
+      "physical_position": 0,
+      "fresh_engine": true,
+      "actual_hidden_source": "Layer7 position3 RTL output",
+      "executed_stages": [0, 1],
+      "operations": "Position-independent RMSNorm and Q projection only",
+      "independent_stage_comparisons": 2,
+      "full_position3_transaction": false,
+      "layer8_kv_rope_or_stages2_to18_executed": false,
+      "original_stage8_indices13_and15_executed": false,
+      "layer8_positions0_to2_included_in_new_total": false
+    },
+    "independent_stage_comparisons": 538,
+    "comparison_decomposition": "4 + (28 * 19) + 2",
+    "material_failures": 0,
+    "operator_cases_passed": 28682,
+    "operator_coverage": "Actual Icarus/vvp cases including directed exact Fraction-oracle cases",
+    "natural_completion": true,
+    "exit_code": 0,
+    "completion_utc": "2026-09-08T09:33:21.008403+00:00"
+  },
+  "lineage": {
+    "fixed_input_token_ids": [9707, 1879, 0, 358],
+    "candidate_native_greedy_choices": false,
+    "actual_changed_layer0_outputs_feed_layer1": true,
+    "changed_binaries_position0_starts_empty": true,
+    "same_binary_preceding_position_state_links": 21,
+    "interlayer_hidden_links_layers1_to7": 24,
+    "later_transactions_use_own_candidate_hidden_and_kv": true,
+    "independent_reference": "Independently propagated FP16-interstage history",
+    "reference_hidden_or_kv_substituted_into_candidate_execution": false,
+    "software_outputs_relabeled_rtl": false,
+    "independent_reference_full_bit_exactness_claim": false
+  },
+  "numerical_gate": {
+    "unchanged": true,
+    "finite_required": true,
+    "accept": "finite AND (abs_error <= 0.125 OR (relative_error < 0.001 AND ordered_FP16_ULP <= 1))",
+    "relative_denominator": "max(abs(reference), 2^-14)",
+    "absolute_tolerance_inclusive": 0.125,
+    "relative_tolerance_strict": 0.001,
+    "ordered_fp16_ulp_limit_inclusive": 1
+  },
+  "bounded_observations": {
+    "layer7_position0_stage18_index62": {
+      "actual": 1580,
+      "reference": 1581,
+      "absolute_error": 1,
+      "ordered_fp16_ulp": 1,
+      "accepted_by": "Unchanged relative/ULP alternative"
+    },
+    "logical_layer8_position3_q": {
+      "outputs": 896,
+      "maximum_absolute_error": 0.03125,
+      "material_failures": 0,
+      "index223_actual": -13.7421875,
+      "index223_reference": -13.7109375,
+      "index223_absolute_error": 0.03125,
+      "scope": "Physical position0, position-independent stages0_to1 only"
+    }
+  },
+  "bounded_review": {
+    "independent": true,
+    "status": "done",
+    "review_skipped": false,
+    "review_call_completion_utc": "2026-09-08T09:39:58.711544+00:00",
+    "acceptance_record_utc": "2026-09-08T09:39:58.755149+00:00",
+    "scope": "Completed bounded actual RTL result and separate software binary64-v1 eligibility boundary",
+    "chronology": "Actual independent review followed the frozen pending-review annotations",
+    "original_result_unchanged": true
+  },
+  "separate_binary64_v1_eligibility": {
+    "eligibility_remains_unsatisfied": true,
+    "candidate_kind": "SOFTWARE",
+    "reviewed": true,
+    "evaluated_layer_final_outputs": 24,
+    "evaluated_coordinates": 21504,
+    "evaluated_positions": [0, 1, 2],
+    "position3_reference_bound": false,
+    "position3_pass_claim": false,
+    "rtl_output_admission_test": false,
+    "admission": false,
+    "requirements_waived_by_fp16_interstage_rtl_result": false
+  },
+  "timing": {
+    "experimental_elapsed_seconds": 8523.217445007991,
+    "scope": "Completed bounded experimental run, not a hardware or token-rate benchmark",
+    "performance_bottleneck_identified": false,
+    "hardware_latency_or_tokens_per_second_claim": false
+  },
+  "publication_verification": {
+    "rtl_manifest_artifacts_hash_authenticated": 1859,
+    "all_538_retained_gates_and_lineage_checked": true,
+    "separate_software_screen_manifest_authenticated": true,
+    "read_only": true,
+    "rtl_model_gate_or_scalar_screen_replayed": false
+  },
+  "artifact_identities": {
+    "result_sha256": "6ecd10dfee4b1ae4d65de2eb0541545347ffcc831c6ce580553b149ecca7bbed",
+    "frozen_manifest_sha256": "2edead446d7437758a65c6805d7fe736defc02bc3c596ee52761f12ed5b76ad8",
+    "output_manifest_sha256": "19b431cdec71e0a4bb9b84e1577b5ecdf1706146ae13e51cba02d91483159c2c",
+    "operator_result_sha256": "b0fcbf94f6530e83c46b6a5a361607d440c469e8aba2270493ac2fadd1fb0650",
+    "later_independent_review_sha256": "b13013f5364a4396025fc5077e561234b79832025b8c079a27c61b6c067d0ae3",
+    "separate_software_eligibility_result_sha256": "28a4838a6a3f5ebed708ce400a07de988ebb492558fb17667be88389377f87fa"
+  },
+  "claim_boundary": {
+    "full_nine_layer_position3_pass": false,
+    "complete_attention_blocker_repair": false,
+    "whole_trajectory_repair": false,
+    "full_model_final_norm_head_tail_or_tokenizer_result": false,
+    "new_generated_tokens_claimed": 0,
+    "historical_two_generated_token_text": "Hello world! I",
+    "historical_text_lineage": "Different earlier execution lineage, unchanged by this candidate",
+    "dialogue_quality_claim": false,
+    "production_adoption": false,
+    "synthesis_ppa_fpga_u280_xrt_hbm_or_hardware_execution": false,
+    "vivado_vitis_bitstream_or_deployment": false,
+    "hardware_timing_or_throughput": false
+  },
+  "publication_boundary": {
+    "documentation_only": true,
+    "candidate_source_promoted": false,
+    "public_tree_is_executable_reproduction": false,
+    "weights_arrays_raw_logs_simulator_state_or_review_transcripts_included": false
+  }
+}
