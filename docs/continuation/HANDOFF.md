@@ -6,8 +6,8 @@ operator guide is [HANDOFF.zh-CN.md](HANDOFF.zh-CN.md).
 
 The equal mirrors are <https://github.com/aHappend/ace-3> and
 <https://github.com/Argus-AiTeam/ace-3>, branch `main`. The dated source ref is
-`refs/tags/checkpoint-2026-09-24-source`; its exact first-publication commit is
-written into this file by the final documentation commit before push.
+`refs/tags/checkpoint-2026-09-24-source` at
+`2b4eaeeec8280a2398ef9311fb606e28a2b5e850`.
 
 On the original host, use `python tools/argus_continuation.py inspect` before
 acting. Do not restart a live daemon or duplicate an active mission. Continue

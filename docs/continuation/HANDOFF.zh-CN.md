@@ -11,8 +11,7 @@
 - 团队：<https://github.com/Argus-AiTeam/ace-3>
 - 分支：`main`
 - 不可变日期 checkpoint：`refs/tags/checkpoint-2026-09-24-source`
-- checkpoint commit：在首次 source publication commit 后生成，并在 push 前由
-  final main documentation commit 写入准确 SHA
+- checkpoint commit：`2b4eaeeec8280a2398ef9311fb606e28a2b5e850`
 
 发布后必须核对两个远端的 commit 和 tree 相同。Git push 不是事务；如果只成功
 一个，必须如实记录 partial sync，并继续补齐另一个，不能声称已经双同步。
