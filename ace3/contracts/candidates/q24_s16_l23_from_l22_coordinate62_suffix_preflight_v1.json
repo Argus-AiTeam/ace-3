@@ -1,0 +1,74 @@
+{
+  "diagnostic_id": "ace3-q24-s16-l23-from-l22-coordinate62-suffix-preflight-v1",
+  "version": 1,
+  "schema_version": 1,
+  "cwd": "/home/argustest/ace3-argus",
+  "evidence": {
+    "review": {
+      "path": "/home/argustest/.argus-skill-ace3/projects/s-62150b05/handoffs/bc782e353b8c/round-0001.json",
+      "sha256": "81e34683ce427070284a7991dd2e50c4a04f176ac6cba08f5759f3b4abd01ddb"
+    },
+    "mission": {
+      "path": "/home/argustest/.argus-skill-ace3/projects/s-62150b05/handoffs/bc782e353b8c/mission.json",
+      "sha256": "b85ff50f05431e49c7fbd6c2162b37381919a38f4ab98535e119a1b6f2dcb040"
+    },
+    "result": {
+      "path": "/home/argustest/ace3-argus/build/q24_s16_l22_from_l21_coordinate62_suffix_execution_v1_attempt001/result.json",
+      "sha256": "fde641e5006e2d89e8925dbca140adbd55be0a023e9067ee2fb69c882e3d4d9f"
+    },
+    "validation": {
+      "path": "/home/argustest/ace3-argus/build/q24_s16_l22_from_l21_coordinate62_suffix_execution_v1_attempt001/validation.json",
+      "sha256": "6877676c7f7f14b1158673dfc40f11dcdecef1727b6b066973805c2557deb77a"
+    }
+  },
+  "controls": ["frozen_inherited", "frozen_inherited_o", "frozen_inherited_down", "frozen_inherited_o_down", "scratch", "scratch_down", "mapped62", "mapped_all", "inherited_native"],
+  "parent_node": [22, 0, 18],
+  "consumer_node": [23, 0],
+  "history": [9707],
+  "state": {
+    "shape": [896],
+    "fields": {"i": "output_i", "z": "output_z", "h": "stage18"},
+    "dtypes": {"i": "<i8", "z": "|u1", "h": "<u2"},
+    "transformation": "none; entire raw L22 output I/Z/H, not a coordinate cut"
+  },
+  "consumer_kv": {
+    "kind": "own empty P0", "keys": ["k", "v"], "shape": [0, 128],
+    "dtype": "<u2", "storage": "FP16 words",
+    "shared_between_consumers": false, "prior_layer_kv_consumed": false
+  },
+  "future_output": {
+    "default": "/home/argustest/ace3-argus/build/q24_s16_l23_from_l22_coordinate62_suffix_preflight_v1_attempt001",
+    "parent": "/home/argustest/ace3-argus/build",
+    "basename_pattern": "q24_s16_l23_from_l22_coordinate62_suffix_preflight_v1_attempt[0-9]{3,}",
+    "fresh": true, "ignored": true, "direct_child": true,
+    "create_during_check": false, "overwrite": false,
+    "future_creation": "recheck freshness and gates, then exclusive mkdir; separate reviewed executor",
+    "artifacts": ["result.json", "validation.json", "interventions.json"],
+    "per_control_artifacts": ["{control}_L23.npz", "{control}_L23_parent.npz", "{control}_L23_local_references.npz", "{control}_L23_gates.json"]
+  },
+  "reference_manifest": "/home/argustest/ace3-argus/build/q24_software_l9_l23_4d1cfdfc15c0_attempt002/references/freeze.json",
+  "reference_missing_status": "BLOCKED_MISSING_L23_REFERENCE",
+  "policy_id": "ace3-w4a16-local-operator-global-binary64-authority-v3",
+  "profile_id": "ace3-w4a16-layer-final-binary64-fp16-excess-v1",
+  "reference_policy": "legacy-binary64-AWQ-fully-independent-propagation",
+  "excess_budget": "1/8",
+  "local_threshold": "finite AND (absolute_error <= 0.125 OR (relative_error < 0.001 AND ordered_FP16_ULP <= 1)); denominator max(abs(reference), 2^-14)",
+  "interface": ["--check", "--out"],
+  "output": "stdout JSON only; no file writes",
+  "flags": {
+    "native_layer_invocations": 0, "native_L0_L22_invocations": 0,
+    "native_L23_P0_invocations": 0, "dispatch_guard_calls": 0,
+    "rtl_invocations": 0, "hardware_invocations": 0, "gpu_invocations": 0,
+    "simulation_invocations": 0, "external_service_invocations": 0,
+    "evidence_writes": 0, "execution_authorized": false,
+    "accepted_prefix_replay": false, "original_prefix_replay": false,
+    "admission_replay": false, "reference_recomputation": false,
+    "reference_reanchoring": false, "candidate_admitted": false,
+    "policy_adopted": false, "successor_published": false,
+    "strict_FP16_state_claim": false, "new_token_claim": false, "full_model_claim": false
+  },
+  "expected_tests": 30,
+  "command_sidecar": "PYTHONPATH=/home/argustest/ace3-argus PYTHONDONTWRITEBYTECODE=1 /home/argustest/miniconda3/bin/python -B -m ace3.model.candidates.diagnose_q24_s16_l23_from_l22_coordinate62_suffix_preflight_v1 --check",
+  "normal_host_review": "REQUIRED",
+  "claim_boundary": "Preparation only, not L23 numerical evidence. Exactly nine complete raw failed L22 states are isolated counterfactual inputs, not admission parents or adjusted sparse-cut replacements. No native execution, L0-L22 or accepted/original-prefix/admission replay, RTL, hardware, GPU, simulation or evidence writes. Q24 residual state is wider than FP16; G128 asymmetric packed INT4, native GEMM nibble ordering, no qzero plus-one, FP16 scales/operator boundaries/KV and native S16 RTZ remain unchanged. Original-input references, exact thresholds, source/operand/state/KV/lineage gates and all historical failures remain mandatory. No strict-FP16-state W4A16, new-token or full-model admission. This preflight requires independent Host Reviewer validation; later execution requires a separately reviewed executor, exclusive fresh output creation and current source/identity/role-model/account/budget/access/lock/concurrency preflights."
+}

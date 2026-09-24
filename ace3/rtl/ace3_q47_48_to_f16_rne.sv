@@ -2,7 +2,8 @@
 `default_nettype none
 
 module ace3_q47_48_to_f16_rne #(
-    parameter integer ACC_WIDTH = 102
+    parameter integer ACC_WIDTH = 102,
+    parameter integer IEEE_F16 = 0
 ) (
     input  wire signed [ACC_WIDTH-1:0] fixed_i,
     output wire [15:0]                f16_o,
@@ -70,7 +71,9 @@ module ace3_q47_48_to_f16_rne #(
                     encoded_exponent = encoded_exponent + 5'd1;
                 end
                 if (unbiased_exponent > 15) begin
-                    result_bits = {value_sign, 5'h1e, 10'h3ff};
+                    result_bits = (IEEE_F16 != 0)
+                        ? {value_sign, 5'h1f, 10'd0}
+                        : {value_sign, 5'h1e, 10'h3ff};
                     saturated = 1'b1;
                 end else begin
                     result_bits = {
@@ -89,7 +92,8 @@ module ace3_q47_48_to_f16_rne #(
                 if (rounded >= 13'd1024)
                     result_bits = {value_sign, 5'd1, 10'd0};
                 else if (rounded == 13'd0)
-                    result_bits = 16'h0000;
+                    result_bits = (IEEE_F16 != 0)
+                        ? {value_sign, 15'd0} : 16'h0000;
                 else
                     result_bits = {value_sign, 5'd0, rounded[9:0]};
             end

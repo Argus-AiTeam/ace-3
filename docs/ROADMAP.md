@@ -1,83 +1,59 @@
 # ACE-3 MP Roadmap
 
-The roadmap is ordered by evidence dependency. A checked item means the
-corresponding bounded result is published; it does not imply completion of a
-later integration or implementation level.
+## Phase 0: software qualification
 
-## 1. Native AWQ W4A16 foundation
+- [x] Recover the official AWQ G128 tensor contract.
+- [x] Validate packed-weight reconstruction with independent implementations.
+- [x] Run a CPU FP16 reference over the reconstructed official checkpoint.
+- [x] Establish basic dialogue viability.
+- [ ] Run native AutoAWQ or vLLM inference when a compatible GPU is available.
 
-- [x] Authenticate the official AWQ G128 tensor contract.
-- [x] Implement packed asymmetric INT4 unpacking and zero-point handling.
-- [x] Implement the synthesizable G128 W4A16 arithmetic lane.
-- [x] Verify reset, clear, ready/valid backpressure, and four-state boundaries.
-- [x] Bind deterministic vectors to official checkpoint tensor samples.
-- [x] Implement complete cross-group accumulation with one final FP16 rounding.
-- [x] Elaborate Q/O, K/V, Gate/Up, and Down projection geometries.
-- [x] Numerically verify selected complete 896-input official `q_proj` outputs.
-- [ ] Extend official-tensor numerical coverage across every projection family.
+## Phase 1: W4A16 projection
 
-## 2. Decoder arithmetic and state
+- [x] Freeze the implemented arithmetic and interface contract.
+- [x] Implement a synthesizable unpack/dequant/product or dot-lane primitive.
+- [x] Verify reset and backpressure.
+- [x] Pass deterministic edge vectors.
+- [x] Pass seeded random vectors against an independent bit oracle.
+- [x] Bind vectors to an official Qwen projection tensor slice.
+- [x] Reproduce the promoted primitive from the standalone repository layout.
+- [x] Add bounded X/Z and protocol-property simulation coverage.
+- [x] Scale the primitive into a complete parameterized full-input projection
+  engine.
+- [ ] Bind and numerically verify authenticated k/v/o/gate/up/down tensor
+  samples when those read-only samples are available.
 
-- [x] FP16 residual path.
-- [x] FP16 RMSNorm with declared reduction precision.
-- [x] FP16 SiLU and gated MLP.
-- [x] Q/K/V projection cluster.
-- [x] Qwen2 half-split RoPE.
-- [x] Indexed FP16 K/V cache with overwrite and isolation checks.
-- [x] Scaled QK score accumulation.
-- [x] Causal softmax with frozen internal precision.
-- [x] Cached-value composition.
-- [x] Integrated indexed decoder execution with independent reference checks.
+## Phase 2: decoder arithmetic
 
-## 3. Model24 execution
+- [ ] FP16 residual path.
+- [ ] FP16 RMSNorm with declared reduction precision.
+- [x] FP16 RoPE.
+- [x] Mixed-precision attention score and composition.
+- [x] Softmax with explicit internal precision.
+- [x] Indexed FP16 K/V cache primitive with overwrite and isolation checks.
+- [ ] FP16 SiLU and gated MLP.
+- [ ] Tied FP16 embedding and language-model head.
 
-- [x] Add an arithmetic-free 24-layer launch/completion controller.
-- [x] Compile and execute layer-indexed decoder RTL for layers 0 through 23.
-- [x] Authenticate all consumed layer tensors and compiled binaries.
-- [x] Compare post-layer-23 hidden state and Host top-K with an independent
-  official-checkpoint reference.
-- [x] Add persistent Verilator save/restore.
-- [x] Add canonical state envelopes and predecessor lineage.
-- [x] Require caller-held trusted chain-tip commitments before restore.
-- [x] Implement and test the compact authenticated indexed-layer builder.
-- [ ] Publish independently reviewed all-24 compact-build manifests and
-  reproducible evidence. An operational build exists outside source control.
-- [ ] Complete and review the first readable Hybrid RTL dialogue.
+## Phase 3: end-to-end execution
 
-## 4. Runtime completion
+- [ ] Integrate all 24 Qwen2.5-0.5B decoder layers.
+- [ ] Match software-reference logits and greedy tokens.
+- [ ] Generate readable multi-token dialogue.
+- [x] Add an authenticated one-command software/oracle host/runtime path for
+  default and caller-provided prompts, without RTL, synthesis, PPA, FPGA,
+  latency, throughput, or broad dialogue-quality claims.
+- [x] Record separate diagnostic software wall time and controller-driven
+  Verilator wall/cycle evidence, without synthesis, FPGA, hardware-latency, or
+  throughput claims.
 
-- [ ] Publish a one-command accepted First Voice execution path.
-- [ ] Implement RTL final RMSNorm.
-- [ ] Implement streaming tied `lm_head` and Top-K.
-- [ ] Add layer-major prompt prefill without changing token-major generation.
-- [ ] Add durable checkpoint/resume across host restarts.
-- [ ] Report software, RTL simulation, and future hardware latency separately.
+## Phase 4: implementation evidence
 
-## 5. Precision and model scaling
-
-- [x] Establish native AWQ W4A16 as the first complete profile.
-- [ ] Add W8A16.
-- [ ] Add BF16/FP16.
-- [ ] Scale the architecture to a 1.5B model tier.
-- [ ] Scale the architecture to a 3B model tier.
-- [ ] Define larger tiers only after memory, bandwidth, and implementation
-  contracts are evidence-backed.
-
-## 6. Implementation evidence
-
-- [ ] Freeze a reproducible synthesis toolchain and source manifest.
-- [ ] Synthesize a declared configuration.
-- [ ] Report timing and area without extrapolating unsupported PPA.
+- [ ] Synthesize with a reproducible toolchain.
 - [ ] Close timing for a declared target.
-- [ ] Package and deploy an FPGA image when hardware is available.
-- [ ] Measure latency, throughput, memory traffic, resources, power, and energy.
+- [ ] Build and deploy an FPGA image when hardware is available.
+- [ ] Measure throughput, latency, memory traffic, resource use, and power.
 
-## Release policy
+## Release
 
-- [x] Publish source, contracts, tests, and scope-bounded result notes.
-- [x] Keep model assets, generated traces, build products, and local state out
-  of source control.
-- [x] State software, RTL simulation, synthesis, FPGA, and hardware boundaries
-  separately.
-- [ ] Promote First Voice dialogue only after reproducible independent review.
-- [ ] Promote synthesis/PPA/FPGA claims only with the corresponding artifacts.
+ACE-3 remains private until the repository contains reproducible source,
+contracts, tests, and evidence appropriate to the claims being published.

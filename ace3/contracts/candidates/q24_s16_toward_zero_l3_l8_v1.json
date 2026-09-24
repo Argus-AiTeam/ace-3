@@ -1,0 +1,19 @@
+{
+  "continuation_id": "ace3-q24-s16-toward-zero-l3-l8-v1",
+  "candidate_id": "ace3-q24-s16-toward-zero-native-v1",
+  "policy_id": "ace3-w4a16-local-operator-global-binary64-authority-v3",
+  "state_id": "ace3-q24-software-paired-state-v1",
+  "model": "Qwen/Qwen2.5-0.5B-Instruct-AWQ",
+  "scope": {"layers": [3, 4, 5, 6, 7, 8], "position": 0, "history": [9707]},
+  "arithmetic_contract": "ace3/contracts/candidates/q24_s16_toward_zero_native_v1.json",
+  "arithmetic": "Unchanged reviewed native mathematical operators and direct RNE16 conversion, uniform RTZ16 at S16, signed int64 Q24 I/Z residual carry. This opt-in contract extends only the layer dispatch range, not the arithmetic or numerical policy.",
+  "parent": "Reviewed task572169d94b1d attempt002 L2 software_parent.json; authenticate complete paired I/Z/H against its actual output, original freeze and independently reviewed PASS. Do not replay L0-L2 or relift rounded H.",
+  "weights": "Official G128 asymmetric packed INT4, native GEMM nibble ordering, no qzero plus-one, FP16 scales, FP16 activation boundaries and KV.",
+  "state": "Every layer consumes only its immediate passing predecessor's I/Z/H. Each layer starts with its own empty P0 KV; the accepted L2 KV is authenticated but never restored in L3.",
+  "local": "Independent canonical local S0-S17 references and independent rational Q24 residual identity; finite AND (abs_error<=1/8 OR (relative_error<1/1000 AND ordered_FP16_ULP<=1)), denominator=max(abs(reference),2^-14).",
+  "global": "Original-input independently propagated binary64-v1 S18, exact excess<=1/8; no quantization, clamping, re-anchoring or candidate/local-reference injection.",
+  "diagnostics": "Preserve all original FP16 trajectory comparisons and historical FAIL artifacts.",
+  "execution": "Freeze sources, tools, contracts, input identities and reviewed parent before compute. Dispatch L3-L8 only; evaluate every stage before its consumer. Stop at first mandatory failure and publish no failed-layer successor.",
+  "admission": "A complete run covers 108 local vectors and 5376 original-input global coordinates plus independent state identities. A first numerical FAIL is an honest bounded rejection, not admission. Independent normal Host review is REQUIRED.",
+  "non_goals": ["RTL", "L9-L23", "head", "tokens", "full-model admission", "production defaults", "strict-FP16-state W4A16 claims", "hardware"]
+}

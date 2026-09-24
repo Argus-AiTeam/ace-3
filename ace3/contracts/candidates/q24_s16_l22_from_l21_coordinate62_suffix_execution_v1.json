@@ -1,0 +1,59 @@
+{
+  "diagnostic_id": "q24-s16-l22-from-l21-coordinate62-suffix-execution-v1",
+  "version": 1,
+  "cwd": "/home/argustest/ace3-argus",
+  "evidence": {
+    "preflight_source": {
+      "path": "/home/argustest/ace3-argus/ace3/model/candidates/diagnose_q24_s16_l22_from_l21_coordinate62_suffix_preflight_v1.py",
+      "sha256": "46d8ea4e6df531886e1c98ef9d7fe8440b8487500ed3beb7485f7ac4912994e4"
+    },
+    "preflight_contract": {
+      "path": "/home/argustest/ace3-argus/ace3/contracts/candidates/q24_s16_l22_from_l21_coordinate62_suffix_preflight_v1.json",
+      "sha256": "500c35f99c6b36251dfd9aadc777431575ce206f86f6d4f42c6abf467d6fc7fc"
+    },
+    "preflight_review": {
+      "path": "/home/argustest/.argus-skill-ace3/projects/s-62150b05/handoffs/b9de1724bcd7/round-0001.json",
+      "sha256": "6438d89bbd2539d3c5bf001a6ce46233826065749beac89b0488942bcab5c366"
+    }
+  },
+  "controls": ["frozen_inherited", "frozen_inherited_o", "frozen_inherited_down", "frozen_inherited_o_down", "scratch", "scratch_down", "mapped62", "mapped_all", "inherited_native"],
+  "parent_node": [21, 0, 18],
+  "consumer_node": [22, 0],
+  "history": [9707],
+  "stages": [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18],
+  "invocations_per_control": 1,
+  "state": {
+    "shape": [896],
+    "fields": {"i": "output_i", "z": "output_z", "h": "stage18"},
+    "dtypes": {"i": "<i8", "z": "|u1", "h": "<u2"},
+    "transformation": "none; entire raw L21 output I/Z/H, not a coordinate cut"
+  },
+  "consumer_kv": {
+    "kind": "own empty P0", "keys": ["k", "v"], "shape": [0, 128],
+    "dtype": "<u2", "storage": "FP16 words",
+    "shared_between_consumers": false, "prior_layer_kv_consumed": false
+  },
+  "policy_id": "ace3-w4a16-local-operator-global-binary64-authority-v3",
+  "profile_id": "ace3-w4a16-layer-final-binary64-fp16-excess-v1",
+  "reference_policy": "legacy-binary64-AWQ-fully-independent-propagation",
+  "excess_budget": "1/8",
+  "local_threshold": "finite AND (absolute_error <= 0.125 OR (relative_error < 0.001 AND ordered_FP16_ULP <= 1)); denominator max(abs(reference), 2^-14)",
+  "output": "/home/argustest/ace3-argus/build/q24_s16_l22_from_l21_coordinate62_suffix_execution_v1_attempt001",
+  "fresh_ignored_direct_child": true,
+  "overwrite": false,
+  "interface": ["--execute", "--validate", "--out"],
+  "execution_command": "PYTHONPATH=/home/argustest/ace3-argus PYTHONDONTWRITEBYTECODE=1 /home/argustest/miniconda3/bin/python -B -m ace3.model.candidates.diagnose_q24_s16_l22_from_l21_coordinate62_suffix_execution_v1 --execute --out build/q24_s16_l22_from_l21_coordinate62_suffix_execution_v1_attempt001",
+  "expected_tests": 24,
+  "flags": {
+    "native_L0_L21_invocations": 0, "native_L23_invocations": 0,
+    "rtl_invocations": 0, "hardware_invocations": 0, "gpu_invocations": 0,
+    "simulation_invocations": 0, "external_service_invocations": 0,
+    "accepted_prefix_replay": false, "original_prefix_replay": false,
+    "admission_replay": false, "reference_recomputation": false,
+    "reference_reanchoring": false, "candidate_admitted": false,
+    "policy_adopted": false, "successor_published": false,
+    "strict_FP16_state_claim": false, "new_token_claim": false, "full_model_claim": false
+  },
+  "claim_boundary": "Nine isolated CPU-software L22/P0 counterfactual consumers of the complete raw failed L21 states, not admission parents or sparse-cut replacements. No L0-L21 or accepted/original-prefix/admission replay. Q24 residual state is wider than FP16; G128 asymmetric packed INT4, native GEMM nibble ordering, no qzero plus-one, FP16 scales/operator boundaries/KV and native S16 RTZ remain unchanged. Original-input global references, exact thresholds and all historical failures remain unchanged. No strict-FP16-state W4A16, new-token or full-model admission. Independent Host Reviewer validation of this new evidence is required.",
+  "normal_host_review": "REQUIRED"
+}

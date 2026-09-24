@@ -1,0 +1,55 @@
+{
+  "diagnostic_id": "ace3-q24-s16-l8-coordinate62-producer-cone-v1",
+  "policy_id": "ace3-w4a16-local-operator-global-binary64-authority-v3",
+  "reviewed_result_sha256": "569320a0f55ffdd30647decb676c06d5a83610163761ab5a1807ef648fb97d54",
+  "candidate_admitted": false,
+  "policy_adopted": false,
+  "successor_published": false,
+  "rtl_invocations": 0,
+  "normal_host_review": "REQUIRED",
+  "cwd": "/home/argustest/ace3-argus",
+  "command": "PYTHONPATH=/home/argustest/ace3-argus PYTHONDONTWRITEBYTECODE=1 /home/argustest/miniconda3/bin/python -B -m ace3.model.candidates.diagnose_q24_s16_l8_coordinate62_producer_cone_v1 --out build/q24_s16_l8_coordinate62_producer_cone_174d3a4c0f95_attempt001",
+  "reproduction": "Run from cwd using the published command with a fresh nonexistent output of the same bounded prefix. The entry point asserts all repository module/test origins, compiles both new Python sources into the exclusive output, collects and executes all 16 focused tests once, then diagnoses once. No accepted L0-L8 test or native computation is replayed. Expected native work: 55 L9-L13 layer evaluations. Submit via the Argus durable direct runner with a 900-second timeout for this over-two-minute command; retain its submitted task_id/run_id/check_with receipt. Host supplies independent Reviewer reproduction, never self-review.",
+  "inputs": [
+    "build/q24_software_l3_l8_dc98a86e7c02_attempt001",
+    "build/q24_s16_l9_coordinate62_entry_producer_cone_d0755047099e_attempt001",
+    "build/q24_s16_l12_coordinate62_producer_cone_eaee0c6ac5e4_attempt001",
+    "build/q24_s16_l13_l12_parent_coordinate_cut_4937ea22f941_attempt001",
+    "build/q24_s16_l13_upstream_parent_cut_a81669925e0b_attempt001",
+    "build/q24_software_l9_l23_4d1cfdfc15c0_attempt002"
+  ],
+  "controls": [
+    "actual", "frozen_inherited", "frozen_o", "frozen_down",
+    "frozen_inherited_o", "frozen_inherited_down", "frozen_o_down",
+    "frozen_inherited_o_down", "scratch", "scratch_down", "mapped62"
+  ],
+  "branch_definitions": {
+    "inherited": "Accepted actual L7 output I/Z/H entering L8 at coordinate 62. Replace its complete coordinate by nearest-Q24 ties-even of independently propagated original-input L7 binary64; hold actual L8 S11 O and S17 down fixed.",
+    "o": "L8 S11 FP16 O-projection coordinate 62. Replace only this word by direct binary64-to-FP16 RNE of authenticated original-input L8 O, retaining native residual arithmetic and actual uncut branches.",
+    "S12": "Exact unrounded incoming Q24 plus FP16 S11 O, retaining integer/zero-sign state and independently checked RNE16 projection. Compare accepted scratch to nearest-Q24 original-input binary64 residual.",
+    "down": "L8 S17 FP16 down-projection coordinate 62 added to unrounded S12 Q24. Replace only this word by direct FP16 RNE of original-input L8 down.",
+    "S18": "Exact S12 Q24 plus FP16 S17 down, followed by unchanged RNE16 projection. Signed decomposition includes inherited drift, O/down drift, original binary64 addition roundoff and final FP16 projection.",
+    "scratch": "Replace complete S12 I/Z/H coordinate 62 by nearest-Q24 original-input residual; retain actual S17. This is an exogenous frozen branch cut, not a recomputed L8 MLP.",
+    "scratch_down": "Combine the S12 mapping and original-input S17 FP16 mapping, with all other coordinates actual.",
+    "mapped62": "Map complete accepted L8-output I/Z/H coordinate 62 to nearest-Q24 original-input L8 S18. Unchanged L9-L13 must reproduce reviewed L9 inherited_native arrays and gate reports bitwise."
+  },
+  "authentication": "Pin the reviewed L9/L12/L13 result identities and authenticate their repository artifact/source/input/validation bindings. Bind accepted L8 receipt/result/freeze, L7-to-L8 actual paired state, all retained L7/L8 state/KV/stage checks, and the exact L8-to-L9 parent equality. The accepted review identity is inherited from pinned reviewed L9 repository evidence, not freshly re-read external Host metadata. Every consumed repository module, source snapshot, test, model and numerical evidence resolves inside the isolated repository. Third-party interpreter dependencies are not repository modules. Authenticate all bound bytes again after execution; preserve all historical records unchanged.",
+  "reference": "Observe the frozen independent binary64 generator's L8 O/residual/down/S18, seeded only by retained original-input L7 binary64 and its own empty P0 reference KV. Authenticate native checkpoint L8 canonical tensors and require captured L8 S18 bitwise equality to original L8 and the extension's original L9 input. All L9-L13 global references remain independently propagated original-input arrays; no cut ever seeds the reference graph.",
+  "mapping": "Nearest-Q24 ties-even via exact rational arithmetic with error at most 2^-25 and signed zero tags; independently verified RNE16 state projection. O/down mappings remain FP16 RNE. Mapping is diagnostic, not policy adoption, reference substitution or precision/profile modification.",
+  "thresholds": {
+    "S0_S17": "Unchanged finite AND (abs_error <= 0.125 OR (relative_error < 0.001 AND ordered_FP16_ULP <= 1)); denominator max(abs(reference), 2^-14), independent same-actual-operand local references.",
+    "S18": "Unchanged original-input binary64-fp16-excess-v1 exact excess <= 1/8.",
+    "FP16_trajectory": "Unchanged original FP16 diagnostic comparisons retained."
+  },
+  "gate_scope": "Retained accepted L7/L8 reports are authenticated, never reexecuted. Frozen L8 assemblies do not claim omitted operator gates. Every control executes every native stage and unchanged gate in L9-L13, with immediate-predecessor Q24 state, own empty P0 KV and independent S16 RTZ checks. Failing suffixes continue only as diagnostic evidence. No software-parent receipt is published; candidate_admitted remains false even for a scalar or suffix rescue.",
+  "classification": "Report all sufficient frozen singletons/joints, S12 and mapped-output rescues. A unique sufficient singleton supports only conditional inherited-L7 or local-L8 branch sufficiency on the actual frozen background. Multiple/no singletons remain unresolved. Do not infer unique root cause, necessity, residual defect or performance causation from magnitude or scalar rescue.",
+  "evidence": [
+    "validation.json, compiled_0.pyc, compiled_1.pyc, unittest.log",
+    "command.log with repository context, CPU affinity/load, phase/control timings and explicit errors",
+    "retained_authentication.json, L8_original_branches.npz, L7_L8_coordinate62.json",
+    "L8_coordinate62_decomposition.json, frozen_Q24_additive_interactions.json",
+    "per-control L8 parents/cut operands and L9-L13 vectors, local references and complete gate reports",
+    "interventions.json, result.json"
+  ],
+  "claim_boundary": "Only isolated/versioned native-S16-RTZ Q24 CPU software: L8/P0 coordinate-62 frozen producer diagnosis and unchanged L9-L13 suffix. Wide Q24 residual is not strict-FP16-state W4A16. Native AWQ G128 asymmetric INT4 GEMM ordering, no qzero plus-one, FP16 scales/operator boundaries/KV, thresholds, original-input independent reference, accepted bounded evidence and historical failures remain unchanged. No accepted L0-L8 native replay, L14+, new-token, full-model PASS, RTL execution/modification, GPU, FPGA, hardware, simulation, synthesis, PPA, precision/model/profile/budget/configuration change, policy adoption, successor publication, follow-on selection, framework or ACE2 changes."
+}

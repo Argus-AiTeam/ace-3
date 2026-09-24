@@ -1,0 +1,48 @@
+{
+  "diagnostic_id": "ace3-q24-s16-l7-coordinate62-producer-cone-v1",
+  "policy_id": "ace3-w4a16-local-operator-global-binary64-authority-v3",
+  "reviewed_result_sha256": "8b15f1b056f92cf07c766fc4a2fc9e67ae8ba53a06be9026b0b3c899b9aecff8",
+  "reproduced_result_sha256": "381fb30add95d5b6065e25d332ff5f0e425b763a2d342da54d6d03e0c5702e6d",
+  "candidate_admitted": false,
+  "policy_adopted": false,
+  "successor_published": false,
+  "rtl_invocations": 0,
+  "normal_host_review": "REQUIRED",
+  "cwd": "/home/argustest/ace3-argus",
+  "command": "PYTHONPATH=/home/argustest/ace3-argus PYTHONDONTWRITEBYTECODE=1 /home/argustest/miniconda3/bin/python -B -m ace3.model.candidates.diagnose_q24_s16_l7_coordinate62_producer_cone_v1 --out build/q24_s16_l7_coordinate62_producer_cone_6b7120b2b23e_attempt001",
+  "reproduction": "Use the published cwd/command with a fresh nonexistent output of the same bounded prefix. The entry point asserts repository module/test origins, compiles both new Python files into that output, collects and executes all 16 focused tests once, then diagnoses once. No accepted L0-L8 tests or L0-L7 native computation is replayed. There are 66 L8-L13 suffix layer evaluations. Use the Argus durable direct runner with a 900-second timeout for this over-two-minute command and preserve its receipt. Independent review is supplied by the normal Host Reviewer route.",
+  "controls": [
+    "actual", "frozen_inherited", "frozen_o", "frozen_down",
+    "frozen_inherited_o", "frozen_inherited_down", "frozen_o_down",
+    "frozen_inherited_o_down", "scratch", "scratch_down", "mapped62"
+  ],
+  "branch_definitions": {
+    "inherited": "Accepted actual L6 output I/Z/H entering L7 at coordinate 62. Replace the complete coordinate with nearest-Q24 ties-even original-input L6 binary64; freeze actual L7 S11 O and S17 down.",
+    "o": "Replace only L7 S11 FP16 O coordinate 62 with direct binary64-to-FP16 RNE of original-input L7 O. Retain all uncut branches.",
+    "S12": "Exact incoming Q24 plus FP16 S11 O; retain I/Z/H with independently checked RNE16 projection. Compare accepted scratch with nearest-Q24 original-input L7 residual.",
+    "down": "Replace only L7 S17 FP16 down coordinate 62 with direct FP16 RNE of original-input L7 down.",
+    "S18": "Exact unrounded S12 Q24 plus FP16 S17, followed by unchanged RNE16. Decompose inherited drift, O/down drift, original binary64 addition roundoff and final FP16 projection.",
+    "scratch": "Map the complete L7 S12 coordinate 62 to nearest-Q24 original-input residual, retaining actual down. This is an exogenous frozen cut, not recomputed L7 MLP.",
+    "scratch_down": "Combine mapped S12 and original-input RNE-FP16 down at coordinate 62 only.",
+    "mapped62": "Map the complete L7 output coordinate 62 to nearest-Q24 original-input L7 S18; recompute the unchanged native L8-L13 suffix, not frozen L8 branches."
+  },
+  "authentication": "Pin reviewed L8 engineer and independent reproduction results, then authenticate their input/source/validation/artifact bindings and the reviewed L9/L12/L13 chain. Authenticate accepted L3-L8 receipt/freeze/result, L6/L7/L8 immediate state links, L6/L7 stage/state/KV checks and L8 baseline arrays/local references/reports. Authenticate original-input L6-L8 binary64, L8 FP16 trajectory and canonical checkpoint tensors. Every consumed repository module, source, test and evidence resolves in the isolated tree; interpreter dependencies are external third-party packages, not repository modules. External Host review identities are retained metadata inherited from pinned repository results and are not reopened. Recheck bound bytes and source origins after execution.",
+  "reference": "Capture frozen independent original-input binary64 L7 O/residual/down/S18 from retained original L6 binary64 and its own empty P0 KV. Require captured S18 bitwise equality to retained original L7. Never seed any reference with actual or intervened data. L8-L13 original global and FP16 trajectory references remain unchanged.",
+  "mapping": "Nearest-Q24 ties-even uses exact rational arithmetic, maximum error 2^-25 and signed zero preservation. O/down map with direct FP16 RNE. This is a diagnostic intervention, not precision/profile adoption or reference replacement.",
+  "thresholds": {
+    "S0_S17": "Unchanged finite AND (abs_error <= 0.125 OR (relative_error < 0.001 AND ordered_FP16_ULP <= 1)); denominator max(abs(reference), 2^-14), independent same-actual-operand local references.",
+    "S18": "Unchanged original-input binary64-fp16-excess-v1 exact excess <= 1/8.",
+    "FP16_trajectory": "Original FP16 trajectory comparisons remain separately reported diagnostics."
+  },
+  "gate_scope": "No native L7 replay or omitted L7 gate claim. The dedicated L8 wrapper uses the same candidate stage generator, independent local references, gates and RTZ/state/KV checks without modifying the existing L9-L13 dispatcher guard. Every control executes all 19 native stages and unchanged gates for each L8-L13 layer, threads immediate Q24 parents and starts own empty P0 KV. The actual baseline must reproduce retained arrays/local references/reports bitwise. Failing suffixes continue only for diagnosis. Even all-suffix passing cuts remain non-admitting because frozen L7 cuts are not admitted operator repairs.",
+  "classification": "Only conditional inherited-L6 or local-L7 singleton sufficiency, or unresolved under tested branch mappings. Report all singleton/joint rescues, S12/output cuts and complete suffix gate outcomes. Do not infer unique root cause, necessity, residual defect, or performance cause.",
+  "evidence": [
+    "validation.json, compiled_0.pyc, compiled_1.pyc, unittest.log",
+    "command.log with CPU affinity/load, exact command context, timings and explicit errors",
+    "retained_authentication.json, L7_original_branches.npz, L6_L7_coordinate62.json",
+    "L7_coordinate62_decomposition.json, frozen_Q24_additive_interactions.json",
+    "per-control L7 cut operands/parents and L8-L13 actual vectors/local references/full gate reports",
+    "interventions.json, result.json"
+  ],
+  "claim_boundary": "Only isolated versioned native-S16-RTZ Q24 CPU software, L7/P0 coordinate-62 frozen producer diagnosis and L8-L13 suffix. Wide residual Q24 is not strict-FP16-state W4A16. Native AWQ G128 asymmetric INT4 GEMM ordering, no qzero plus-one, FP16 scales/operator boundaries/KV, original-input global reference, numerical thresholds, accepted evidence and historical failures remain unchanged. No accepted L0-L7 native replay, L14+, new-token, full-model PASS, RTL modification/execution, GPU/FPGA/hardware/simulation/synthesis/PPA, precision/model/profile/budget/configuration change, policy adoption, successor publication, follow-on selection, framework or ACE2 changes."
+}

@@ -1,0 +1,7 @@
+{
+  "schema": "argus-continuation-project/v1",
+  "project": "ACE3",
+  "expected_workdir": "/home/argustest/ace3-argus",
+  "state_root": "/home/argustest/.argus-skill-ace3/projects/s-62150b05",
+  "global_root": "/home/argustest/.argus-skill-ace3"
+}

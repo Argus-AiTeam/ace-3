@@ -1,0 +1,64 @@
+{
+  "diagnostic_id": "ace3-q24-s16-l9-coordinate62-entry-producer-cone-v1",
+  "policy_id": "ace3-w4a16-local-operator-global-binary64-authority-v3",
+  "reviewed_result_sha256": "54260b6d161471d9aaf3021c271cd7281e604e94fe0147a2e2a10cc27e86bd3e",
+  "coordinate_result_sha256": "08230294f36233d6b535490c35222d030dfb671c13dd70df79ec0cb4361cbe99",
+  "upstream_result_sha256": "f9a98abf3c266ecf79ee1822223617436d91037851137b8d25f0fa33ee5eb732",
+  "candidate_admitted": false,
+  "policy_adopted": false,
+  "successor_published": false,
+  "rtl_invocations": 0,
+  "normal_host_review": "REQUIRED",
+  "cwd": "/home/argustest/ace3-argus",
+  "command": "PYTHONPATH=/home/argustest/ace3-argus PYTHONDONTWRITEBYTECODE=1 /home/argustest/miniconda3/bin/python -B -m ace3.model.candidates.diagnose_q24_s16_l9_coordinate62_entry_producer_cone_v1 --out build/q24_s16_l9_coordinate62_producer_cone_d0755047099e_attempt001",
+  "reproduction": "Run the published command from cwd, selecting a fresh nonexistent output directly under build with the required q24_s16_l9_coordinate62_producer_cone_ prefix for independent Reviewer reproduction. The legacy q24_s16_l9_coordinate62_entry_producer_cone_ output prefix is rejected; the versioned module and contract identities are unchanged. The command asserts repository module/test origins, compiles both touched Python sources to the exclusive output, collects and executes all 18 focused tests once, then runs this diagnostic once. No accepted L0-L8 tests or computation execute. Expected native work is 46 layer evaluations; use the Argus durable runner for executions expected to exceed two minutes.",
+  "inputs": [
+    "build/q24_software_l3_l8_dc98a86e7c02_attempt001",
+    "build/q24_s16_l12_coordinate62_producer_cone_eaee0c6ac5e4_attempt001",
+    "build/q24_s16_l13_upstream_parent_cut_a81669925e0b_attempt001",
+    "build/q24_s16_l13_l12_parent_coordinate_cut_4937ea22f941_attempt001",
+    "build/q24_software_l9_l23_4d1cfdfc15c0_attempt002"
+  ],
+  "controls": [
+    "actual",
+    "frozen_inherited",
+    "frozen_o",
+    "frozen_down",
+    "frozen_inherited_o",
+    "frozen_inherited_down",
+    "frozen_o_down",
+    "frozen_inherited_o_down",
+    "inherited_native",
+    "mapped62",
+    "mapped_all"
+  ],
+  "branch_definitions": {
+    "inherited": "Accepted actual L8 I/Z/H coordinate 62 entering L9. Frozen cuts replace the complete coordinate with nearest-Q24 ties-even of the independently propagated original-input L8 binary64 value, holding actual L9 S11 O and S17 down fixed.",
+    "o": "L9 S11 FP16 O-projection coordinate 62 added to incoming Q24 at S12. Replace only this word with direct binary64-to-FP16 RNE of the authenticated original-input L9 O branch, without changing runtime arithmetic.",
+    "S12": "Exact unrounded incoming Q24 plus FP16 S11 O. Independently verify integer/zero-sign state and its RNE16 projection. Record the original binary64 residual, nearest-Q24 mapping error and actual/reference delta. Frozen controls hold downstream S17 fixed rather than claiming a recomputed MLP.",
+    "down": "L9 S17 FP16 down-projection coordinate 62 added to unrounded S12 Q24 at S18. Replace only this word with direct FP16 RNE of original-input binary64 down. The full inherited/O/down factorial discloses additive contributions and threshold interactions.",
+    "S18": "Exact unrounded S12 Q24 plus S17 down, with unchanged RNE16 projection. Record the signed decomposition, including original binary64 addition roundoff and FP16 projection error.",
+    "inherited_native": "Replace complete incoming L8 I/Z/H coordinate 62 by the disclosed map, recompute all 19 native L9 stages and gates including S16 RTZ, then execute unchanged L10-L13. This tests reachable nonlinear effects not included in frozen cuts.",
+    "mapped62": "Replace complete L9-output I/Z/H coordinate 62 by nearest-Q24 original-input L9 S18; run unchanged L10-L13.",
+    "mapped_all": "Replace all 896 complete L9-output coordinates by the same map, reproducing reviewed a81669925e0b cut09_mapped L10-L13 arrays and mandatory gate reports bitwise."
+  },
+  "authentication": "Pin eaee0c6ac5e4, 4937ea22f941 and a81669925e0b results and authenticate all recorded artifact/source/validation/input bindings. Reuse their selected attempt002 freeze and actual residual/own-empty-P0-KV/receipt chain. Bind accepted L8 receipt/result/freeze/output/reports/KV and compare its actual state to L9 input; read only retained evidence, never replay L0-L8. The explicitly pinned external dc98a86e7c02 round-0003.json is review metadata only, never executable code, model tensors or a reference substitute. Every repository module, source, test and numerical input resolves inside /home/argustest/ace3-argus. Interpreter dependency packages are not repository substitutes. Assert origins before/after execution and authenticate all bound bytes again at completion.",
+  "reference": "Observe L9 S11, S12, S17 and S18 using authenticated original generator definitions and native G128 canonical checkpoint tensors, seeded exclusively by the retained original-input binary64 L8 reference with own empty P0 reference KV. Assert L9 S18 bitwise equality to retained original reference. All L10-L13 gates use their unchanged independently propagated original-input references; counterfactual outputs never seed the reference graph.",
+  "mapping": "Nearest-Q24 ties-even via exact rational arithmetic, at most 2^-25 mapping error; signed zero tags and independently checked RNE16 projections retained. O/down replacements remain FP16 with disclosed RNE mapping. No precision/profile change, reference substitution or admitted mapped parent.",
+  "thresholds": {
+    "S0_S17": "Unchanged finite AND (abs_error <= 0.125 OR (relative_error < 0.001 AND ordered_FP16_ULP <= 1)); denominator max(abs(reference), 2^-14), independently computed same-actual-operand local references.",
+    "S18": "Unchanged original-input binary64-fp16-excess-v1 exact excess <= 1/8.",
+    "FP16_trajectory": "Unchanged diagnostic comparisons remain present under v3."
+  },
+  "gate_scope": "Actual and inherited-native L9 run all stages/gates. All 11 controls run all 19 native stages and unchanged gates in each L10-L13 layer. Continue a failing counterfactual only as non-admitting diagnostic data, retaining every failure and explicit immediate predecessor state; do not publish software-parent receipts. Frozen or mapped L9 assemblies do not claim omitted L9 operator gates passed. Every candidate_admitted stays false, even if scalar or suffix gates pass.",
+  "classification": "Report all sufficient frozen singletons and joint cuts, inherited-native rescue and mapped-output rescue. A unique sufficient singleton supports only conditional inherited-L8 or local-L9 branch sufficiency on the tested background. Otherwise attribution remains unresolved. Never infer a unique producer, necessity, residual defect or performance cause from additive magnitude or threshold rescue alone.",
+  "evidence": [
+    "validation.json, compiled_0.pyc, compiled_1.pyc, unittest.log",
+    "command.log with CPU affinity/load, per-control elapsed times and errors",
+    "L8_entry_coordinate62.json, L9_original_branches.npz, L9_coordinate62_decomposition.json",
+    "actual_L9 vectors/gates and inherited_native L9 vectors/local references/gates",
+    "Per-control L9 parent and frozen operands; L10-L13 native vectors and all gate reports",
+    "interventions.json, frozen_Q24_additive_interactions.json, result.json"
+  ],
+  "claim_boundary": "Only isolated/versioned native-S16-RTZ Q24 CPU software, L9/P0 coordinate-62 producer diagnosis with L10-L13 suffix. Residual Q24 is wider than FP16, not strict-FP16-state W4A16. INT4 AWQ G128 asymmetric native GEMM nibble ordering, no qzero plus-one, FP16 scales/operator boundaries/KV, all thresholds, original-input independent global reference, historical failures and bounded acceptances remain unchanged. No RTL, GPU, FPGA, hardware, simulation, synthesis, PPA, L14+, new-token, full-model PASS, precision/model/profile/budget/configuration change, policy adoption, successor publication, follow-on selection, framework or ACE2 changes."
+}

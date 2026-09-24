@@ -1,0 +1,61 @@
+{
+  "diagnostic_id": "ace3-q24-s16-l12-coordinate62-producer-cone-v1",
+  "policy_id": "ace3-w4a16-local-operator-global-binary64-authority-v3",
+  "reviewed_result_sha256": "08230294f36233d6b535490c35222d030dfb671c13dd70df79ec0cb4361cbe99",
+  "reviewed_upstream_sha256": "f9a98abf3c266ecf79ee1822223617436d91037851137b8d25f0fa33ee5eb732",
+  "candidate_admitted": false,
+  "policy_adopted": false,
+  "successor_published": false,
+  "rtl_invocations": 0,
+  "normal_host_review": "REQUIRED",
+  "cwd": "/home/argustest/ace3-argus",
+  "command": "PYTHONPATH=/home/argustest/ace3-argus PYTHONDONTWRITEBYTECODE=1 /home/argustest/miniconda3/bin/python -B -m ace3.model.candidates.diagnose_q24_s16_l12_coordinate62_producer_cone_v1 --out build/q24_s16_l12_coordinate62_producer_cone_eaee0c6ac5e4_attempt001",
+  "reproduction": "From the declared cwd, use the absolute interpreter and command-local module path shown. Choose a fresh nonexistent output under the same build prefix for independent Reviewer reproduction. This single command compiles both touched Python files into that output, collects and runs only the 16 focused task tests once, then executes the diagnostic once. No accepted L0-L8 tests or computation are replayed. Use the durable runner if execution is expected to exceed two minutes.",
+  "inputs": [
+    "build/q24_s16_l13_l12_parent_coordinate_cut_4937ea22f941_attempt001",
+    "build/q24_s16_l13_upstream_parent_cut_a81669925e0b_attempt001",
+    "build/q24_software_l9_l23_4d1cfdfc15c0_attempt002"
+  ],
+  "controls": [
+    "actual",
+    "frozen_inherited",
+    "frozen_o",
+    "frozen_down",
+    "frozen_inherited_o",
+    "frozen_inherited_down",
+    "frozen_o_down",
+    "frozen_inherited_o_down",
+    "scratch",
+    "scratch_down",
+    "mapped62",
+    "mapped_all",
+    "inherited_native"
+  ],
+  "branch_definitions": {
+    "inherited": "L12 incoming L11 output signed Q24 I/Z/H coordinate 62. Replace the complete coordinate by the disclosed nearest-Q24 ties-even mapped original-input L11 reference. Frozen controls hold actual O/down fixed.",
+    "o": "L12 S11 O-projection coordinate 62 contributes to S12. Replace only this FP16 word with direct FP16 RNE of the captured original-input binary64 L12 O projection, keeping every other coordinate actual.",
+    "down": "L12 S17 down-projection coordinate 62 contributes to S18. Replace only this FP16 word with direct FP16 RNE of the captured original-input binary64 L12 down projection. Frozen controls do not recompute MLP following other branch cuts.",
+    "scratch": "L12 S12 unrounded residual scratch I/Z and its RNE16 H, mapped nearest-Q24 ties-even from original input plus original O. Replace complete scratch coordinate 62, retain actual S17 or its disclosed original-FP16-RNE coordinate cut, and perform the unchanged exact Q24 final addition.",
+    "inherited_native": "Replace only incoming L11 coordinate 62, then recompute all 19 native L12 stages and unchanged gates before running unchanged L13. This includes all reachable nonlinear L12 effects, unlike the frozen branch factorial.",
+    "mapped62_and_mapped_all": "Reproduce reviewed single_062 and mapped L12-output cuts bitwise through unchanged native L13, without inventing accepted lineage for either counterfactual."
+  },
+  "mapping": "Inputs/scratch/output coordinate controls use the reviewed exact rational nearest-Q24 ties-even mapping, maximum mapping error 2^-25, with zero signs retained and independent RNE16 H projection. O/down controls stay FP16, use struct-pack direct binary64-to-FP16 RNE via the unchanged native helper, and do not change the runtime rounding profile. Record exact signed actual-versus-original branch decomposition including final projection and original binary64 addition roundoff.",
+  "authentication": "Authenticate both pinned reviewed results, their recorded artifacts/validation/source/input bindings, retained freeze and immediate actual I/Z/H/receipt/KV chain. Assert original reference linkage L9-L13 using the reviewed helper. Reconstruct L12 original-input binary64 branches using only authenticated original generator definitions and canonical checkpoint tensors; assert output bitwise identical to retained independent L12 reference. Reproduce actual native L12/L13 and reviewed L13 coordinate endpoints. Assert every loaded repository module and bound input/source resolves within this isolated repository; authenticate bound bytes again at completion. External Python dependencies are interpreter packages, not repository module substitutes.",
+  "thresholds": {
+    "S0_S17": "Unchanged finite AND (absolute_error <= 0.125 OR (relative_error < 0.001 AND ordered_FP16_ULP <= 1)); relative denominator max(abs(reference), 2^-14), independently computed same-actual-operand local references.",
+    "S18": "Unchanged original-input binary64-fp16-excess-v1 exact excess <= 1/8. The independently propagated original reference is never replaced by actual state, mapped state, local references, or intervention outputs.",
+    "FP16_trajectory": "Existing diagnostic-only comparisons remain intact under v3."
+  },
+  "gate_scope": "Every control runs all 19 native L13 stages with source/operand/state/own-empty-P0-KV/S16-RTZ checks and unchanged numerical gates. Actual L12 and inherited-native L12 also run all 19 stages and gates. Frozen exogenous L12 branch assemblies are conditional arithmetic interventions, not a claim of passing omitted L12 operator gates or a valid replacement producer. Their source operands, exact residual sums and selected coordinate boundaries are checked independently. All historical and fresh numerical failures are retained. Scalar rescue and full L13 gate outcomes are separate; every counterfactual remains non-admitted even when all suffix gates pass.",
+  "classification": "Report all sufficient frozen singleton/joint branches, scratch rescue and recomputed inherited-native rescue. Exactly one sufficient frozen singleton permits only conditional single-branch sufficiency; otherwise producer attribution remains an unresolved interaction. Never infer a unique upstream producer from the thresholded outcome, additive error magnitude, or a scalar rescue.",
+  "evidence": [
+    "validation.json, compiled_0.pyc, compiled_1.pyc, unittest.log",
+    "command.log with live CPU observations, measured phases and every control",
+    "result.json with authenticated bindings, source origins, non-admission flags and explicit missing-evidence limits",
+    "L9_L12_coordinate62.json and L12_coordinate62_decomposition.json",
+    "L12_original_branches.npz, actual_L12.npz and actual_L12_gates.json",
+    "Per-control L12 parent, frozen cut operands or recomputed native L12 vectors/gates, L13 native vectors and all gate reports",
+    "interventions.json and frozen_Q24_additive_interactions.json"
+  ],
+  "claim_boundary": "Only an isolated versioned native-S16-RTZ Q24 CPU-software diagnostic. Wide Q24 residual state is not strict-FP16-state W4A16. G128 asymmetric packed INT4 AWQ weights, native nibble order, no qzero plus-one, FP16 scales/operator boundaries/KV, thresholds, original-input global reference, accepted evidence and historical failures remain unchanged. No RTL invocation or modification, GPU, FPGA, simulation, synthesis, PPA, precision/profile/model/budget change, new-token, full-model PASS, policy adoption, successor publication or follow-on task selection."
+}

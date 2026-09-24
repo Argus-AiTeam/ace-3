@@ -1,0 +1,35 @@
+{
+  "regression_id": "ace3-residual-exact-grid-q24-primitive-regression-v1",
+  "contract": "residual_exact_grid_q24_v1.json",
+  "public_abi": "ace3-residual-exact-grid-q24-public-abi-v1",
+  "top": "ace3_residual_exact_grid_q24_tb",
+  "dut": "ace3_residual_exact_grid_q24_core",
+  "parameters": {"VECTOR_SIZE": 896, "STATE_WIDTH": 64, "FRAC_BITS": 24},
+  "harness_path_note": "Harness is under ace3/rtl/candidates, rather than ace3/tb, to obey this mission's writable-path boundary.",
+  "command": "python3 -B ace3/model/candidates/verify_residual_exact_grid_q24_v1.py --attempt-id q24_primitive_a8b9021c084b_attempt002",
+  "previous_route": "run_residual_exact_grid_q24_v1.py remains compile/import/elaboration-only; its first attempt is not rerun or relabeled",
+  "expectations": {
+    "oracle": "independent Fraction-based finite FP16 interpretation and representable-neighbor search; no RTL imports",
+    "oracle_crosscheck": "Python struct binary16 decoding/encoding and exact integer sums, not oracle-generated expectations",
+    "rtl_inputs": "all 63488 finite FP16 words; general binade/tie/overflow/narrowing cases; no model tensors",
+    "persistence": "eight actual-output-fed increments, plus independent same-view/different-state check",
+    "seed": 11330340,
+    "four_state": "real Icarus vvp, participating X/Z on each data port and unknown start/input-valid/output-ready/clear/reset controls",
+    "waveform": "protocol and fault-control phase; arithmetic phase preserves exact vector rows and failure diagnostics",
+    "codec": "896 signed-int64 little-endian plus tag records; exactly 8064 bytes; explicit trusted metadata equality, not real model provenance"
+  },
+  "invariants": {
+    "U01": "all finite/subnormal FP16 lift and exact projection; nonfinite rejection",
+    "U02": "exact state recurrence and remainder retention, primitive only",
+    "U03": "all zero-sign combinations, cancellation, noncanonical tags",
+    "U04": "both signs, RNE even/odd ties, binade/subnormal edge, 65504 and 65520 boundary",
+    "U05": "signed extension, int64 extremes, narrowing overflow code 3 versus FP16 overflow code 4",
+    "U08": "896 paired outputs in unstalled and seeded stalled schedules; stable full tuple and elastic replacement",
+    "U09": "primitive idle/start/pending-output/partial-vector/fault reset and clear cancellation; no decoder commit claim",
+    "U10": "participating X/Z payload fault 1 and diagnosed no-transfer controls/invalid counts",
+    "U11": "portable codec byte round-trip, exact endianness and restored residual recurrence; reject invalid metadata, length, tags and nonfinite view"
+  },
+  "score_policy": "PASS only if contract elaboration, all selected Python unit tests, and nonzero Icarus semantic checks pass, exact terminal counters match, and frozen source/input bindings remain unchanged",
+  "excluded": ["decoder", "controller", "model", "real KV persistence", "accepted-state forwarding", "L9 or ancestor replay", "tail", "tokenizer", "token generation", "hardware"],
+  "independent_review": "normal Host Reviewer required; not granted by this regression contract"
+}

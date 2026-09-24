@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Diagnose layer-3 stage error against a same-handoff float64 reference."""
+"""Diagnose an indexed decoder layer against a same-handoff float64 reference."""
 
 from __future__ import annotations
 
@@ -16,19 +16,26 @@ import torch.nn.functional as torch_functional
 
 from model24_execution_oracle import (
     CHECKPOINT_SHA256,
+    ContractError,
     MODEL_REPOSITORY,
     MODEL_REVISION,
     _layer_tensor_payloads,
     load_two_token_handoff,
 )
-from official_model24_next_token import _torch_linear, _torch_rmsnorm
+from official_model24_next_token import (
+    TERMINAL_HIDDEN_ABSOLUTE_TOLERANCE,
+    _torch_linear,
+    _torch_rmsnorm,
+)
 
-LAYER_INDEX = 3
+DEFAULT_LAYER_INDEX = 3
 HIDDEN_SIZE = 896
 HEAD_DIM = 64
 QUERY_HEADS = 14
 KEY_VALUE_HEADS = 2
 MATERIAL_ABSOLUTE_ERROR = 0.1
+FP16_RELATIVE_TOLERANCE = 0.001
+FP16_MAX_ULP_DISTANCE = 1
 
 STAGES = (
     "input_rmsnorm",
@@ -85,6 +92,38 @@ def require(condition: bool, message: str) -> None:
 
 def sha256_bytes(payload: bytes) -> str:
     return hashlib.sha256(payload).hexdigest()
+
+
+def authenticate_predecessor_handoff(
+    handoff_path: Path,
+    *,
+    layer_index: int,
+    expected_predecessor_layer: int,
+    expected_handoff_sha256: str,
+) -> tuple[list[list[int]], dict[str, Any]]:
+    require(layer_index > 0,
+            "diagnostic predecessor authentication requires layer index > 0")
+    require(
+        expected_predecessor_layer == layer_index - 1,
+        "expected predecessor layer does not match diagnostic layer",
+    )
+    require(
+        re.fullmatch(r"[0-9a-f]{64}", expected_handoff_sha256) is not None,
+        "expected handoff SHA256 must be 64 lowercase hexadecimal digits",
+    )
+    try:
+        handoff, binding = load_two_token_handoff(
+            handoff_path,
+            expected_sha256=expected_handoff_sha256,
+        )
+    except ContractError as error:
+        raise DiagnosticError(str(error)) from error
+    return handoff, {
+        **binding,
+        "source_layer_index": expected_predecessor_layer,
+        "consumer_layer_index": layer_index,
+        "authenticated_expected_sha256": expected_handoff_sha256,
+    }
 
 
 def f16_values(bits: np.ndarray | list[int]) -> np.ndarray:
@@ -154,11 +193,12 @@ def load_trace(path: Path) -> dict[int, dict[int, np.ndarray]]:
 def load_tensors(
     checkpoint_path: Path,
     tensor_map_path: Path,
+    layer_index: int,
 ) -> tuple[dict[str, np.ndarray], dict[str, Any], list[dict[str, Any]]]:
     payloads, records, binding = _layer_tensor_payloads(
         checkpoint_path,
         tensor_map_path,
-        LAYER_INDEX,
+        layer_index,
     )
     tensors = {}
     hashes = []
@@ -181,30 +221,48 @@ def load_tensors(
 def independent_reference(
     activation: torch.Tensor,
     tensors: dict[str, np.ndarray],
+    layer_index: int,
+    *,
+    reference_policy: str = "w4a16_fp16_interstage",
 ) -> dict[int, dict[int, np.ndarray]]:
-    prefix = f"model.layers.{LAYER_INDEX}"
-    norm1 = _torch_rmsnorm(
-        activation,
-        tensors[f"{prefix}.input_layernorm.weight"],
+    if reference_policy not in {
+        "continuous_float64",
+        "w4a16_fp16_interstage",
+    }:
+        raise DiagnosticError(
+            f"unsupported layer reference policy: {reference_policy}"
+        )
+
+    def stage(values: torch.Tensor) -> torch.Tensor:
+        if reference_policy == "continuous_float64":
+            return values.to(torch.float64)
+        return values.to(torch.float16).to(torch.float64)
+
+    prefix = f"model.layers.{layer_index}"
+    norm1 = stage(
+        _torch_rmsnorm(
+            activation,
+            tensors[f"{prefix}.input_layernorm.weight"],
+        )
     )
-    q = _torch_linear(
+    q = stage(_torch_linear(
         norm1,
         tensors,
         f"{prefix}.self_attn.q_proj",
         f"{prefix}.self_attn.q_proj.bias",
-    )
-    k = _torch_linear(
+    ))
+    k = stage(_torch_linear(
         norm1,
         tensors,
         f"{prefix}.self_attn.k_proj",
         f"{prefix}.self_attn.k_proj.bias",
-    )
-    v = _torch_linear(
+    ))
+    v = stage(_torch_linear(
         norm1,
         tensors,
         f"{prefix}.self_attn.v_proj",
         f"{prefix}.self_attn.v_proj.bias",
-    )
+    ))
     positions = torch.arange(2, dtype=torch.float64)
     frequencies = 1.0 / (
         1_000_000.0
@@ -225,8 +283,8 @@ def independent_reference(
             dim=-1,
         )
 
-    rotated_q = rotate(q, QUERY_HEADS)
-    rotated_k = rotate(k, KEY_VALUE_HEADS)
+    rotated_q = stage(rotate(q, QUERY_HEADS))
+    rotated_k = stage(rotate(k, KEY_VALUE_HEADS))
     values = v.reshape(2, KEY_VALUE_HEADS, HEAD_DIM)
     scores: list[list[torch.Tensor]] = []
     probabilities: list[list[torch.Tensor]] = []
@@ -237,34 +295,38 @@ def independent_reference(
         attended_rows = []
         for head in range(QUERY_HEADS):
             kv_head = head // (QUERY_HEADS // KEY_VALUE_HEADS)
-            score = (
+            score = stage(
                 rotated_q[token, head]
                 @ rotated_k[: token + 1, kv_head].T
                 / (HEAD_DIM**0.5)
             )
-            probability = torch.softmax(score, dim=-1)
+            probability = stage(torch.softmax(score, dim=-1))
             score_rows.append(score)
             probability_rows.append(probability)
-            attended_rows.append(probability @ values[: token + 1, kv_head])
+            attended_rows.append(
+                stage(probability @ values[: token + 1, kv_head])
+            )
         scores.append(score_rows)
         probabilities.append(probability_rows)
         attended.append(torch.stack(attended_rows))
-    attended_tensor = torch.stack(attended).reshape(2, HIDDEN_SIZE)
-    output = _torch_linear(
+    attended_tensor = stage(torch.stack(attended).reshape(2, HIDDEN_SIZE))
+    output = stage(_torch_linear(
         attended_tensor,
         tensors,
         f"{prefix}.self_attn.o_proj",
+    ))
+    residual1 = stage(output + activation)
+    norm2 = stage(
+        _torch_rmsnorm(
+            residual1,
+            tensors[f"{prefix}.post_attention_layernorm.weight"],
+        )
     )
-    residual1 = output + activation
-    norm2 = _torch_rmsnorm(
-        residual1,
-        tensors[f"{prefix}.post_attention_layernorm.weight"],
-    )
-    gate = _torch_linear(norm2, tensors, f"{prefix}.mlp.gate_proj")
-    up = _torch_linear(norm2, tensors, f"{prefix}.mlp.up_proj")
-    silu = torch_functional.silu(gate) * up
-    down = _torch_linear(silu, tensors, f"{prefix}.mlp.down_proj")
-    final = residual1 + down
+    gate = stage(_torch_linear(norm2, tensors, f"{prefix}.mlp.gate_proj"))
+    up = stage(_torch_linear(norm2, tensors, f"{prefix}.mlp.up_proj"))
+    silu = stage(torch_functional.silu(gate) * up)
+    down = stage(_torch_linear(silu, tensors, f"{prefix}.mlp.down_proj"))
+    final = stage(residual1 + down)
     common = (
         norm1,
         q,
@@ -345,7 +407,77 @@ def distribution(
     }
 
 
+def ordered_fp16_bits(bits: int) -> int:
+    magnitude = bits & 0x7FFF
+    return 0x8000 - magnitude if bits & 0x8000 else 0x8000 + magnitude
+
+
+def focus_coordinate_stages(
+    primary: dict[int, dict[int, np.ndarray]],
+    reference: dict[int, dict[int, np.ndarray]],
+    token: int,
+    dimension: int,
+) -> list[dict[str, Any]]:
+    require(0 <= dimension < HIDDEN_SIZE, "focus dimension is out of range")
+    rows = []
+    for stage, name in enumerate(STAGES):
+        if stage in (8, 9) or dimension >= primary[token][stage].size:
+            continue
+        produced_bits = int(primary[token][stage][dimension])
+        produced_value = float(f16_values([produced_bits])[0])
+        reference_value = float(reference[token][stage][dimension])
+        absolute_error = abs(produced_value - reference_value)
+        relative_error = absolute_error / max(
+            abs(reference_value),
+            float(np.finfo(np.float16).tiny),
+        )
+        rounded_reference_bits = int(
+            np.asarray(np.float16(reference_value), dtype="<f2")
+            .view("<u2")
+            .item()
+        )
+        ulp_distance = abs(
+            ordered_fp16_bits(produced_bits)
+            - ordered_fp16_bits(rounded_reference_bits)
+        )
+        accepted_by_absolute = (
+            absolute_error <= TERMINAL_HIDDEN_ABSOLUTE_TOLERANCE
+        )
+        accepted_by_relative_ulp = (
+            relative_error < FP16_RELATIVE_TOLERANCE
+            and ulp_distance <= FP16_MAX_ULP_DISTANCE
+        )
+        rows.append(
+            {
+                "stage_index": stage,
+                "stage": name,
+                "produced_bits": f"{produced_bits:04x}",
+                "produced_value": produced_value,
+                "reference_value": reference_value,
+                "absolute_error": absolute_error,
+                "relative_error": relative_error,
+                "ulp_distance_to_rounded_reference": ulp_distance,
+                "accepted_by_layer_comparator": bool(
+                    accepted_by_absolute or accepted_by_relative_ulp
+                ),
+            }
+        )
+    return rows
+
+
 def diagnose(args: argparse.Namespace) -> dict[str, Any]:
+    layer_index = args.layer_index
+    focus_dimensions = tuple(args.focus_dimension)
+    require(
+        layer_index == DEFAULT_LAYER_INDEX or focus_dimensions,
+        "non-default layer diagnostics require at least one focus dimension",
+    )
+    handoff, handoff_binding = authenticate_predecessor_handoff(
+        args.handoff,
+        layer_index=layer_index,
+        expected_predecessor_layer=args.expected_predecessor_layer,
+        expected_handoff_sha256=args.expected_handoff_sha256,
+    )
     raw_trace_payload = args.rtl_trace.read_bytes()
     oracle_trace_payload = args.oracle_trace.read_bytes()
     raw_final_payload = args.rtl_final.read_bytes()
@@ -355,7 +487,6 @@ def diagnose(args: argparse.Namespace) -> dict[str, Any]:
     require(raw_final_payload == oracle_final_payload,
             "RTL final rows differ from the integer oracle")
     primary = load_trace(args.rtl_trace)
-    handoff, handoff_binding = load_two_token_handoff(args.handoff)
     final, _ = load_two_token_handoff(args.rtl_final)
     for token in range(2):
         require(primary[token][18].tolist() == final[token],
@@ -363,11 +494,13 @@ def diagnose(args: argparse.Namespace) -> dict[str, Any]:
     tensors, layer_binding, tensor_hashes = load_tensors(
         args.checkpoint,
         args.tensor_map,
+        layer_index,
     )
     activation_bits = np.asarray(handoff, dtype="<u2")
     reference = independent_reference(
         torch.from_numpy(f16_values(activation_bits)),
         tensors,
+        layer_index,
     )
     comparisons: dict[str, Any] = {}
     for token in range(2):
@@ -386,14 +519,17 @@ def diagnose(args: argparse.Namespace) -> dict[str, Any]:
                 }
             )
         first_divergent = next(
-            row for row in rows if row["max_abs_error"] > 0.0
+            (row for row in rows if row["max_abs_error"] > 0.0),
+            None,
         )
         first_material = next(
             (row for row in rows if row["count_abs_gt_0_1"] > 0),
             None,
         )
         comparisons[str(token)] = {
-            "first_divergent_stage": first_divergent["stage"],
+            "first_divergent_stage": (
+                None if first_divergent is None else first_divergent["stage"]
+            ),
             "first_material_stage_abs_gt_0_1": (
                 None if first_material is None else first_material["stage"]
             ),
@@ -404,23 +540,40 @@ def diagnose(args: argparse.Namespace) -> dict[str, Any]:
     token1 = comparisons["1"]["stages"]
     token0_final = token0[18]
     token1_final = token1[18]
-    require(
-        comparisons["0"]["first_material_stage_abs_gt_0_1"] == "down_proj",
-        "Token 0 material divergence moved before the down projection",
-    )
-    require(
-        token0_final["count_abs_gt_0_1"] == 1
-        and token0_final["affected_coordinates_abs_gt_0_1"]
-        == [{"dimension": 62}]
-        and token0_final["relative_error_at_worst"] < 0.001
-        and token0_final["fp16_ulps_at_worst"] <= 1.0,
-        "Token 0 final deviation exceeds the bounded FP16 outlier disposition",
-    )
-    require(
-        comparisons["1"]["first_material_stage_abs_gt_0_1"] is None
-        and token1_final["max_abs_error"] < 0.01,
-        "Token 1 adjacent numerical bound failed",
-    )
+    focus_coordinates = {
+        str(dimension): focus_coordinate_stages(
+            primary,
+            reference,
+            token=0,
+            dimension=dimension,
+        )
+        for dimension in focus_dimensions
+    }
+    if layer_index == DEFAULT_LAYER_INDEX and not focus_dimensions:
+        require(
+            comparisons["0"]["first_material_stage_abs_gt_0_1"] == "down_proj",
+            "Token 0 material divergence moved before the down projection",
+        )
+        require(
+            token0_final["count_abs_gt_0_1"] == 1
+            and token0_final["affected_coordinates_abs_gt_0_1"]
+            == [{"dimension": 62}]
+            and token0_final["relative_error_at_worst"] < 0.001
+            and token0_final["fp16_ulps_at_worst"] <= 1.0,
+            "Token 0 final deviation exceeds the bounded FP16 outlier disposition",
+        )
+        require(
+            comparisons["1"]["first_material_stage_abs_gt_0_1"] is None
+            and token1_final["max_abs_error"] < 0.01,
+            "Token 1 adjacent numerical bound failed",
+        )
+    else:
+        for dimension, rows in focus_coordinates.items():
+            require(
+                rows[-1]["stage"] == "mlp_residual"
+                and rows[-1]["accepted_by_layer_comparator"],
+                f"focus dimension {dimension} exceeds the same-handoff boundary",
+            )
     for token in range(2):
         require(np.array_equal(primary[token][5], primary[token][6]),
                 f"token {token} K-cache write differs from RoPE K")
@@ -438,12 +591,13 @@ def diagnose(args: argparse.Namespace) -> dict[str, Any]:
     )
 
     return {
-        "schema_version": 1,
-        "kind": "ace3_layer3_token0_stage_diagnostic",
+        "schema_version": 2,
+        "kind": "ace3_indexed_layer_stage_diagnostic",
         "model_binding": {
             "repository": MODEL_REPOSITORY,
             "revision": MODEL_REVISION,
             "checkpoint_sha256": CHECKPOINT_SHA256,
+            "layer_index": layer_index,
             "layer_binding": layer_binding,
             "consumed_tensors": tensor_hashes,
         },
@@ -475,10 +629,12 @@ def diagnose(args: argparse.Namespace) -> dict[str, Any]:
             },
         },
         "comparison_boundary": (
-            "same authenticated layer-2 FP16 handoff; independent PyTorch CPU "
-            "float64 dequantized-AWQ layer-3 operators"
+            f"same authenticated layer-{layer_index - 1} FP16 handoff; "
+            "independent PyTorch CPU float64 dequantized-AWQ "
+            f"layer-{layer_index} operators"
         ),
         "comparisons": comparisons,
+        "focus_coordinates": focus_coordinates,
         "kv_causality": {
             "token0_k_write_matches_rope": True,
             "token0_v_write_matches_projection": True,
@@ -493,14 +649,21 @@ def diagnose(args: argparse.Namespace) -> dict[str, Any]:
         "disposition": {
             "rtl_or_operator_defect_found": False,
             "classification": "bounded_fp16_reference_boundary",
-            "first_divergent_stage": "input_rmsnorm",
-            "first_material_stage_abs_gt_0_1": "down_proj",
-            "affected_dimensions_abs_gt_0_1": [62],
+            "reference_reset": "authenticated FP16 layer input handoff",
+            "first_divergent_stage": comparisons["0"]["first_divergent_stage"],
+            "first_material_stage_abs_gt_0_1": comparisons["0"][
+                "first_material_stage_abs_gt_0_1"
+            ],
+            "affected_dimensions_abs_gt_0_1": [
+                row["dimension"]
+                for row in token0_final["affected_coordinates_abs_gt_0_1"]
+            ],
+            "focus_dimensions": list(focus_dimensions),
             "rationale": (
-                "RTL is bit-exact to the integer oracle. The only Token 0 "
-                "material absolute outlier appears at down-projection dimension "
-                "62 and remains one FP16 ULP with sub-0.001 relative error after "
-                "the final residual; Token 1 and two-position K/V causality pass."
+                "RTL trace and final rows are bit-exact to the integer oracle; "
+                "the focused final coordinates remain within the scale-aware "
+                "FP16 comparator when float64 evaluation starts from the same "
+                "authenticated FP16 handoff."
             ),
         },
     }
@@ -510,7 +673,11 @@ def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser()
     parser.add_argument("--checkpoint", type=Path, required=True)
     parser.add_argument("--tensor-map", type=Path, required=True)
+    parser.add_argument("--layer-index", type=int, default=DEFAULT_LAYER_INDEX)
+    parser.add_argument("--focus-dimension", type=int, action="append", default=[])
     parser.add_argument("--handoff", type=Path, required=True)
+    parser.add_argument("--expected-predecessor-layer", type=int, required=True)
+    parser.add_argument("--expected-handoff-sha256", required=True)
     parser.add_argument("--rtl-trace", type=Path, required=True)
     parser.add_argument("--oracle-trace", type=Path, required=True)
     parser.add_argument("--rtl-final", type=Path, required=True)
@@ -531,9 +698,12 @@ def main() -> None:
         token0 = report["comparisons"]["0"]["stages"][18]
         token1 = report["comparisons"]["1"]["stages"][18]
         print(
-            "LAYER3_TOKEN0_DIAGNOSTIC_PASS "
+            "INDEXED_LAYER_STAGE_DIAGNOSTIC_PASS "
+            f"layer={args.layer_index} "
             "classification=bounded_fp16_reference_boundary "
-            "first_material_stage=down_proj affected_dimension=62 "
+            f"first_material_stage="
+            f"{report['comparisons']['0']['first_material_stage_abs_gt_0_1']} "
+            f"focus_dimensions={','.join(str(value) for value in args.focus_dimension)} "
             f"token0_final_max={token0['max_abs_error']} "
             f"token0_final_relative={token0['relative_error_at_worst']} "
             f"token0_final_ulps={token0['fp16_ulps_at_worst']} "
@@ -541,7 +711,7 @@ def main() -> None:
             "rtl_integer_oracle=exact kv_causality=pass"
         )
     except (DiagnosticError, OSError, ValueError) as error:
-        raise SystemExit(f"LAYER3_TOKEN0_DIAGNOSTIC_FAIL {error}") from error
+        raise SystemExit(f"INDEXED_LAYER_STAGE_DIAGNOSTIC_FAIL {error}") from error
 
 
 if __name__ == "__main__":

@@ -1,0 +1,52 @@
+{
+  "arithmetic_id": "ace3-residual-exact-grid-q24-v1",
+  "public_abi": "ace3-residual-exact-grid-q24-public-abi-v1",
+  "scope": "isolated primitive; not a decoder or model adoption",
+  "authority_binding": "residual_exact_grid_q24_execution_authority_binding_ce914530c478_attempt001.md",
+  "normative_semantics": "residual_exact_grid_q24_semantics_51efa8e34614_attempt001.md",
+  "module": "ace3_residual_exact_grid_q24_core",
+  "literal_header": "ace3/rtl/candidates/residual_exact_grid_q24_v1/ace3_residual_exact_grid_q24_public.svh",
+  "source": "ace3/rtl/candidates/residual_exact_grid_q24_v1/ace3_residual_exact_grid_q24_core.sv",
+  "elaboration_top": "ace3_residual_exact_grid_q24_elab",
+  "parameters": {
+    "VECTOR_SIZE": {"default": 896, "minimum": 1, "maximum": 8191},
+    "STATE_WIDTH": {"default": 64, "supported": [64]},
+    "FRAC_BITS": {"default": 24, "supported": [24]}
+  },
+  "recurrence": {
+    "decode": "B(x) = exact binary16(x) * 2^24",
+    "root": "I = B(authenticated embedding); Z = embedding is negative zero",
+    "update": "J = I + B(actual addend); checked signed 65-bit addition, then signed 64-bit narrowing",
+    "zero_tag": "Znew = (J == 0 and I == 0 and Z == 1 and addend == negative zero)",
+    "view": "binary16 RNE(J * 2^-24), gradual underflow; use Znew for exact zero",
+    "overflow": "reject signed integer overflow or FP16 RNE infinity; abs(value) >= 65520 rejects",
+    "residual_ownership": "Output state, not the rounded FP16 view, is the next residual operand."
+  },
+  "protocol": {
+    "clock": "posedge clk_i",
+    "reset": "asynchronous active-low rst_ni",
+    "clear": "synchronous active-high clear_i, priority over transfers",
+    "start": "idle only; known count 1..VECTOR_SIZE; first input no earlier than the next cycle",
+    "invalid_count": "start_ready_o remains low; caller must diagnose invalid count, not wait indefinitely or report success",
+    "input": "in_valid_i && in_ready_o accepts exactly one state/addend pair",
+    "output": "one registered paired result after input acceptance; one-entry elastic output; one element per cycle when unstalled",
+    "backpressure": "all output payload, index, last and fault fields stable while valid and not ready",
+    "completion": "busy_o clears only when the last result transfers",
+    "fault": "faulted result is last; numeric fields are non-admissible zeros; no later inputs or starts until reset/clear",
+    "unknowns": "participating payload X/Z produces code 1 on an accepted input; unknown valid/ready/control prevents a transfer and must be diagnosed by the owning harness",
+    "cancellation": "reset/clear discards all pending transfers; partial vectors are not state parents"
+  },
+  "fault_codes": {
+    "0": "success",
+    "1": "nonfinite or unknown participating input payload",
+    "2": "noncanonical negative-zero tag",
+    "3": "signed 64-bit state addition overflow",
+    "4": "FP16 view overflow"
+  },
+  "fault_priority": [1, 2, 3, 4],
+  "reserved_fault_codes": [5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15],
+  "route_command": "python3 -B ace3/model/candidates/run_residual_exact_grid_q24_v1.py --attempt-id q24_contract_runtime_05f93e5fa139_attempt001",
+  "route_boundary": "freeze source/header/contracts; import independent oracle/codec without calling arithmetic; compile and elaborate only; never invoke a simulator executable",
+  "primitive_numerical_status": "NOT_EVALUATED",
+  "decoder_model_token_status": "NOT_EVALUATED"
+}

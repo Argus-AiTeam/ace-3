@@ -1,0 +1,39 @@
+{
+  "diagnostic_id": "ace3-q24-s16-l13-upstream-parent-cut-v1",
+  "policy_id": "ace3-w4a16-local-operator-global-binary64-authority-v3",
+  "candidate_admitted": false,
+  "policy_adopted": false,
+  "successor_published": false,
+  "rtl_invocations": 0,
+  "normal_host_review": "REQUIRED",
+  "cwd": "/home/argustest/ace3-argus",
+  "command": "PYTHONPATH=/home/argustest/ace3-argus PYTHONDONTWRITEBYTECODE=1 /home/argustest/miniconda3/bin/python -B -m ace3.model.candidates.diagnose_q24_s16_l13_upstream_parent_cut_v1 --input build/q24_software_l9_l23_4d1cfdfc15c0_attempt002 --out build/q24_s16_l13_upstream_parent_cut_a81669925e0b_attempt001",
+  "reproduction": "Run the same command from cwd with a new, nonexistent build/q24_s16_l13_upstream_parent_cut_* output directory. Compilation and the focused tests execute inside this command once. Existing output directories are rejected, not replaced.",
+  "reviewed_result_sha256": {
+    "paired": "43f03c96a6e6252e031bf46205ede6d7c422f5c67d93f213e90006c4f39da89d",
+    "drift": "09f34850c886e825f20b4f009598629dc5efcea895bb866a0decf1eaad89fdd6"
+  },
+  "cuts_after_layer": [9, 10, 11, 12],
+  "position": 0,
+  "history": [9707],
+  "coordinates_per_control": 896,
+  "parent_mapping": "Original-input independently propagated binary64 layer output, mapped by exact rational nearest Q24 with ties to even; preserve negative zero and derive the FP16 view by independent exact RNE16 projection. Maximum absolute mapping error is 2^-25. This is a disclosed, non-admitted counterfactual, never a global-reference replacement.",
+  "actual_control": "Replay native L9-L13 once from the retained accepted L8 Q24 parent. Require bitwise equality of every native archive, independent local vector and mandatory gate report with attempt002. Share these verified actual suffixes across cuts; do not replay accepted L0-L8.",
+  "mapped_control": "At each cut, replace the entire parent after that layer with its mapped original-input reference. Execute only layers cut+1 through L13 with unchanged native S16 RTZ. Every layer consumes its immediate actual control-produced Q24 I/Z/H and its own empty P0 cache, never prior-layer KV.",
+  "diagnostic_gate_handling": "Evaluate all unchanged local and global gates. Numerical failures are retained and do not stop a diagnostic suffix; invalid source, operands, state, KV, lineage or missing gate evidence blocks it. No resulting state is published or admitted even if a diagnostic suffix passes.",
+  "thresholds": {
+    "S0_S17": "finite AND (absolute_error <= 0.125 OR (relative_error < 0.001 AND ordered_FP16_ULP <= 1)); relative denominator max(abs(reference), 2^-14), independent same-actual-operand references",
+    "S18": "unchanged binary64-fp16-excess-v1: exact actual_error minus nearest-FP16 representation floor <= 1/8 against the original-input global reference",
+    "FP16_trajectory": "unchanged diagnostic only under existing v3 policy"
+  },
+  "classification": "First flipping cut means the first in ascending [9,10,11,12] whose L13/P0/S18 index62 changes from retained 6630/reject to 662f/accept. Report all cuts, including nonmonotonic or other-word outcomes. Aggregate parent cuts do not uniquely identify an upstream producer.",
+  "evidence": [
+    "validation.json and unittest.log with compiled Python, exact collection/execution counts and repository module origins",
+    "command.log with command-local context, CPU resource observation and measured per-layer times",
+    "result.json with input/source bindings, reviewed endpoint reproduction and attribution limits",
+    "cuts.json with both suffixes, full parent mapping errors and unchanged gate outcomes",
+    "full_vector_outcomes.json with exact gate evaluation for all 896 L13 coordinates",
+    "per-layer native NPZ vectors and gate JSON; mapped parent NPZ; retained_authentication.json"
+  ],
+  "claim_boundary": "CPU-software diagnostic only. Q24 residual state is wider than FP16. G128 asymmetric native AWQ INT4 weights, no qzero plus-one, FP16 scales/operators/KV and native S16 RTZ remain unchanged. Historical failures and bounded accepted evidence remain intact. No strict-FP16-state W4A16, new-token, full-model, RTL, simulation, synthesis, hardware, GPU, FPGA, PPA or performance-bottleneck claim. No policy adoption, successor publication or follow-on task selection."
+}

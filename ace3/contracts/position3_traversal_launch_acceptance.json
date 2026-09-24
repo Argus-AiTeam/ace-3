@@ -1,0 +1,62 @@
+{
+  "schema_version": 1,
+  "contract_id": "ace3-selected-token-position3-traversal-launch-acceptance-v1",
+  "input_package": {
+    "kind": "ace3_selected_token_position3_traversal_launch_package",
+    "status": "READY",
+    "fresh_preparation_validation_required": true,
+    "artifact_closure": [
+      "launch_manifest.json",
+      "position3_input.hex"
+    ]
+  },
+  "required_bindings": {
+    "model": "Qwen/Qwen2.5-0.5B-Instruct-AWQ@db09cd27ead7fee40cdee309693cf83601b9c899",
+    "checkpoint_sha256": "c50d807b7bed7ff314308972e0f4bcf4e5a70bc60ad88fc7df53940831ed0c1b",
+    "numeric_profile": "native asymmetric packed INT4 AWQ W4A16 G128, no qzero plus-one adjustment, FP16 activations and FP16 K/V",
+    "target_position": 3,
+    "prompt_token_history": [
+      151644,
+      2114,
+      271
+    ],
+    "embedding_tensor": "model.embed_tokens.weight",
+    "embedding_dtype": "FP16",
+    "embedding_elements": 896,
+    "kv_source_position": 2,
+    "kv_target_position": 3,
+    "kv_parent_layers": 24,
+    "source_closure_required": true,
+    "artifact_closure_required": true,
+    "operation": "selected-token-position3-full-traversal"
+  },
+  "output": {
+    "kind": "ace3_position3_traversal_inert_launch_authority_preflight",
+    "status": "ACCEPTED",
+    "only_artifact": "launch_preflight.json",
+    "state": "INERT_PREFLIGHT_ONLY",
+    "execution_authority": false,
+    "durable_launch_authority": false,
+    "execution_performed": false,
+    "traversal_output_created": false
+  },
+  "fail_closed": {
+    "validate_before_output_creation": true,
+    "missing_package_artifact_must_fail": true,
+    "stale_package_artifact_must_fail": true,
+    "incomplete_package_must_fail": true,
+    "substituted_package_artifact_must_fail": true,
+    "invalid_binding_must_not_emit_preflight": true,
+    "recheck_condition": "recheck when build/model24_selected_token_position3_preparation/package/launch_manifest.json exists with status READY and passes fresh validation of its exact embedding, token history, 24-layer FP16 K/V parentage, position-2 parents, source/artifact closure, and selected-token-position3-full-traversal operation"
+  },
+  "claim_boundary": {
+    "position3_traversal": "not executed",
+    "durable_launch": "not performed",
+    "dialogue": "not claimed",
+    "synthesis": "not run",
+    "ppa": "not measured",
+    "fpga": "not run",
+    "latency": "not measured",
+    "throughput": "not measured"
+  }
+}

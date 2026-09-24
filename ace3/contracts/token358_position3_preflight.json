@@ -1,0 +1,32 @@
+{
+  "schema": "ace3_token358_position3_preflight_v1",
+  "tail_directory": "build/position2_tail_runtime_attempt001",
+  "tail_seal_sha256": "42912a11daf9679a563e1d64a0503b2051e819a99bc6d9a025c86dbd9ae4bb95",
+  "tail_review": "/home/argustest/.argus-skill-ace3/projects/s-62150b05/handoffs/1693a83a95c6/round-0003.json",
+  "tail_review_sha256": "ec14189ad54cdcff3ee00a4448faf24e47630d48c6849a049cb8ea0160546ed7",
+  "prefix_directory": "build/model24_persistent_kv_selected_token_corrected_q_attempt005",
+  "prefix_result_sha256": "3fa8678b46c94d4c071d73b9b7cb8e7309207299ffa1b1acc3ec8a67d136194e",
+  "prefix_seal_sha256": "eecbd4c1b59af12e557ea2aba0593aa9ff10dbf46378e5bef657f19663129bae",
+  "prefix_frozen_sha256": "78d8badc10828852d2ca0cde96d79b73e2305587496414b659ec1c59d4233f15",
+  "tokenizer_directory": "build/host_dialogue_audit_20260829T182819Z/tokenizer",
+  "input_token_history": [9707, 1879, 0],
+  "selected_token_id": 358,
+  "target_position": 3,
+  "profile": {
+    "weights": "G128 asymmetric packed INT4; native GEMM nibble order; no qzero +1",
+    "scales": "FP16",
+    "activations": "FP16",
+    "kv": "FP16"
+  },
+  "claim_boundary": "Computer-local reviewed-parent admission and host input preparation only. No new decoder or tail execution, K/V restore, completed dialogue, synthesis, PPA, FPGA, or hardware evidence.",
+  "negative_controls": [
+    "stale_token_271",
+    "foreign_parent",
+    "consumed_authority",
+    "missing_kv",
+    "mismatched_token_history",
+    "embedding_mismatch",
+    "topk_mismatch",
+    "source_drift"
+  ]
+}

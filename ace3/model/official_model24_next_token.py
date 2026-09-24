@@ -363,27 +363,44 @@ def _reference_layer(
     layer_id: int,
     tensors: dict[str, np.ndarray],
     hidden: torch.Tensor,
+    *,
+    reference_policy: str = "continuous_float64",
 ) -> torch.Tensor:
+    if reference_policy not in {
+        "continuous_float64",
+        "w4a16_fp16_interstage",
+    }:
+        raise Model24ExecutionError(
+            f"unsupported layer reference policy: {reference_policy}"
+        )
+
+    def stage(values: torch.Tensor) -> torch.Tensor:
+        if reference_policy == "continuous_float64":
+            return values.to(torch.float64)
+        return values.to(torch.float16).to(torch.float64)
+
     prefix = f"model.layers.{layer_id}"
-    norm1 = _torch_rmsnorm(hidden, tensors[f"{prefix}.input_layernorm.weight"])
-    q = _torch_linear(
+    norm1 = stage(
+        _torch_rmsnorm(hidden, tensors[f"{prefix}.input_layernorm.weight"])
+    )
+    q = stage(_torch_linear(
         norm1,
         tensors,
         f"{prefix}.self_attn.q_proj",
         f"{prefix}.self_attn.q_proj.bias",
-    )
-    k = _torch_linear(
+    ))
+    k = stage(_torch_linear(
         norm1,
         tensors,
         f"{prefix}.self_attn.k_proj",
         f"{prefix}.self_attn.k_proj.bias",
-    )
-    v = _torch_linear(
+    ))
+    v = stage(_torch_linear(
         norm1,
         tensors,
         f"{prefix}.self_attn.v_proj",
         f"{prefix}.self_attn.v_proj.bias",
-    )
+    ))
     positions = torch.arange(len(TOKEN_IDS), dtype=torch.float64)
     frequencies = 1.0 / (
         ROPE_THETA ** (torch.arange(0, HEAD_DIM, 2, dtype=torch.float64) / HEAD_DIM)
@@ -403,8 +420,8 @@ def _reference_layer(
             dim=-1,
         )
 
-    rotated_q = rotate(q, QUERY_HEADS)
-    rotated_k = rotate(k, KEY_VALUE_HEADS)
+    rotated_q = stage(rotate(q, QUERY_HEADS))
+    rotated_k = stage(rotate(k, KEY_VALUE_HEADS))
     values = v.reshape(len(TOKEN_IDS), KEY_VALUE_HEADS, HEAD_DIM)
     attended = torch.zeros(
         (len(TOKEN_IDS), QUERY_HEADS, HEAD_DIM),
@@ -413,32 +430,37 @@ def _reference_layer(
     for position in range(len(TOKEN_IDS)):
         for query_head in range(QUERY_HEADS):
             kv_head = query_head // (QUERY_HEADS // KEY_VALUE_HEADS)
-            score = (
+            score = stage(
                 rotated_q[position, query_head]
                 @ rotated_k[: position + 1, kv_head].T
                 / (HEAD_DIM**0.5)
             )
-            attended[position, query_head] = (
-                torch.softmax(score, dim=-1) @ values[: position + 1, kv_head]
+            probability = stage(torch.softmax(score, dim=-1))
+            attended[position, query_head] = stage(
+                probability @ values[: position + 1, kv_head]
             )
-    output = _torch_linear(
+    attended = stage(attended)
+    output = stage(_torch_linear(
         attended.reshape(len(TOKEN_IDS), HIDDEN_SIZE),
         tensors,
         f"{prefix}.self_attn.o_proj",
+    ))
+    residual1 = stage(hidden + output)
+    norm2 = stage(
+        _torch_rmsnorm(
+            residual1,
+            tensors[f"{prefix}.post_attention_layernorm.weight"],
+        )
     )
-    residual1 = hidden + output
-    norm2 = _torch_rmsnorm(
-        residual1,
-        tensors[f"{prefix}.post_attention_layernorm.weight"],
-    )
-    gate = _torch_linear(norm2, tensors, f"{prefix}.mlp.gate_proj")
-    up = _torch_linear(norm2, tensors, f"{prefix}.mlp.up_proj")
-    down = _torch_linear(
-        torch_functional.silu(gate) * up,
+    gate = stage(_torch_linear(norm2, tensors, f"{prefix}.mlp.gate_proj"))
+    up = stage(_torch_linear(norm2, tensors, f"{prefix}.mlp.up_proj"))
+    silu = stage(torch_functional.silu(gate) * up)
+    down = stage(_torch_linear(
+        silu,
         tensors,
         f"{prefix}.mlp.down_proj",
-    )
-    return residual1 + down
+    ))
+    return stage(residual1 + down)
 
 
 def _load_embeddings(checkpoint: Any) -> tuple[np.ndarray, dict[str, Any]]:

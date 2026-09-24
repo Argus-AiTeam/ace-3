@@ -1,0 +1,42 @@
+{
+  "diagnostic_id": "ace3-q24-s16-l12-coordinate62-producer-cone-v3",
+  "inherits": "ace3/contracts/candidates/q24_s16_l12_coordinate62_producer_cone_v2.json",
+  "inherits_sha256": "46d378c90626ace8555055a3ab453056a3a2ff60ebc5a3288922a4d2fd2bc2d6",
+  "preserved_fields": ["policy_id", "reviewed_upstream_sha256", "candidate_admitted", "policy_adopted", "successor_published", "rtl_invocations", "normal_host_review", "controls", "branch_definitions", "mapping", "thresholds", "classification", "claim_boundary"],
+  "reviewed_result": "/home/argustest/ace3-argus/build/q24_s16_l13_l12_parent_coordinate_cut_v3_1d567e59cfac_attempt001/result.json",
+  "reviewed_result_sha256": "4073e5da85af77e0770a399e724c64f8326abb1a636f21554f4966b50b7299a9",
+  "retained_freeze_sha256": "a87f01cdb117e4eefa4f9f2c9d27eb9c01c124b61053f3f3d85738308ebe7395",
+  "inputs": ["build/q24_s16_l13_l12_parent_coordinate_cut_v3_1d567e59cfac_attempt001", "build/q24_s16_l13_upstream_parent_cut_a81669925e0b_attempt001", "build/q24_software_l9_l23_4d1cfdfc15c0_attempt002"],
+  "policy_id": "ace3-w4a16-local-operator-global-binary64-authority-v3",
+  "thresholds": {
+    "S0_S17": "Unchanged finite AND (absolute_error <= 0.125 OR (relative_error < 0.001 AND ordered_FP16_ULP <= 1)); relative denominator max(abs(reference), 2^-14), independently computed same-actual-operand local references.",
+    "S18": "Unchanged original-input binary64-fp16-excess-v1 exact excess <= 1/8. The independently propagated original reference is never replaced by actual state, mapped state, local references, or intervention outputs.",
+    "FP16_trajectory": "Existing diagnostic-only comparisons remain intact under v3."
+  },
+  "controls": ["actual", "frozen_inherited", "frozen_o", "frozen_down", "frozen_inherited_o", "frozen_inherited_down", "frozen_o_down", "frozen_inherited_o_down", "scratch", "scratch_down", "mapped62", "mapped_all", "inherited_native"],
+  "candidate_admitted": false,
+  "policy_adopted": false,
+  "successor_published": false,
+  "normal_host_review": "REQUIRED",
+  "rtl_invocations": 0,
+  "native_L0_L8_invocations": 0,
+  "accepted_prefix_replay": false,
+  "scientific_result_claim": false,
+  "cwd": "/home/argustest/ace3-argus",
+  "command": "PYTHONPATH=/home/argustest/ace3-argus PYTHONDONTWRITEBYTECODE=1 /home/argustest/miniconda3/bin/python -B -m ace3.model.candidates.diagnose_q24_s16_l12_coordinate62_producer_cone_v3 --check",
+  "execution_command": "PYTHONPATH=/home/argustest/ace3-argus PYTHONDONTWRITEBYTECODE=1 /home/argustest/miniconda3/bin/python -B -m ace3.model.candidates.diagnose_q24_s16_l12_coordinate62_producer_cone_v3 --execute --out build/q24_s16_l12_coordinate62_producer_cone_v3_fresh",
+  "interface": ["--check", "--execute --out FRESH_DIRECTORY"],
+  "expected_tests": 30,
+  "native_control_dispatch_authorized": true,
+  "dispatch_purpose": "isolated_non_admission_counterfactual_suffix",
+  "attribution_question": "Which frozen L12 coordinate-62 inherited/O/down branches are conditionally sufficient to change the retained L13 S18 rejection, and does recomputing the inherited-coordinate L12 suffix preserve that rescue?",
+  "suffix_extent": {"position": 0, "L12": 2, "L13": 13},
+  "maximum_native_layer_invocations": 15,
+  "layer_necessity": {
+    "L12": "One isolated baseline to authenticate exact producer operands and gates, one inherited_native control to recompute reachable nonlinear effects.",
+    "L13": "One unchanged 19-stage suffix with all gates for each of the 13 frozen producer, scratch, reviewed endpoint and inherited-native controls."
+  },
+  "execution_boundary": "--check compiles actual repo sources, authenticates the pinned v2 closure and reviewed v3/L12 artifacts read-only, and executes exactly the focused v3 tests with zero native/RTL dispatch. --execute additionally permits only the declared 15 native layer invocations into a fresh versioned build directory. This delivery does not execute controls. A separate bounded Planner execution task and independent Host review are required.",
+  "reproduction": "Run command once from cwd with the absolute interpreter and visible command-local PYTHONPATH. Exactly 30 tests must execute with zero failures/errors/skips. Historical suites are imported for origin checks only. The execution command is a fresh-output template, not queued work; use the operator-required durable runner for execution. No historical bare-command PASS.",
+  "authentication": "Inherit every pinned v2 source/current-update, input, artifact, operand, I/Z/H state, own-empty-P0 FP16 KV, receipt and lineage check unchanged. Inherit v1 branch definitions, mapping, classification and claim boundary through the hash-pinned v2 contract. Original-input independently propagated binary64 global reference and all 19 stage gates remain unchanged. Recheck bound inputs, source origins, contracts and history at completion."
+}

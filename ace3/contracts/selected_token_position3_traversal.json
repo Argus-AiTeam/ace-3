@@ -1,0 +1,87 @@
+{
+  "schema_version": 1,
+  "contract_id": "ace3-selected-token-position3-full-traversal-v1",
+  "required_input": {
+    "path": "build/model24_selected_token_position3_launch_acceptance/preflight/launch_preflight.json",
+    "kind": "ace3_position3_traversal_inert_launch_authority_preflight",
+    "status": "ACCEPTED",
+    "fresh_validation_required": true,
+    "operation": "selected-token-position3-full-traversal",
+    "target_position": 3,
+    "prompt_token_history": [
+      151644,
+      2114,
+      271
+    ],
+    "embedding": {
+      "tensor": "model.embed_tokens.weight",
+      "dtype": "FP16",
+      "elements": 896
+    },
+    "kv_parentage": {
+      "source_position": 2,
+      "target_position": 3,
+      "ordered_layers": 24
+    },
+    "source_and_artifact_hashes_required": true
+  },
+  "execution": {
+    "starts_only_after_all_input_bindings_validate": true,
+    "implementation": "24 ordered current-worktree Verilator decoder-layer transactions",
+    "canonical_build_identity": {
+      "fresh_external_build_directory_per_validation": true,
+      "layer_parameter_must_match": true,
+      "accurate_silu_parameter": 1,
+      "stored_binary_must_hash_match_fresh_build": true,
+      "stored_compile_log_must_match_normalized_fresh_build_log": true
+    },
+    "vector_closure": {
+      "manifest_schema_version": 1,
+      "manifest_kind": "ace3_position3_live_transaction_vectors",
+      "per_layer_exact_checkpoint_tensor_count": 26,
+      "exact_names_metadata_and_serialized_hashes_required": true,
+      "position_input_and_rope_bindings_required": true,
+      "canonical_per_layer_manifest_input_rope_and_tensor_paths_required": true
+    },
+    "validation_time_replay": {
+      "every_layer_required": true,
+      "authenticated_position2_kv_parent_required": true,
+      "fresh_output_directory_required": true,
+      "simulation_log_terminal_trace_state_and_output_must_match": true,
+      "fresh_integer_oracle_comparison_required": true
+    },
+    "numeric_profile": "native asymmetric packed INT4 AWQ W4A16 G128, no qzero plus-one adjustment, FP16 activations and FP16 K/V",
+    "independent_oracle": "exact integer W4A16 model with position-0 through position-2 K/V replay",
+    "natural_terminal_layers": 24
+  },
+  "output": {
+    "kind": "ace3_selected_token_position3_continuation_evidence",
+    "status": "COMPLETE",
+    "ordered_layer_records": 24,
+    "per_layer_position2_kv_parent_required": true,
+    "per_layer_source_and_artifact_hashes_required": true,
+    "post_layer23_binding_required": true
+  },
+  "fail_closed": {
+    "missing_preflight_must_not_create_execution_output": true,
+    "stale_preflight_must_not_create_execution_output": true,
+    "malformed_preflight_must_not_create_execution_output": true,
+    "substituted_binding_must_not_create_execution_output": true,
+    "wrong_operation_must_not_create_execution_output": true,
+    "incomplete_traversal_must_not_emit_complete_evidence": true,
+    "empty_truncated_extra_or_substituted_tensor_closure_rejected": true,
+    "dummy_manifest_rejected": true,
+    "alternate_vector_records_with_substituted_harness_paths_rejected": true,
+    "substituted_binary_rejected": true,
+    "fabricated_terminal_or_log_rejected": true,
+    "oracle_only_output_rejected": true
+  },
+  "claim_boundary": {
+    "dialogue": "not claimed",
+    "synthesis": "not run",
+    "ppa": "not measured",
+    "fpga": "not run",
+    "latency": "not measured",
+    "throughput": "not measured"
+  }
+}

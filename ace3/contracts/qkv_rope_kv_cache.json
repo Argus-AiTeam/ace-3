@@ -34,7 +34,9 @@
         "out_features": 128
       }
     ],
-    "engine": "unchanged ace3_awq_w4a16_projection_engine with native asymmetric G128 AWQ semantics"
+    "engine": "Shared ace3_awq_w4a16_projection_engine with native asymmetric G128 AWQ semantics; Q explicitly selects SINGLE_ROUND_BIAS=1, while K/V retain legacy mode 0.",
+    "q_numerical_policy": "See awq_w4a16_projection_engine.json bias_rounding_modes. Q adds bias to the exact dot before a single FP16 RNE; pre-bias accumulator and stream interfaces are unchanged.",
+    "q_validation_boundary": "Bounded compiled Q arithmetic comparison only. Independent Reviewer acceptance and full actual-output-fed validation/re-prefill are deferred; old binaries and software-injected frontiers are not evidence for the changed implementation."
   },
   "rope": {
     "implementation": "ace3/rtl/ace3_qwen2_rope_pair.sv",

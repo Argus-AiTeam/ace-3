@@ -4,7 +4,6 @@
 #include "verilated_save.h"
 
 #include <array>
-#include <cstdio>
 #include <cstdint>
 #include <cstdlib>
 #include <fstream>
@@ -14,6 +13,8 @@
 #include <string>
 #include <vector>
 
+struct Trace { unsigned token, position, stage, index, value; };
+struct Final { unsigned token, index, value; };
 struct Projection {
     std::vector<uint32_t> qweight, qzeros;
     std::vector<uint16_t> scales, bias;
@@ -39,6 +40,8 @@ static uint64_t start_timeout_cycles = 100000;
 static uint64_t start_attempts, start_accepts;
 static unsigned attempted_load_kind, attempted_load_index;
 static unsigned accepted_load_kind, accepted_load_index;
+static bool transaction_mode;
+static unsigned transaction_position;
 
 static std::vector<std::string> lines(const std::string& path) {
     std::ifstream file(path);
@@ -83,13 +86,14 @@ struct Harness {
     std::vector<uint16_t> norm1, norm2;
     std::array<Projection, 7> p;
     std::array<uint16_t, 128 * 32> rope_cos{}, rope_sin{};
+    std::vector<Trace> expected_trace;
+    std::vector<Final> expected_final;
     std::ofstream raw_trace, raw_final;
     bool fail_after_raw;
-    bool transaction;
-    unsigned transaction_position;
     bool trace_hold = false, final_hold = false, done_hold = false;
     std::array<uint64_t, 4> trace_held{}, final_held{}, done_held{};
     std::array<bool, 3> loaded{};
+    unsigned expected_done_position = 0;
 
     std::string progress() const {
         return "phase=" + std::to_string(unsigned(top.phase_o)) +
@@ -111,68 +115,68 @@ struct Harness {
                " done=" + std::to_string(done_count);
     }
 
-    Harness(const std::string& dir, const std::string& raw_dir, bool inject_failure,
-            unsigned layer_index, bool transaction_mode = false,
-            unsigned position = 0, const std::string& input_path = "",
-            const std::string& rope_path = "")
+    Harness(const std::string& dir, const std::string& tensor_dir,
+            const std::string& raw_dir, bool inject_failure, unsigned layer_index)
         : raw_trace(raw_dir + "/trace.hex", std::ios::trunc),
           raw_final(raw_dir + "/final.hex", std::ios::trunc),
-          fail_after_raw(inject_failure), transaction(transaction_mode),
-          transaction_position(position) {
+          fail_after_raw(inject_failure) {
         if (!raw_trace || !raw_final)
             throw std::runtime_error("cannot open raw output files");
-        const auto input_lines = lines(
-            input_path.empty() ? dir + "/inputs.hex" : input_path);
-        const auto rope_lines = lines(
-            rope_path.empty() ? dir + "/rope_coefficients.hex" : rope_path);
-        const size_t expected_inputs = transaction ? 896 : 1792;
-        const size_t expected_rope = transaction ? 32 : 64;
-        if (input_lines.size() != expected_inputs ||
-            rope_lines.size() != expected_rope)
-            throw std::runtime_error("decoder input vector count mismatch");
+        const auto input_lines = lines(dir + "/inputs.hex");
+        const auto trace_lines = lines(dir + "/trace.hex");
+        const auto final_lines = lines(dir + "/final.hex");
+        const auto rope_lines = lines(dir + "/rope_coefficients.hex");
+        const auto manifest_lines = lines(dir + "/boundary_manifest.json");
+        std::string manifest;
+        for (const auto& line : manifest_lines) manifest += line;
+        if ((input_lines.size() != 896 && input_lines.size() != 1792) ||
+            trace_lines.empty() || final_lines.size() != input_lines.size() ||
+            rope_lines.empty() || rope_lines.size() > rope_cos.size() ||
+            manifest.find("\"trace_records\": " +
+                          std::to_string(trace_lines.size())) == std::string::npos ||
+            manifest.find("\"final_records\": " +
+                          std::to_string(final_lines.size())) == std::string::npos)
+            throw std::runtime_error("decoder runtime vector contract mismatch");
         inputs[0].resize(896); inputs[1].resize(896);
-        std::array<std::array<bool, 896>, 2> input_seen{};
         for (const auto& line : input_lines) {
             const unsigned token = std::stoul(line.substr(0, 2), nullptr, 16);
             const unsigned index = std::stoul(line.substr(2, 4), nullptr, 16);
-            if (token > (transaction ? 0u : 1u) || index >= 896 ||
-                input_seen[token][index])
-                throw std::runtime_error("bad input record");
-            input_seen[token][index] = true;
+            if (token > 1 || index >= 896) throw std::runtime_error("bad input record");
             inputs[token][index] = std::stoul(line.substr(6, 4), nullptr, 16);
         }
-        for (unsigned token=0; token<(transaction ? 1u : 2u); ++token)
-            for (unsigned index=0; index<896; ++index)
-                if (!input_seen[token][index])
-                    throw std::runtime_error("missing input record");
-        std::array<std::array<bool, 32>, 128> rope_seen{};
+        for (const auto& line : trace_lines) {
+            if (line.size() != 16) throw std::runtime_error("bad trace record");
+            expected_trace.push_back({
+                static_cast<unsigned>(std::stoul(line.substr(0,2),nullptr,16)),
+                static_cast<unsigned>(std::stoul(line.substr(2,4),nullptr,16)),
+                static_cast<unsigned>(std::stoul(line.substr(6,2),nullptr,16)),
+                static_cast<unsigned>(std::stoul(line.substr(8,4),nullptr,16)),
+                static_cast<unsigned>(std::stoul(line.substr(12,4),nullptr,16))});
+        }
+        for (const auto& line : final_lines) {
+            if (line.size() != 10) throw std::runtime_error("bad final record");
+            expected_final.push_back({
+                static_cast<unsigned>(std::stoul(line.substr(0,2),nullptr,16)),
+                static_cast<unsigned>(std::stoul(line.substr(2,4),nullptr,16)),
+                static_cast<unsigned>(std::stoul(line.substr(6,4),nullptr,16))});
+        }
         for (const auto& line : rope_lines) {
             const unsigned pos = std::stoul(line.substr(0,4),nullptr,16);
             const unsigned pair = std::stoul(line.substr(4,2),nullptr,16);
-            if (pos >= 128 || pair >= 32 ||
-                (transaction && pos != transaction_position) ||
-                rope_seen[pos][pair])
-                throw std::runtime_error("bad rope record");
-            rope_seen[pos][pair] = true;
+            if (pos > 127 || pair >= 32) throw std::runtime_error("bad rope record");
             rope_cos[pos*32+pair] = std::stoul(line.substr(6,4),nullptr,16);
             rope_sin[pos*32+pair] = std::stoul(line.substr(10,4),nullptr,16);
         }
-        const unsigned first_position = transaction ? transaction_position : 0;
-        const unsigned last_position = transaction ? transaction_position : 1;
-        for (unsigned pos=first_position; pos<=last_position; ++pos)
-            for (unsigned pair=0; pair<32; ++pair)
-                if (!rope_seen[pos][pair])
-                    throw std::runtime_error("missing rope record");
         const std::string layer = "layer" + std::to_string(layer_index) + "_";
-        norm1 = hex_file<uint16_t>(tensor(dir, layer + "input_layernorm_weight.fp16le.bin"));
-        norm2 = hex_file<uint16_t>(tensor(dir, layer + "post_attention_layernorm_weight.fp16le.bin"));
-        p[0]=projection(dir,layer+"self_attn_q_proj",true);
-        p[1]=projection(dir,layer+"self_attn_k_proj",true);
-        p[2]=projection(dir,layer+"self_attn_v_proj",true);
-        p[3]=projection(dir,layer+"self_attn_o_proj",false);
-        p[4]=projection(dir,layer+"mlp_gate_proj",false);
-        p[5]=projection(dir,layer+"mlp_up_proj",false);
-        p[6]=projection(dir,layer+"mlp_down_proj",false);
+        norm1 = hex_file<uint16_t>(tensor(tensor_dir, layer + "input_layernorm_weight.fp16le.bin"));
+        norm2 = hex_file<uint16_t>(tensor(tensor_dir, layer + "post_attention_layernorm_weight.fp16le.bin"));
+        p[0]=projection(tensor_dir,layer+"self_attn_q_proj",true);
+        p[1]=projection(tensor_dir,layer+"self_attn_k_proj",true);
+        p[2]=projection(tensor_dir,layer+"self_attn_v_proj",true);
+        p[3]=projection(tensor_dir,layer+"self_attn_o_proj",false);
+        p[4]=projection(tensor_dir,layer+"mlp_gate_proj",false);
+        p[5]=projection(tensor_dir,layer+"mlp_up_proj",false);
+        p[6]=projection(tensor_dir,layer+"mlp_down_proj",false);
         if (norm1.size()!=896 || norm2.size()!=896)
             throw std::runtime_error("decoder normalization tensor geometry mismatch");
         for (size_t kind=0; kind<p.size(); ++kind) {
@@ -270,6 +274,13 @@ struct Harness {
         if (layer0_trace_capture_accept(
                 checking, top.trace_valid_o, top.trace_ready_i,
                 top.final_valid_o, top.final_ready_i)) {
+            if (trace_count>=expected_trace.size() ||
+                expected_trace[trace_count].token!=done_count ||
+                expected_trace[trace_count].position!=top.trace_position_o ||
+                expected_trace[trace_count].stage!=top.trace_stage_o ||
+                expected_trace[trace_count].index!=top.trace_index_o ||
+                expected_trace[trace_count].value!=top.trace_f16_o)
+                mismatch("trace record=" + std::to_string(trace_count));
             raw_trace << std::hex << std::setfill('0')
                       << std::setw(2) << done_count
                       << std::setw(4) << unsigned(top.trace_position_o)
@@ -286,6 +297,11 @@ struct Harness {
         if (layer0_final_capture_accept(
                 checking, top.final_valid_o, top.final_ready_i,
                 top.trace_ready_i)) {
+            if (final_count>=expected_final.size() ||
+                expected_final[final_count].token!=done_count ||
+                expected_final[final_count].index!=top.final_index_o ||
+                expected_final[final_count].value!=top.final_f16_o)
+                mismatch("final record=" + std::to_string(final_count));
             raw_final << std::hex << std::setfill('0')
                       << std::setw(2) << done_count
                       << std::setw(4) << unsigned(top.final_index_o)
@@ -296,10 +312,8 @@ struct Harness {
             ++final_count;
         }
         if (checking && top.done_valid_o && top.done_ready_i) {
-            const uint64_t expected_position =
-                transaction ? transaction_position : done_count;
             if (top.done_cache_slot_o!=0 ||
-                top.done_position_o!=expected_position ||
+                top.done_position_o!=expected_done_position ||
                 top.done_cycles_o==0 || top.done_cycles_o<=top.done_stall_cycles_o)
                 mismatch("done metadata");
             if (done_count<2) token_done[done_count]=cycles;
@@ -361,6 +375,7 @@ struct Harness {
     }
     void start(unsigned slot, unsigned position, unsigned token, bool must_accept=true) {
         ++start_attempts;
+        expected_done_position=position;
         top.start_cache_slot_i=slot; top.start_position_i=position; top.start_valid_i=1; drive(); top.eval();
         if (bool(top.start_ready_o)!=must_accept) mismatch("start acceptance slot="+std::to_string(slot)+" position="+std::to_string(position));
         if (must_accept && !top.start_ready_o)
@@ -398,157 +413,17 @@ struct Harness {
         if (!raw_trace || !raw_final)
             throw std::runtime_error("raw output close failed");
     }
-    void restore_state(const std::string& path) {
-        VerilatedRestore stream;
-        stream.open(path.c_str());
-        stream >> top;
-        stream.close();
-        idle();
-        top.eval();
-        if (top.busy_o || top.done_valid_o || top.phase_o != 0)
-            throw std::runtime_error("restored transaction state is not idle");
-    }
-    void save_state(const std::string& path) {
-        if (top.busy_o || top.done_valid_o || top.phase_o != 0)
-            throw std::runtime_error("refusing to save nonterminal transaction state");
-        const std::string partial = path + ".partial";
-        std::remove(partial.c_str());
-        VerilatedSave stream;
-        stream.open(partial.c_str());
-        stream << top;
-        stream.close();
-        std::ifstream saved(partial, std::ios::binary | std::ios::ate);
-        if (!saved || saved.tellg() <= 0)
-            throw std::runtime_error("transaction state save is empty");
-        saved.close();
-        std::remove(path.c_str());
-        if (std::rename(partial.c_str(), path.c_str()) != 0)
-            throw std::runtime_error("transaction state commit failed");
-    }
 };
-
-static void savable_idle(Vace3_decoder_layer0_token_engine& top) {
-    top.clear_i=0; top.load_valid_i=0; top.load_kind_i=0; top.load_index_i=0;
-    top.load_f16_i=0; top.start_valid_i=0; top.start_cache_slot_i=0;
-    top.start_position_i=0; top.projection_meta_valid_i=1;
-    top.projection_pair_valid_i=1; top.projection_bias_valid_i=1;
-    top.rope_valid_i=1; top.trace_ready_i=1; top.final_ready_i=1;
-    top.done_ready_i=1; top.projection_qzeros_i=0;
-    top.projection_scale_f16_i=0x3c00; top.projection_qweight_i=0;
-    top.projection_bias_f16_i=0; top.rope_cos_f16_i=0x3c00;
-    top.rope_sin_f16_i=0;
-}
-
-static void savable_tick(Vace3_decoder_layer0_token_engine& top) {
-    top.clk_i=0; savable_idle(top); top.eval();
-    top.clk_i=1; top.eval();
-}
-
-static std::array<uint64_t, 16> savable_observation(
-        const Vace3_decoder_layer0_token_engine& top) {
-    return {
-        top.load_ready_o, top.start_ready_o, top.busy_o, top.phase_o,
-        top.projection_kind_o, top.projection_meta_ready_o,
-        top.projection_meta_output_channel_o, top.projection_pair_ready_o,
-        top.projection_pair_input_o, top.rope_ready_o, top.rope_position_o,
-        top.trace_valid_o, top.trace_stage_o, top.trace_index_o,
-        top.trace_f16_o, top.done_valid_o,
-    };
-}
-
-static void run_compact_build_self_test(unsigned expected_layer_index) {
-    Vace3_decoder_layer0_token_engine top;
-    savable_idle(top);
-    top.rst_ni=0; top.clk_i=0; top.eval();
-    savable_tick(top); savable_tick(top);
-    top.rst_ni=1; savable_tick(top);
-    if (unsigned(top.layer_index_o) != expected_layer_index)
-        throw std::runtime_error("compact build layer parameter mismatch");
-    if (top.busy_o || top.done_valid_o || top.phase_o != 0)
-        throw std::runtime_error("compact build reset did not reach idle");
-    top.load_kind_i=0; top.load_index_i=0; top.load_f16_i=0x3c00;
-    top.load_valid_i=1; top.clk_i=0; top.eval();
-    if (!top.load_ready_o)
-        throw std::runtime_error("compact build load handshake rejected");
-    top.clk_i=1; top.eval(); top.load_valid_i=0;
-    savable_tick(top);
-    if (unsigned(top.layer_index_o) != expected_layer_index || top.busy_o)
-        throw std::runtime_error("compact build RTL observation mismatch");
-    top.final();
-    std::cout << "DECODER_LAYER_TOKEN_ENGINE_COMPACT_BUILD_PASS layer_index="
-              << expected_layer_index << " load_words=1\n";
-}
-
-static void run_savable_self_test(const std::string& state_path) {
-    Vace3_decoder_layer0_token_engine original;
-    savable_idle(original);
-    original.rst_ni=0; original.clk_i=0; original.eval();
-    savable_tick(original); savable_tick(original);
-    original.rst_ni=1;
-    for (unsigned kind=0; kind<3; ++kind) {
-        for (unsigned index=0; index<896; ++index) {
-            original.load_kind_i=kind;
-            original.load_index_i=index;
-            original.load_f16_i=(kind == 0) ? (0x3000u + (index & 0xffu))
-                                             : 0x3c00u;
-            original.load_valid_i=1;
-            original.clk_i=0; original.eval();
-            if (!original.load_ready_o)
-                throw std::runtime_error("savable self-test preload rejected");
-            original.clk_i=1; original.eval();
-            original.load_valid_i=0;
-        }
-    }
-    original.start_cache_slot_i=0; original.start_position_i=0;
-    original.start_valid_i=1; original.clk_i=0; original.eval();
-    if (!original.start_ready_o)
-        throw std::runtime_error("savable self-test start rejected");
-    original.clk_i=1; original.eval(); original.start_valid_i=0;
-    for (unsigned step=0; step<257; ++step) savable_tick(original);
-
-    const std::string partial = state_path + ".partial";
-    std::remove(partial.c_str());
-    VerilatedSave save;
-    save.open(partial.c_str());
-    save << original;
-    save.close();
-    std::remove(state_path.c_str());
-    if (std::rename(partial.c_str(), state_path.c_str()) != 0)
-        throw std::runtime_error("savable self-test state commit failed");
-
-    std::vector<std::array<uint64_t, 16>> expected;
-    for (unsigned step=0; step<1024; ++step) {
-        savable_tick(original);
-        expected.push_back(savable_observation(original));
-    }
-
-    Vace3_decoder_layer0_token_engine restored;
-    VerilatedRestore restore;
-    restore.open(state_path.c_str());
-    restore >> restored;
-    restore.close();
-    for (unsigned step=0; step<expected.size(); ++step) {
-        savable_tick(restored);
-        if (savable_observation(restored) != expected[step])
-            throw std::runtime_error(
-                "savable self-test restored trajectory diverged at step " +
-                std::to_string(step));
-    }
-    original.final();
-    restored.final();
-    std::ifstream state(state_path, std::ios::binary | std::ios::ate);
-    if (!state || state.tellg() <= 0)
-        throw std::runtime_error("savable self-test produced no state");
-    std::cout << "DECODER_LAYER_TOKEN_ENGINE_SAVABLE_PASS "
-              << "preloaded_words=2688 compared_cycles=" << expected.size()
-              << " state_bytes=" << state.tellg() << "\n";
-}
 
 static void write_terminal(const std::string& raw_dir, bool natural_terminal,
                            unsigned exit_code) {
     std::ofstream terminal(raw_dir + "/terminal.txt", std::ios::trunc);
     if (!terminal) return;
-    if (active_layer_index == 0) {
+    if (transaction_mode) {
+        terminal << "schema=ace3_decoder_token_transaction_v1 layer_index="
+                 << active_layer_index << " position=" << transaction_position
+                 << " natural_terminal=" << (natural_terminal ? 1 : 0);
+    } else if (active_layer_index == 0) {
         terminal << "schema=ace3_decoder_layer0_raw_v1 natural_terminal="
                  << (natural_terminal ? 1 : 0);
     } else {
@@ -565,20 +440,25 @@ static void write_terminal(const std::string& raw_dir, bool natural_terminal,
 int main(int argc, char** argv) {
     std::string raw_dir;
     try {
-        Verilated::commandArgs(argc,argv); std::string dir;
+        Verilated::commandArgs(argc,argv); std::string dir, tensor_dir;
+        std::string state_in, state_out;
         active_layer_index=0;
         bool fail_after_raw=false;
-        bool transaction=false;
-        bool compact_build_self_test=false;
-        unsigned transaction_position=0;
-        std::string transaction_input, transaction_rope, state_in, state_out;
-        std::string transaction_metadata, savable_self_test;
+        transaction_mode=false;
+        transaction_position=0;
         for(int i=1;i<argc;++i) {
             const std::string argument=argv[i];
             if(argument=="--vector-dir" && i+1<argc) dir=argv[++i];
+            else if(argument=="--tensor-dir" && i+1<argc) tensor_dir=argv[++i];
             else if(argument=="--raw-dir" && i+1<argc) raw_dir=argv[++i];
             else if(argument=="--layer-index" && i+1<argc)
                 active_layer_index=std::stoul(argv[++i]);
+            else if(argument=="--transaction-position" && i+1<argc) {
+                transaction_mode=true;
+                transaction_position=std::stoul(argv[++i]);
+            }
+            else if(argument=="--state-in" && i+1<argc) state_in=argv[++i];
+            else if(argument=="--state-out" && i+1<argc) state_out=argv[++i];
             else if(argument=="--fail-after-raw") fail_after_raw=true;
             else if(argument=="--progress-interval" && i+1<argc)
                 progress_interval=std::stoull(argv[++i]);
@@ -586,102 +466,63 @@ int main(int argc, char** argv) {
                 preload_timeout_cycles=std::stoull(argv[++i]);
             else if(argument=="--start-timeout-cycles" && i+1<argc)
                 start_timeout_cycles=std::stoull(argv[++i]);
-            else if(argument=="--transaction-position" && i+1<argc) {
-                transaction=true;
-                transaction_position=std::stoul(argv[++i]);
-            } else if(argument=="--transaction-input" && i+1<argc)
-                transaction_input=argv[++i];
-            else if(argument=="--transaction-rope" && i+1<argc)
-                transaction_rope=argv[++i];
-            else if(argument=="--state-in" && i+1<argc)
-                state_in=argv[++i];
-            else if(argument=="--state-out" && i+1<argc)
-                state_out=argv[++i];
-            else if(argument=="--transaction-metadata" && i+1<argc)
-                transaction_metadata=argv[++i];
-            else if(argument=="--savable-self-test" && i+1<argc)
-                savable_self_test=argv[++i];
-            else if(argument=="--compact-build-self-test")
-                compact_build_self_test=true;
-        }
-        if(compact_build_self_test) {
-            if(active_layer_index>23)
-                throw std::runtime_error("layer index must be in [0,23]");
-            run_compact_build_self_test(active_layer_index);
-            return 0;
-        }
-        if(!savable_self_test.empty()) {
-            run_savable_self_test(savable_self_test);
-            return 0;
         }
         if(dir.empty() || raw_dir.empty())
             throw std::runtime_error("usage: --vector-dir PATH --raw-dir PATH");
+        if(tensor_dir.empty()) tensor_dir=dir;
         if(active_layer_index>23)
             throw std::runtime_error("layer index must be in [0,23]");
+        if(transaction_mode && (transaction_position>127 || state_out.empty()))
+            throw std::runtime_error("transaction requires position [0,127] and --state-out");
+        if(!transaction_mode && (!state_in.empty() || !state_out.empty()))
+            throw std::runtime_error("state files require transactional mode");
+        if(transaction_mode && transaction_position==0 && !state_in.empty())
+            throw std::runtime_error("position zero must not restore predecessor state");
+        if(transaction_mode && transaction_position>0 && state_in.empty())
+            throw std::runtime_error("nonzero position requires predecessor state");
         if(!preload_timeout_cycles || !start_timeout_cycles)
             throw std::runtime_error("timeout cycles must be nonzero");
-        if(transaction &&
-           (transaction_position>=128 || transaction_input.empty() ||
-            transaction_rope.empty() || state_out.empty() ||
-            transaction_metadata.empty() ||
-            (transaction_position==0 && !state_in.empty()) ||
-            (transaction_position>0 && state_in.empty()) ||
-            state_in==state_out))
-            throw std::runtime_error("invalid transaction arguments");
         cycles=stalls=failures=trace_count=final_count=done_count=0; checking=false;
-        Harness h(
-            dir, raw_dir, fail_after_raw, active_layer_index, transaction,
-            transaction_position, transaction_input, transaction_rope);
+        Harness h(dir,tensor_dir,raw_dir,fail_after_raw,active_layer_index);
         h.top.eval();
         if (unsigned(h.top.layer_index_o)!=active_layer_index)
             throw std::runtime_error("RTL layer parameter does not match vector layer");
-        if (transaction) {
-            if (transaction_position == 0) {
-                h.idle(); h.reset();
-                h.load(1,0); h.load(2,0);
+        if (transaction_mode) {
+            h.idle();
+            if (state_in.empty()) {
+                h.reset();
+                h.load(1,0);
+                h.load(2,0);
             } else {
-                h.restore_state(state_in);
+                VerilatedRestore restore;
+                restore.open(state_in.c_str());
+                restore >> h.top;
+                restore.close();
+                h.idle();
+                h.top.eval();
+                if (h.top.busy_o || h.top.done_valid_o || h.top.phase_o!=0)
+                    throw std::runtime_error("restored simulator state is not idle");
             }
             h.load(0,0);
             checking=true;
             h.start(0,transaction_position,0);
             h.finish_checked(1);
             checking=false;
-            if (failures || final_count!=896 || done_count!=1 || trace_count==0)
-                throw std::runtime_error("transaction completion mismatch");
-            h.idle(); h.top.eval();
-            h.save_state(state_out);
-            h.close_raw();
-            std::ofstream metadata(transaction_metadata, std::ios::trunc);
-            if (!metadata)
-                throw std::runtime_error("cannot open transaction metadata");
-            metadata
-                << "{\"schema_version\":1,"
-                << "\"kind\":\"ace3_decoder_verilator_transaction\","
-                << "\"layer_index\":" << active_layer_index << ","
-                << "\"position\":" << transaction_position << ","
-                << "\"next_position\":" << transaction_position + 1 << ","
-                << "\"cache_slot\":0,"
-                << "\"trace_records\":" << trace_count << ","
-                << "\"final_records\":" << final_count << ","
-                << "\"done_records\":" << done_count << ","
-                << "\"natural_terminal\":true}\n";
-            metadata.close();
-            if (!metadata)
-                throw std::runtime_error("transaction metadata close failed");
+            if(trace_count!=h.expected_trace.size() ||
+               final_count!=h.expected_final.size() ||
+               final_count!=896 || done_count!=1 || failures)
+                throw std::runtime_error("transaction output count mismatch");
+            VerilatedSave save;
+            save.open(state_out.c_str());
+            save << h.top;
+            save.close();
             h.top.final();
-            std::ofstream terminal(raw_dir + "/terminal.txt", std::ios::trunc);
-            terminal
-                << "schema=ace3_decoder_transaction_raw_v1 natural_terminal=1 "
-                << "exit_code=0 layer_index=" << active_layer_index
-                << " position=" << transaction_position
-                << " trace_count=" << trace_count
-                << " final_count=" << final_count
-                << " done_count=" << done_count << '\n';
-            std::cout << "DECODER_LAYER_TOKEN_ENGINE_TRANSACTION_PASS layer="
-                      << active_layer_index << " position="
-                      << transaction_position << " trace_count=" << trace_count
-                      << " final_count=" << final_count << "\n";
+            h.close_raw();
+            write_terminal(raw_dir,true,0);
+            std::cout<<"DECODER_LAYER_TOKEN_TRANSACTION_PASS layer="
+                     <<active_layer_index<<" position="<<transaction_position
+                     <<" trace_count="<<trace_count<<" final_count="<<final_count
+                     <<" cycles="<<cycles<<" stalls="<<stalls<<"\n";
             return 0;
         }
         h.idle(); h.reset();

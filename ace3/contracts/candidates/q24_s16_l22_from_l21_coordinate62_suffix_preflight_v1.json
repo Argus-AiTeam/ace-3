@@ -1,0 +1,98 @@
+{
+  "diagnostic_id": "ace3-q24-s16-l22-from-l21-coordinate62-suffix-preflight-v1",
+  "version": 1,
+  "schema_version": 1,
+  "cwd": "/home/argustest/ace3-argus",
+  "evidence": {
+    "localization_source": {
+      "path": "/home/argustest/ace3-argus/ace3/model/candidates/diagnose_q24_s16_l21_sparse_cut_localization_matrix_v1.py",
+      "sha256": "8b9823ca0453b793d26e0641636241eaebeb88e09b148baa82f658a0f76d0eb3"
+    },
+    "localization_review": {
+      "path": "/home/argustest/.argus-skill-ace3/projects/s-62150b05/handoffs/6c38406b5e07/round-0001.json",
+      "sha256": "9fdfbb799579f987d0c9648ed926b8f33fa483ac95fba427488a6ea66b66b8a1"
+    },
+    "census_source": {
+      "path": "/home/argustest/ace3-argus/ace3/model/candidates/diagnose_q24_s16_l21_from_l20_s18_failure_census_v1.py",
+      "sha256": "a8faef5d1deb15803357bc952b0bc4c177b23e044a6a30299d5f29d79599c2f7"
+    },
+    "census_review": {
+      "path": "/home/argustest/.argus-skill-ace3/projects/s-62150b05/handoffs/ecf478e49bef/round-0001.json",
+      "sha256": "4ccd955f1460ad654f3ce190ec4e9ac28605923f8591e6dfa01ec2ad7dd7defc"
+    },
+    "state_oracle": {
+      "path": "/home/argustest/ace3-argus/ace3/model/candidates/residual_exact_grid_q24_reference_v1.py",
+      "sha256": "dbbe2ac57bf8f6dd0cdc6cece202eeb52f0643bfa07ed542dca0d8c4b58a81e5"
+    }
+  },
+  "controls": [
+    "frozen_inherited", "frozen_inherited_o", "frozen_inherited_down",
+    "frozen_inherited_o_down", "scratch", "scratch_down", "mapped62",
+    "mapped_all", "inherited_native"
+  ],
+  "parent_node": [21, 0, 18],
+  "consumer_node": [22, 0],
+  "history": [9707],
+  "coordinate": 62,
+  "state": {
+    "shape": [896],
+    "fields": {"i": "output_i", "z": "output_z", "h": "stage18"},
+    "dtypes": {"i": "<i8", "z": "|u1", "h": "<u2"},
+    "transformation": "none; entire raw L21 output I/Z/H, not a coordinate cut"
+  },
+  "consumer_kv": {
+    "kind": "own empty P0", "keys": ["k", "v"], "shape": [0, 128],
+    "dtype": "<u2", "storage": "FP16 words",
+    "shared_between_consumers": false, "prior_layer_kv_consumed": false
+  },
+  "future_output": {
+    "default": "/home/argustest/ace3-argus/build/q24_s16_l22_from_l21_coordinate62_suffix_preflight_v1_attempt001",
+    "parent": "/home/argustest/ace3-argus/build",
+    "basename_pattern": "q24_s16_l22_from_l21_coordinate62_suffix_preflight_v1_attempt[0-9]{3,}",
+    "fresh": true, "ignored": true, "direct_child": true,
+    "create_during_check": false, "overwrite": false,
+    "future_creation": "recheck freshness and gates, then exclusive mkdir; separate reviewed executor",
+    "artifacts": ["result.json", "validation.json", "interventions.json"],
+    "per_control_artifacts": [
+      "{control}_L22.npz", "{control}_L22_parent.npz",
+      "{control}_L22_local_references.npz", "{control}_L22_gates.json"
+    ]
+  },
+  "reference_manifest": "/home/argustest/ace3-argus/build/q24_software_l9_l23_4d1cfdfc15c0_attempt002/references/freeze.json",
+  "reference_policy": "legacy-binary64-AWQ-fully-independent-propagation",
+  "policy_id": "ace3-w4a16-local-operator-global-binary64-authority-v3",
+  "profile_id": "ace3-w4a16-layer-final-binary64-fp16-excess-v1",
+  "excess_budget": "1/8",
+  "local_threshold": "finite AND (absolute_error <= 0.125 OR (relative_error < 0.001 AND ordered_FP16_ULP <= 1)); denominator max(abs(reference), 2^-14)",
+  "reference_missing_status": "BLOCKED_MISSING_L22_REFERENCE",
+  "interface": ["--check", "--out"],
+  "output": "stdout JSON only; no file writes",
+  "flags": {
+    "native_layer_invocations": 0,
+    "native_L0_L21_invocations": 0,
+    "rtl_invocations": 0,
+    "reference_recomputation": false,
+    "reference_reanchoring": false,
+    "accepted_prefix_replay": false,
+    "candidate_admitted": false,
+    "policy_adopted": false,
+    "successor_published": false,
+    "native_L0_L20_invocations": 0,
+    "native_L0_L23_invocations": 0,
+    "hardware_invocations": 0,
+    "simulation_invocations": 0,
+    "original_prefix_replay": false,
+    "native_L22_P0_invocations": 0,
+    "gpu_invocations": 0,
+    "dispatch_guard_calls": 0,
+    "evidence_writes": 0,
+    "execution_authorized": false,
+    "strict_FP16_state_claim": false,
+    "new_token_claim": false,
+    "full_model_claim": false
+  },
+  "expected_tests": 28,
+  "command_sidecar": "PYTHONPATH=/home/argustest/ace3-argus PYTHONDONTWRITEBYTECODE=1 /home/argustest/miniconda3/bin/python -B -m ace3.model.candidates.diagnose_q24_s16_l22_from_l21_coordinate62_suffix_preflight_v1 --check",
+  "normal_host_review": "REQUIRED",
+  "claim_boundary": "Preparation only; no L22 numerical result. Nine raw failed L21 parents are counterfactual inputs, never admission parents. The old sparse-cut closure cannot certify, substitute for or propagate these nine states. No L0-L21, accepted-prefix or original-prefix replay; no native execution, RTL, hardware, GPU or simulation; no evidence overwrite. Q24 residual state is wider than FP16; native G128 asymmetric packed INT4, GEMM nibble ordering, no qzero plus-one, FP16 scales/operator boundaries/KV and S16 RTZ remain unchanged. Thresholds and source/operand/state/KV/lineage gates remain mandatory. No strict-FP16-state W4A16, new-token or full-model admission claim. A future executor requires separate review and current source/identity/model/account/budget/access/concurrency preflights."
+}

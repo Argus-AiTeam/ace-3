@@ -1,0 +1,58 @@
+{
+  "schema_version": 1,
+  "contract_id": "ace3-repair8-lm-head-position2-preparation-v1",
+  "accepted_repair8": {
+    "result_sha256": "da2c696b9701e86944ddfb22a28bb51f99f64a55bbe6e325aa58da7bc7d420c9",
+    "terminal_hidden_sha256": "3e99fe3e1d30e6350d32f3ef45311f4a81114b27c13a5e01ef04f1a1ca0bf429",
+    "source_position": 1,
+    "mutation": "forbidden"
+  },
+  "model_binding": {
+    "repository": "Qwen/Qwen2.5-0.5B-Instruct-AWQ",
+    "revision": "db09cd27ead7fee40cdee309693cf83601b9c899",
+    "checkpoint_sha256": "c50d807b7bed7ff314308972e0f4bcf4e5a70bc60ad88fc7df53940831ed0c1b",
+    "tied_weight_sha256": "d74257dc547b48be5ae7b93f1c9af072c0c42dbbb85503078e25c59cd09e68d0",
+    "tokenizer_sha256": "c0382117ea329cdf097041132f6d735924b697924d6f6fc3945713e96ce87539",
+    "tokenizer_config_sha256": "5b5d4f65d0acd3b2d56a35b56d374a36cbc1c8fa5cf3b3febbbfabf22f359583"
+  },
+  "lm_head": {
+    "hidden_size": 896,
+    "vocab_size": 151936,
+    "top_k": 10,
+    "rounding": "exact FP16 products accumulated without intermediate rounding; one binary16 RNE rounding per logit",
+    "ordering": "descending rounded finite FP16 value, then ascending token ID",
+    "independent_reference": "PyTorch CPU float64 over authenticated FP16 tied weights and the FP16 public hidden boundary",
+    "required_integer_mismatches": 0,
+    "required_receipt": [
+      "selected_token_id",
+      "selected_logit_f16_bits",
+      "top_k",
+      "accepted_logits",
+      "accepted_weights",
+      "natural_terminal"
+    ]
+  },
+  "position2": {
+    "target_position": 2,
+    "state_count": 24,
+    "state_source": "accepted repair8 execution/states/layer00..layer23/position002",
+    "selected_token_source": "accepted official lm_head receipt matching the independent full-vocabulary oracle",
+    "cached_or_scripted_token": "forbidden"
+  },
+  "authority": {
+    "package_acceptance_is_execution_authority": false,
+    "official_lm_head_cardinality": 1,
+    "position2_cardinality": 1,
+    "finite_timeout_required": true,
+    "independent_review_required": true
+  },
+  "claim_boundary": {
+    "dialogue": "not claimed",
+    "synthesis": "not run",
+    "ppa": "not measured",
+    "fpga": "not run",
+    "latency": "not measured",
+    "throughput": "not measured",
+    "broad_generation_quality": "not claimed"
+  }
+}

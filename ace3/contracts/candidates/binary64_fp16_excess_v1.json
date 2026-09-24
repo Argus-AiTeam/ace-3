@@ -1,0 +1,52 @@
+{
+  "profile_id": "ace3-w4a16-layer-final-binary64-fp16-excess-v1",
+  "version": 1,
+  "status": "prospective_candidate_pending_independent_host_review",
+  "boundary": "layer-final-output",
+  "precision": "W4A16",
+  "reference_policy": "legacy-binary64-AWQ-fully-independent-propagation",
+  "reference_inputs": "Original token embeddings and independently propagated binary64 hidden/K/V only; never FP16-cast history, actual-operand re-anchoring, or software activation injection.",
+  "public_interface": {
+    "python": "ace3.model.candidates.binary64_fp16_excess_v1.evaluate_layer_final_output(*, actual_fp16_bits: int, reference_binary64_hex: str) -> dict",
+    "actual_fp16_bits": "A Python int, not bool, in [0, 65535], encoding one finite IEEE binary16 value. No masking, truncation, numeric-value conversion, or compatibility aliases.",
+    "reference_binary64_hex": "The canonical float.hex() representation of a finite IEEE binary64 value; conversion must round-trip to the identical string. Decimal strings, noncanonical hexadecimal strings, NaN and infinity are rejected.",
+    "rtl": "No RTL, module, port, parameter, clock, reset, state ABI, or simulator interface changes."
+  },
+  "definition": {
+    "q": "min(abs(h-r)) over all finite IEEE binary16 h",
+    "actual_error": "abs(a-r)",
+    "excess_error": "actual_error-q",
+    "acceptance": "valid finite operands AND abs(r) <= 65504 AND excess_error <= 1/8",
+    "excess_budget": "1/8",
+    "budget_configurable": false,
+    "nearest": "Search adjacent nonnegative binary16 magnitudes using exact arithmetic, choose minimum error, resolve equal errors by even significand low bit, then restore the reference sign.",
+    "zero": "Both signed zeros have exact value zero. The selected nearest zero retains the reference sign, including negative values rounding to zero; actual zero sign does not change any error.",
+    "subnormals": "Gradual underflow; all binary16 subnormals participate. No flush-to-zero.",
+    "overflow": "Reject every reference outside [-65504, 65504], even if nearest-rounding could produce a finite endpoint. Never saturate or excuse overflow.",
+    "arithmetic": "Decode FP16 exactly with the existing integer bit oracle and binary64 with Fraction.from_float. Compute distances and the inclusive comparison as exact rational arithmetic. Report q, actual_error and excess_error as exact Fraction strings, not rounded decimal or binary64 differences.",
+    "negative_excess": "Raise EvaluatorDefect; never clamp to zero.",
+    "invalid_operands": "Raise InvalidOperand with an explicit reason. CLI exits 2, emits status FAIL and does not report numerical metrics.",
+    "numerical_rejection": "Valid finite excess above 1/8 returns accepted=false; CLI exits 1."
+  },
+  "result_binding": {
+    "each_scalar": "Profile ID/version, precision, boundary, reference policy, exact reference hex, actual FP16 bits, nearest FP16 bits, evaluator/specification/bit-oracle paths and SHA256 content bindings.",
+    "claim_scope": "Scalar output-error assessment only. Source binding is not authentication of a model trajectory.",
+    "retrospective_admission": "Not implemented or authorized before genuine independent Host Reviewer acceptance. A later retained-output adapter must authenticate source/state/binary/input/output lineage and reference-policy bindings without an RTL replay for comparison metadata.",
+    "runtime_adoption": "Not implemented. Requires reviewed profile plus every unchanged gate and compatible source/state/binary bindings."
+  },
+  "non_regression": {
+    "legacy_binary64": "Keep the existing absolute_error <= 0.125 evaluator, defaults, and all original FAIL files unchanged.",
+    "fp16_interstage": "finite AND (abs_error <= 0.125 OR (relative_error < 0.001 AND ordered_FP16_ULP <= 1)); denominator max(abs(reference), 2^-14), unchanged.",
+    "other_gates": "Exact own-input checks and the separately bound head/logit contract remain unchanged.",
+    "excluded": ["logits", "final-RMSNorm/head boundary", "internal stages", "other dtypes", "other precision modes", "model-fidelity certification", "full-driver certification", "token/dialogue certification"]
+  },
+  "general_cases": {
+    "generator": "ace3/model/tests/test_binary64_fp16_excess_v1.py:general_cases",
+    "identities": "Deterministic signed gap endpoints, quarter points and ties across subnormals and every finite normal binade; fixed-seed additional gaps; budget boundary and adjacent binary64 values; binary64 underflow-scale values and representability limits.",
+    "oracle": "Independent Python struct IEEE binary16 conversion/decoding with exact rational error calculations, plus explicit inclusive-budget expectations.",
+    "additional": "All finite binary16 decoding patterns, invalid encodings, nonfinite inputs, overflow, evaluator-defect injection, actual archived legacy function regression, CLI behavior, and five reference-only witness lower-bound regressions.",
+    "witness_scope": "The five retained reference values are supplemental fixtures, not trajectory evaluations; original actual RTL values are not admitted.",
+    "freeze": "Before the first run, freeze this specification, evaluator, helper, tests, full generated case identities/inputs, witness fixtures, command, Python and NumPy versions, and preservation-target content bindings under a fresh ignored attempt directory.",
+    "attempt_policy": "One validation run per frozen attempt; never overwrite attempts or original failures. Record any repair as a new attempt with failure taxonomy, root-cause hypothesis and regression."
+  }
+}

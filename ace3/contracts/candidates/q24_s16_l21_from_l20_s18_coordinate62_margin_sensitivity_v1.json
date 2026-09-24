@@ -1,0 +1,86 @@
+{
+  "diagnostic_id": "ace3-q24-s16-l21-from-l20-s18-coordinate62-margin-sensitivity-v1",
+  "version": 1,
+  "cwd": "/home/argustest/ace3-argus",
+  "controls": ["frozen_inherited", "frozen_inherited_o", "frozen_inherited_down", "frozen_inherited_o_down", "scratch", "scratch_down", "mapped62", "mapped_all", "inherited_native"],
+  "node": [21, 0, 18],
+  "coordinate": 62,
+  "coordinates_per_control": 896,
+  "policy_id": "ace3-w4a16-local-operator-global-binary64-authority-v3",
+  "profile_id": "ace3-w4a16-layer-final-binary64-fp16-excess-v1",
+  "reference_policy": "legacy-binary64-AWQ-fully-independent-propagation",
+  "excess_budget": "1/8",
+  "local_threshold": "finite AND (absolute_error <= 0.125 OR (relative_error < 0.001 AND ordered_FP16_ULP <= 1)); denominator max(abs(reference), 2^-14)",
+  "evidence": {
+    "census_source": {
+      "path": "/home/argustest/ace3-argus/ace3/model/candidates/diagnose_q24_s16_l21_from_l20_s18_failure_census_v1.py",
+      "sha256": "a8faef5d1deb15803357bc952b0bc4c177b23e044a6a30299d5f29d79599c2f7"
+    },
+    "census_contract": {
+      "path": "/home/argustest/ace3-argus/ace3/contracts/candidates/q24_s16_l21_from_l20_s18_failure_census_v1.json",
+      "sha256": "21e7d24a96065c1f01efa750e8f368e22e0d9fa5430ed65c7374c44467300138"
+    },
+    "census_test": {
+      "path": "/home/argustest/ace3-argus/tests/test_q24_s16_l21_from_l20_s18_failure_census_v1.py",
+      "sha256": "1e2fb7d4f6ac3cfb4bfdb88408468056cca3d9989c2bc5e38b7e3e184421c34f"
+    },
+    "census_review": {
+      "path": "/home/argustest/.argus-skill-ace3/projects/s-62150b05/handoffs/ecf478e49bef/round-0001.json",
+      "sha256": "4ccd955f1460ad654f3ce190ec4e9ac28605923f8591e6dfa01ec2ad7dd7defc"
+    },
+    "q24_oracle": {
+      "path": "/home/argustest/ace3-argus/ace3/model/candidates/residual_exact_grid_q24_reference_v1.py",
+      "sha256": "dbbe2ac57bf8f6dd0cdc6cece202eeb52f0643bfa07ed542dca0d8c4b58a81e5"
+    }
+  },
+  "census_terminal_inputs": {
+    "review": {
+      "path": "/home/argustest/.argus-skill-ace3/projects/s-62150b05/handoffs/e0ffefcd1586/round-0003.json",
+      "sha256": "d8a961a4eb0ea09526febb557b2ddc0f74d1ff4094cd2b2b2101237b023cf12f"
+    },
+    "result": {
+      "path": "/home/argustest/ace3-argus/build/q24_s16_l21_from_l20_coordinate62_suffix_v1_fresh_e0ffefcd1586_attempt001/result.json",
+      "bytes": 723870,
+      "sha256": "32fe8fa45a34770e326ba3763fd032a227a33b621eda7732fa9b45ff7b91353c"
+    },
+    "validation": {
+      "path": "/home/argustest/ace3-argus/build/q24_s16_l21_from_l20_coordinate62_suffix_v1_fresh_e0ffefcd1586_attempt001/validation.json",
+      "bytes": 745760,
+      "sha256": "7ee2d13f60eaffbecd5905a81a2cfa53cc0e9babf123a95bec46dd1d8ed27102"
+    }
+  },
+  "interface": ["--out"],
+  "command": "PYTHONPATH=/home/argustest/ace3-argus PYTHONDONTWRITEBYTECODE=1 /home/argustest/miniconda3/bin/python -B -m ace3.model.candidates.diagnose_q24_s16_l21_from_l20_s18_coordinate62_margin_sensitivity_v1 --out build/q24_s16_l21_from_l20_s18_coordinate62_margin_sensitivity_v1_attempt001",
+  "expected_tests": 24,
+  "output_scope": "build/q24_s16_l21_from_l20_s18_coordinate62_margin_sensitivity_v1_attempt* (absent direct child only)",
+  "flags": {
+    "native_layer_invocations": 0,
+    "decoder_invocations": 0,
+    "prefix_invocations": 0,
+    "admission_invocations": 0,
+    "reference_invocations": 0,
+    "rtl_invocations": 0,
+    "gpu_invocations": 0,
+    "hardware_invocations": 0,
+    "simulation_invocations": 0,
+    "suffix_invocations": 0,
+    "reference_recomputation": false,
+    "reference_reanchoring": false,
+    "original_prefix_replay": false,
+    "accepted_prefix_replay": false,
+    "candidate_admitted": false,
+    "policy_adopted": false,
+    "successor_published": false,
+    "state_archive_published": false
+  },
+  "authentication_scope": "Pin the reviewed census source/contract/tests and terminal independent review; reuse only its read-only authenticator for its terminal L21 result/validation/review, 37 artifacts, source/history, nine controls and original L20/L21 references. The census is stdout-only and has no standalone result.json/validation.json; do not replay its command or reconstruct a lost stdout capture. The 2593 ancestral binding records remain pinned, not exhaustively reread or replayed. Source/operand/state/KV/RTZ gates are authenticated retained facts.",
+  "classification": {
+    "SUPPORTED": "All nine minimal cuts pass, one-unit-less fails, only coordinate 62 changes, and common reference/cell/target/margin signatures agree.",
+    "REJECTED": "Authenticated arithmetic, minimality, full-vector or common-mechanism checks fail; stop at the first inconsistency.",
+    "UNKNOWN": "A required identity, retained binding or schema is unavailable/mismatched; no scalar diagnosis is admitted."
+  },
+  "control_agreement": "Different retained Q24 integers and cut sizes are allowed; reference, baseline word/excess, nearest word, passing cells and adjusted integer must agree.",
+  "termination": "One diagnostic run then normal independent Reviewer; no successor.",
+  "normal_host_review": "REQUIRED",
+  "claim_boundary": "Narrow L21 coordinate-62 scalar boundary sensitivity only, not a root cause or native repair. Q24 residual state is wider than FP16. Native G128 asymmetric packed INT4, GEMM nibble ordering, no qzero plus-one, FP16 scales/operator boundaries/KV and S16 RTZ remain unchanged. No strict-FP16-state W4A16, new-token or full-model admission. No producer, prefix, admission, reference or successor execution. Independent Host Reviewer reproduction required."
+}

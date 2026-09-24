@@ -58,8 +58,8 @@
     "emission_order": "The expected stream follows the token-engine state machine: norm1, Q, rotated Q in Qwen half-split pair order (p then p+32), K, V, rotated K in the same half-split pair order, alternating cache K/V writes, then per query-head score rows, probability rows, value dimensions, O, residual1, norm2, gate, up, SiLU, down, and final residual."
   },
   "numerical_order": {
-    "projection": "native AWQ G128 group accumulators sum in signed Q53.48; every complete projection is rounded once to binary16",
-    "bias": "Q, K, and V each add their FP16 checkpoint bias only after that complete projection rounding",
+    "projection": "native AWQ G128 group accumulators sum in signed Q53.48; the accumulator output remains the exact pre-bias dot",
+    "bias": "bias_policy[1].p_bias selects SINGLE_ROUND_BIAS=1 for Q/K: exact dot plus FP16 bias, then one FP16 RNE with IEEE signed underflow zero and overflow. bias_policy[0].p_bias selects SINGLE_ROUND_BIAS=0 for V: legacy dot-round-then-bias. K is a layer08 causal-replay repair candidate pending fresh actual-output-fed traversal and Host Reviewer acceptance. Shared projection-engine default, bias-disabled O/gate/up/down, public ports/parameters and trace IDs remain unchanged.",
     "rope": "Qwen2 half-split RoPE uses binary16 multiply/multiply/add",
     "attention": "causal 14:2 GQA uses the accepted fixed-point score, softmax, and value operators over retained FP16 cache rows",
     "mlp": "rational integer SiLU gate uses the accepted adaptation oracle"

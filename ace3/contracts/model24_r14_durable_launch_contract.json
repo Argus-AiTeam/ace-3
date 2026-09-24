@@ -1,0 +1,124 @@
+{
+  "schema_version": 1,
+  "kind": "ace3_model24_r14_durable_launch_contract",
+  "validation_modes": [
+    "package",
+    "review",
+    "pre-submit",
+    "launch",
+    "post-terminal"
+  ],
+  "review": {
+    "canonical_filename": "review.json",
+    "exclusive_creation": true,
+    "required_verdicts": [
+      "ACCEPT",
+      "REJECT"
+    ],
+    "required_reviewer_level": "L2",
+    "required_producer_role": "reviewer",
+    "required_active_role": "reviewer",
+    "required_independent": true,
+    "required_preparation_participation": false,
+    "required_bound_hashes": [
+      "package_manifest_sha256",
+      "package_seal_sha256",
+      "review_request_sha256",
+      "lifecycle_sha256",
+      "validator_sha256",
+      "launch_contract_sha256",
+      "source_tree_sha256",
+      "r12_terminal_evidence_sha256",
+      "r13_failure_evidence_sha256"
+    ],
+    "required_positive_fixtures": [
+      "package",
+      "review",
+      "pre-submit",
+      "launch",
+      "post-terminal"
+    ],
+    "required_negative_cases": [
+      "reviewer-producer-role",
+      "reviewer-active-role",
+      "reviewer-level",
+      "reviewer-preparation-participation",
+      "reviewer-identity",
+      "reviewer-test-results",
+      "provenance-hash",
+      "authority-binding",
+      "retry",
+      "replay",
+      "resume",
+      "watcher",
+      "wrong-argv",
+      "launch-contract",
+      "wrong-receipt-path",
+      "wrong-stdout-path",
+      "wrong-stderr-path",
+      "receipt-replay",
+      "pre-existing-state",
+      "package-mutation",
+      "source-mutation",
+      "conflated-registry-child-roots",
+      "wrong-submitter-cwd",
+      "temporary-terminal-root",
+      "pre-launch-receipt-dependence",
+      "foreign-terminal-artifact",
+      "missing-terminal-artifact",
+      "duplicate-payload-invocation",
+      "canonical-artifact-from-inert-fixture",
+      "absent-simulation-directory",
+      "absent-payload-output-directory",
+      "foreign-payload-directory",
+      "pre-existing-payload-directory",
+      "symlinked-payload-directory",
+      "payload-directory-outside-output-root",
+      "partial-payload-directory-creation",
+      "foreign-output-root-entry"
+    ]
+  },
+  "authority": {
+    "package_acceptance_is_execution_authority": false,
+    "manager_exactly_once_directive": true,
+    "execution_cardinality": 1,
+    "binds_submission_root_child_cwd_and_command": true,
+    "consumed_exclusively_by_child": true,
+    "binds_simulation_and_payload_output_directories": true
+  },
+  "durable_runner": {
+    "python": "/home/argustest/argustest2/argus-skill-latest/.venv/bin/python",
+    "module": "argus_skill.tools.subagent",
+    "mode": "direct",
+    "timeout_seconds": 18000,
+    "registry_directory": ".argus_subagents",
+    "registry_location_basis": "submitter_cwd",
+    "child_location_basis": "--cwd",
+    "receipt_is_post_submit_evidence": true,
+    "prelaunch_receipt_dependency": false
+  },
+  "terminal_evidence": {
+    "root_must_be_permanent": true,
+    "root_must_be_outside_child_cwd": true,
+    "manifest_filename": "manifest.json",
+    "receipt_and_logs_derived_from_registry_root": true,
+    "exclusive_manifest_creation": true
+  },
+  "launch": {
+    "required_payload_mode": "fresh",
+    "forbidden_semantics": [
+      "retry",
+      "replay",
+      "resume",
+      "watcher"
+    ],
+    "validate_before_authority_consumption": true,
+    "validate_before_output_creation": true,
+    "output_exclusive_creation": true,
+    "lifecycle_creates_payload_directories": true,
+    "payload_directory_collision_rejection": true,
+    "payload_directories_fsynced_before_invocation": true,
+    "strict_post_creation_resolution": true,
+    "payload_cardinality": 1
+  }
+}

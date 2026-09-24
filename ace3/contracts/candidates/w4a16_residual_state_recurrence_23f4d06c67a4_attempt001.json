@@ -1,0 +1,186 @@
+{
+  "spec_id": "w4a16-residual-state-recurrence-23f4d06c67a4-attempt001",
+  "artifact_kind": "non_executing_engineer_adjudication",
+  "decision": "reject_persistent_compensation_under_current_contract",
+  "only_current_option": "retain_contract_and_stop",
+  "independent_review": "REQUIRED_PENDING_NORMAL_HOST_REVIEWER",
+  "scope": "Residual arithmetic/state semantics only; no candidate implementation, numerical experiment, source promotion or execution authorization.",
+  "rationale_document": "ace3/model/candidates/w4a16_residual_state_spec_23f4d06c67a4_attempt001.md",
+  "execution_authorized": {
+    "software_candidate": false,
+    "rtl_edit": false,
+    "rtl_compile_or_simulation": false,
+    "reference_recomputation": false,
+    "accepted_ancestor_replay": false,
+    "failed_hidden_or_state_forwarding": false,
+    "l10_l23": false,
+    "tail_or_token": false
+  },
+  "unchanged_profile": {
+    "model": "Qwen/Qwen2.5-0.5B-Instruct-AWQ",
+    "precision": "W4A16",
+    "weights": "G128 asymmetric packed INT4; native GEMM nibble order [0,4,1,5,2,6,3,7]; qzero adjustment 0; FP16 scales.",
+    "activation_dtype": "binary16",
+    "kv_dtype": "binary16",
+    "policy_id": "ace3-w4a16-local-operator-global-binary64-authority-v3",
+    "policy_source": "ace3/contracts/candidates/decoder_gate_policy_v3.json",
+    "numerical_profile": "ace3-w4a16-layer-final-binary64-fp16-excess-v1",
+    "local_S0_S17": "finite AND (abs_error <= 1/8 OR (relative_error < 1/1000 AND ordered_FP16_ULP <= 1)); denominator=max(abs(independent local FP16 reference),2^-14).",
+    "local_operand_authority": "Authenticated actual producer data and independently authenticated canonical operator/control metadata; local agreement never excuses wrong residual ownership, cache identity or unsupported arithmetic semantics.",
+    "global_S18": "Original independently propagated binary64 r; q(r)=min over finite binary16 h of abs(h-r); exact excess=abs(actual-r)-q(r) <= 1/8. Finite operands and abs(r)<=65504 mandatory. No clamping, re-anchoring or candidate-derived global reference.",
+    "legacy": "Preserve legacy/v2 policies, defaults and all FAILs. Whole-FP16 S0-S18 trajectory comparisons remain truthful v3 diagnostics, not replacement mandatory gates.",
+    "later_modes": "No W8A16, BF16/FP16 or other mode is implemented or admitted. Future modes require explicit numerical and state contracts; this rejection is not a universal restriction on their interfaces."
+  },
+  "retained_evidence": {
+    "accepted_prefix": {
+      "scope": "Actual P0/L0-L8 in the current single-round/v3 lineage; not the older full-model tail lineage.",
+      "last_admission": "build/l6_l8_continuation_8d9993c9e84c_attempt001/runtime/layer08/admission/result.json",
+      "binding_authority": "The retained L9 manifest parent binding and the genuine prerequisite reviews; no fresh prefix admission or replay."
+    },
+    "l9": {
+      "freeze": "build/l9_l23_continuation_10d99fb0a67e_attempt002/freeze.json",
+      "manifest": "build/l9_l23_continuation_10d99fb0a67e_attempt002/runtime/layer09/manifest.json",
+      "admission": "build/l9_l23_continuation_10d99fb0a67e_attempt002/runtime/layer09/admission/result.json",
+      "authenticated_receipt": "build/l9_execution_gate_1a3ea71dc640_attempt001/validation.log",
+      "status": "FAIL",
+      "evidence_kind": "actual_rtl_numerical_evaluation",
+      "mandatory_local_passes": 18,
+      "mandatory_local_coordinates": 22428,
+      "mandatory_global_coordinates": 896,
+      "mandatory_global_failures": 1,
+      "witness_diagnostic_only": {
+        "node": [9, 0, 18],
+        "index": 62,
+        "actual_fp16_bits": "662d",
+        "nearest_fp16_bits": "662c",
+        "reference_binary64_hex": "0x1.8b0476aae57f7p+10",
+        "excess_error": "1892290766857/2199023255552",
+        "operand_bits": {"input_hidden": "662c", "stage11": "b52b", "stage17": "3b1d"},
+        "exact_sum": "6473999/4096",
+        "interpretation": "Correct single RNE16 of these actual inputs is 1581. This is not a broken final-adder diagnosis."
+      },
+      "saved_state": {
+        "idle": true,
+        "layer": 9,
+        "valid_entries": 128,
+        "state_restore_or_eval_performed_by_retained_admission": false,
+        "usable_as_continuation_parent": false
+      }
+    },
+    "canonical_suffix_control": {
+      "result": "build/l9_retained_rounding_12d663db33d6_attempt002/result.json",
+      "review": "/home/argustest/.argus-skill-ace3/projects/s-62150b05/handoffs/dd6ba8da8fff/round-0001.json",
+      "reviewed_stop": "/home/argustest/.argus-skill-ace3/projects/s-62150b05/handoffs/1a3ea71dc640/round-0001.json",
+      "primitive_difference_counts": {"0": 4, "3": 47, "13": 3, "16": 27},
+      "arms": ["canonical_s16_suffix", "canonical_s13_suffix", "canonical_s3_suffix", "canonical_s0_suffix"],
+      "retained_conclusion": "All four complete canonical value suffixes still produce 662d at the retained witness and fail the unchanged global gate. No demonstrated surgical repair.",
+      "limit": "Nested same-input software controls, not isolated RTL patches, unique upstream localization or a proof that every locally admissible implementation fails. No rerun in this mission."
+    }
+  },
+  "current_general_recurrence": {
+    "domain": "Every valid layer l, token position p and hidden coordinate i; H, O and D are authenticated finite binary16 producer values.",
+    "S12": "R[l,p,i]=RNE16(value(H[l,p,i])+value(O[l,p,i])).",
+    "S13_S17": "The MLP consumes actual binary16 R at S13, through the unchanged norm2/gate/up/SiLU/down operators, producing binary16 D. It does not consume the unrounded H+O.",
+    "S18": "H[l+1,p,i]=RNE16(value(H[l,p,i])+value(O[l,p,i])+value(D[l,p,i])) with an exact three-term sum and one final rounding.",
+    "intralayer_equivalence": "With e=(value(H)+value(O))-value(R), exact R+e+D equals H+O+D. Computing that transient e is only a refactoring of the already implemented single-round final residual, not a new repair.",
+    "cross_layer_state": "Only the binary16 hidden vector crosses the layer boundary. There is no admitted residual-error carry.",
+    "cross_position_state": "Own-layer FP16 K/V plus validity, context and control state persist. Residual error is not an autoregressive state variable shared between token positions.",
+    "implementation_source": "build/single_round_residual_rtl_execution_fb06353c5f53_attempt001/source/ace3_fp16_single_round_residual_core.sv",
+    "exact_accumulation": "The frozen core decodes each finite FP16 operand to signed 41-bit Q24, sign-extends to signed 43-bit Q24, adds exactly, then applies the binary16 RNE converter. This transient internal width does not widen the activation ABI."
+  },
+  "rejected_extension": {
+    "kind": "Mathematical counterproposal only; no implementation or usable state ABI is defined.",
+    "state": "Additional exact dyadic C[l,p,i], owned by a single candidate arithmetic history and token position, never by a witness, cache slot alone or reference output.",
+    "root": "C[0,p,i]=0 only at an authenticated FP16 model activation root. This is not a license to introduce C=0 at an arbitrary retained layer boundary and claim compensated-prefix equivalence.",
+    "full_residual_variant": [
+      "T=value(H)+C+value(O)",
+      "R=RNE16(T); existing FP16-boundary MLP produces D from R",
+      "U=T+value(D); H_next=RNE16(U); C_next=U-value(H_next)"
+    ],
+    "final_only_variant": [
+      "Keep S12 and its MLP inputs unchanged",
+      "U=value(H)+C+value(O)+value(D); H_next=RNE16(U); C_next=U-value(H_next)"
+    ],
+    "not_a_global_reference": "C accounts only for this candidate's own residual rounding. It is not original_binary64_hidden-H and cannot reconstruct primitive or nonlinear global-trajectory errors.",
+    "finite_rounding": "All named FP16 operands must be finite/known. RNE16 has ties-to-even and gradual underflow; any overflow/invalid state rejects the transaction. Exact mathematical C is not silently rounded, saturated or assigned an implementation width.",
+    "reset_clear": "A hypothetical extension must invalidate all carries with reset/clear and initialize them only at a real root, not retain them across unrelated positions, prompts or arithmetic lineages.",
+    "restore": "Every live carry would have to survive a compatible same-history save/restore exactly, including ownership and validity. Legacy snapshots lack an admitted carry field and cannot be migrated by invented zeros, reference differences or scratch-memory reinterpretation.",
+    "rejection_reasons": [
+      "C discarded at every layer boundary reduces the final-only variant to the existing exact single-round recurrence and leaves the retained L9 rounding unchanged.",
+      "Nonzero C used at S12 changes the frozen canonical residual operand semantics; passing an error tolerance is not authorization to change that operator.",
+      "Persistent C used even only at S18 makes (H,C), rather than H alone, the residual activation state. Multiple FP16 words or host-side compensation do not avoid this effective state/profile extension.",
+      "The exact frozen public top has no residual-carry input/output and the generated simulator save ABI provides no admitted portable cross-layer carry. Reusing unused ports, encodings or scratch state is not compatibility.",
+      "Feeding H+C to RMSNorm/Q/K/V is a further activation-boundary change, not the existing FP16-input operator.",
+      "Selecting an initial C, bias, rounding mode or output from the known witness/global answer is forbidden. A general alternative with different rounding is still a new arithmetic policy requiring separate justification."
+    ],
+    "claim_limit": "Rejection under the current frozen W4A16 arithmetic/state contract, not proof that compensated arithmetic is impossible in another explicitly reviewed profile or that all principled W4A16 implementation repairs fail."
+  },
+  "affected_cone_and_reuse": {
+    "current_decision": "No source, arithmetic, cache or state is changed; accepted L0-L8 and the failed L9 cone remain immutable. No affected cone is authorized to run.",
+    "hypothetical_global_carry": "First additional state is produced at L0/P0/S18; accepted FP16-only prefix receipts do not admit this new carry history. With zero root carry, L0 numerical outputs can remain identical and are not automatically replayed.",
+    "hypothetical_first_numeric_changes": {
+      "full_residual_variant": "First possible carry use is L1/P0/S12, affecting S13-S18 and subsequent layers. Its own P0 Q/K/V precede this change.",
+      "final_only_variant": "First possible numerical change is L1/P0/S18; next-layer RMSNorm/Q/K/V and their descendant hidden/cache histories are affected.",
+      "effective_hidden_to_nonlinear_variant": "Using H+C as a nonlinear input first potentially changes L1/P0/S0 and that layer's Q/K/V. This is separately rejected activation widening.",
+      "unrounded_residual_to_norm2_variant": "Bypassing the S12 FP16 boundary first affects L0/P0/S13 even without cross-layer carry; it violates the frozen S13 input semantics."
+    },
+    "reuse_boundary": "Reuse authenticated outputs only where producer inputs, arithmetic, controls, finite/rounding rules and required state are unchanged. Byte-identical FP16 H does not establish carry identity. A new global recurrence cannot simply attach to accepted L8 using an invented C9.",
+    "local_restart_at_l9": "For a final-only extension with C9=0, retained H/O/D give exactly the known FAIL; it does not recover any earlier rounding history. Nonzero C9 has no admitted source in the retained L8 interface.",
+    "kv_lineage": "K/V is owned by layer, slot, position, canonical weights/RoPE and its actual hidden producer history. A same-layer residual-only change after K/V production need not change that P0 K/V, but later-layer K/V and all reachable later-position histories require separate compatibility analysis.",
+    "snapshot_lineage": "Opaque Verilator snapshots bind the generated class layout, compiled parameters, binary/source closure and complete live state. Matching module ports, FP16 dtype or dimensions is insufficient for restoration.",
+    "historical_tail": "The older 24-layer/token-358 tail and Q-only fixed-history candidate evidence are separate lineages, not carry initializers or downstream states for this prefix.",
+    "future_proof_requirement": "An independently justified changed cone must identify the first changed producer and every reachable hidden/K/V dependency; preserve and reuse genuinely unaffected accepted data rather than replaying ancestors for metadata."
+  },
+  "public_interface_and_control": {
+    "exact_signature_authority": {
+      "path": "build/l9_l23_continuation_10d99fb0a67e_attempt002/freeze.json",
+      "json_pointer": "/public_contract"
+    },
+    "module": "ace3_decoder_layer0_token_engine",
+    "declared_parameters": {"LAYER_INDEX": "integer, default 0", "ACCURATE_SILU": "integer, default (LAYER_INDEX >= 3)"},
+    "retained_l9_parameters": {"LAYER_INDEX": 9, "ACCURATE_SILU": 1},
+    "ports": "The entire exact frozen signature is normative by reference, not a guessed alias list. In particular load_f16_i, trace_f16_o and final_f16_o are 16-bit; no carry channel or hardware restore port exists.",
+    "changed_modules_ports_parameters": [],
+    "clock_reset": "Rising-edge transfers; rst_ni is asynchronous active-low, clear_i synchronous active-high. Reset/clear return control to idle, invalidate activation/norm loads, zero context lengths, clear pending trace/done and invalidate cache valid bits. Cache payload RAM need not be physically zeroed; invalid entries are not valid state.",
+    "rounding_zero_finite": "Preserve exact residual accumulation and binary16 RNE ties-to-even/gradual underflow. At S18 an exactly zero sum is -0 only when all three operands are -0; otherwise +0. Nonfinite operands or FP16 overflow assert the core invalid indication; its placeholder output is not an admissible finite result. X/Z in participating data/control is rejected under the existing top/harness checks, never coerced into valid zero.",
+    "handshake": "Accept inputs and outputs only on valid/ready clock edges; hold pending payload/index/last under backpressure; never update arithmetic or persistent ownership merely because valid is held. Preserve coupled final/trace and done sequencing and existing fault behavior.",
+    "reset_is_not_restore": "P0 has empty own-layer prior KV and must not restore a predecessor snapshot. Later-position state must be an independently admitted compatible own-layer snapshot, restored idle with its actual context/validity. Clearing it would destroy the required context.",
+    "retained_compile_receipt": "build/l9_l23_continuation_10d99fb0a67e_attempt002/public_contract_compile.process.json",
+    "compile_boundary": "No compilation is performed for this non-executing rejection. Before a separately admitted first candidate attempt, freeze and compile the exact top/module/ports/parameters without aliases; compile success alone is not numerical correctness or ABI compatibility."
+  },
+  "forbidden_executions": [
+    "No software candidate, RTL edit, capture, replay, restore/eval or L10-L23 launch from this artifact.",
+    "No use of failed L9 output/snapshot as a continuation parent, even though its runtime/state checks passed.",
+    "No reference hidden/Q/K/V, local expected output or binary64-derived correction injected into execution.",
+    "No witness-conditioned bias, rounding, coordinate/layer exceptions, selected preferred outputs or calibration against the known answer.",
+    "No threshold/reference policy weakening, activation/KV widening, silent ABI migration or arithmetic/state lineage splice.",
+    "No changed global reference inputs; retain all original diagnostics, FAILs, freezes, sources and genuine reviews.",
+    "No token/full-model/dialogue, synthesis, PPA, FPGA, board, bitstream, deployed-hardware, commit or publication claim."
+  ],
+  "review_prerequisites": {
+    "before_any_new_work": [
+      "Normal independent Host Reviewer must assess this scoped rejection against the actual frozen recurrence, public signature and reviewed retained evidence. Engineer cannot self-approve; historical reviews do not approve this new spec.",
+      "A distinct general candidate requires a separately reviewed mathematical reason and a precise changed-source/operand/state cone, not another unchanged primitive-canonicalization experiment.",
+      "Any arithmetic-boundary, persistent residual-state or ABI extension needs explicit delegated-parent technical disposition and independent review before software candidate construction; this artifact grants none.",
+      "An independent oracle must be specified before candidate execution: canonical model/control authentication, independent implementation, exact rounding/finite rules and unchanged v3/global references. It must not import candidate arithmetic or construct expected values from candidate outputs.",
+      "State ownership, root initialization, cache dependencies, save layout and any reuse argument must be reviewed before restoring or forwarding state. Missing information blocks; no silent defaults.",
+      "Only a subsequently scoped, genuinely reviewed candidate can proceed to software evidence, then reviewed RTL changes/affected-cone execution under unchanged gates. A later numerical failure stops forwarding, regardless of local gate success."
+    ],
+    "future_regressions_not_run": [
+      "General signed residuals, cancellation and all signed-zero combinations; subnormals, normal/binade ties and large/small operands; exact three-term versus accidental double rounding.",
+      "Finite limits, overflow, NaN/Inf, X/Z, invalid count/control, inclusive abs/excess budget and strict relative boundary; no success-shaped placeholder admission.",
+      "Reset/clear during idle and active transactions, backpressure stability, exactly-once consumption, no stale residual/load state, P0 no-restore and later-position own-layer context preservation.",
+      "Restored versus uninterrupted compatible execution, wrong layer/position/slot, missing carry, foreign arithmetic/source/generated ABI, truncated/invalid state and attempted A/B splice rejection.",
+      "All covered coordinates and stages, a real local arithmetic error, global drift despite local correctness, independent canonical metadata and producer identity failures, legacy/v2 preservation.",
+      "Retain the L9 same-input exact sum and four canonical-suffix FAILs as negative controls, never as witness-specific implementation rules; do not rerun them unchanged merely to restamp this spec."
+    ]
+  },
+  "failure_accounting": {
+    "retained_attempt": "l9_l23_continuation_10d99fb0a67e_attempt002",
+    "taxonomy": "mandatory_global_numerical_failure",
+    "root_cause_hypothesis": "Inherited FP16 hidden-state versus original-global trajectory discrepancy persists through the observed L9 residual. Canonical suffix controls rule out the tested same-input primitive corrections as a demonstrated remedy; they do not isolate every upstream cause.",
+    "regression": "Reuse the reviewed exact residual witness and all four complete canonical suffixes without recomputation.",
+    "new_numerical_attempts": 0,
+    "this_spec_result": "Contract-compatibility rejection, not evaluator-no-execution reclassification of the actual L9 FAIL, a new numerical FAIL or an impossibility proof."
+  }
+}

@@ -1,0 +1,110 @@
+{
+  "schema": "ace-public-progress/v1",
+  "project": "ACE3",
+  "snapshot_utc": "2026-09-24T16:50:59Z",
+  "live_state_observed_utc": "2026-09-24T16:58:55Z",
+  "live_state_may_advance": true,
+  "publication": {
+    "equal_mirrors": [
+      "https://github.com/aHappend/ace-3",
+      "https://github.com/Argus-AiTeam/ace-3"
+    ],
+    "branch": "main",
+    "checkpoint_ref": "refs/tags/checkpoint-2026-09-24-source",
+    "checkpoint_commit": null,
+    "checkpoint_commit_resolution": "Set to the exact first publication commit in the final main documentation commit before push.",
+    "required_github_login": "aHappend"
+  },
+  "live_identity_observed": {
+    "daemon_pid": 2216858,
+    "daemon_start_ticks": 199389235,
+    "state_root": "/home/argustest/.argus-skill-ace3/projects/s-62150b05",
+    "workdir": "/home/argustest/ace3-argus",
+    "runtime_source": "/home/argustest/ace3-argus/build/argus-stage11-terminal-replan-ledger-repair-attempt007/candidate",
+    "runtime_release": "0.1.2+5e0e6fe727d4f717",
+    "runtime_source_digest": "5e0e6fe727d4f717edf2287b9c6439e81e76a4179b52db1aee2d1b69611aefe1",
+    "continuous_enabled": false,
+    "continuous_generation": 50,
+    "identity_is_observation_not_launch_instruction": true
+  },
+  "scientific_profile": {
+    "operators_and_kv": "native S16 RTZ INT4/FP16",
+    "residual": "Q24 signed 64-bit scale 2^-24",
+    "not_equivalent_to": "unchanged strict-FP16-state W4A16",
+    "current_science_execution_authorized": false
+  },
+  "accepted_milestones": [
+    {
+      "mission_id": "04c9ee209234",
+      "status": "done",
+      "normal_reviewer_ts": 1790258440.8231308,
+      "native_finished_ts": 1790258464.9972677,
+      "science_executions": 0,
+      "summary": "Accepted current-runtime real-lineage emitter repair over the authenticated 33-file lineage.",
+      "limitations": [
+        "operational current-runtime contract only",
+        "does not qualify the consumer or science",
+        "Python-scoped audit is not OS-wide enforcement"
+      ],
+      "evidence": [
+        {
+          "host_path": "/home/argustest/.argus-skill-ace3/projects/s-62150b05/handoffs/04c9ee209234/round-0001.json",
+          "sha256": "c823ced1f68f7e48c811d1cd77566c93a1673cc002828bd7df4f9481ee0ee9dd",
+          "published": false,
+          "review_status": "done"
+        }
+      ]
+    }
+  ],
+  "rejected_or_failed": [
+    {
+      "mission_id": "dec0e93fccfd",
+      "status": "failed",
+      "summary": "Rejected invented receipt.results lineage schema; preserve unchanged."
+    },
+    {
+      "mission_id": "e2ba4dbc8651",
+      "status": "paused_operator",
+      "summary": "First emitter-to-candidate interface root is unsealed and unretryable after a stale test-contract pin; do not mutate or seal attempt001.",
+      "evidence": {
+        "host_path": "/home/argustest/.argus-skill-ace3/projects/s-62150b05/handoffs/e2ba4dbc8651/round-0002.json",
+        "sha256": "e2c417ee257a3b4572a0688cd8065d5daef1e98aca4bb6a264cdd228861ea7a5",
+        "review_status": "replan_requested"
+      }
+    },
+    {
+      "mission_id": "609b6cad06bc",
+      "status": "failed",
+      "native_finished_ts": 1790267945.5700746,
+      "summary": "Authorized fresh root remains absent; no 293-test prevalidation, sealed contract, or acceptance exists. Disposable prevalidation outside the build root was lawful, but lifecycle nevertheless ended FAILED.",
+      "evidence": {
+        "host_path": "/home/argustest/.argus-skill-ace3/projects/s-62150b05/handoffs/609b6cad06bc/round-0001.json",
+        "sha256": "688c957aeae9684454c38b9ce4e05d456faa138dc56a860405082144d672caba",
+        "review_status": "replan_requested"
+      }
+    }
+  ],
+  "current_unaccepted_source": [
+    {
+      "path": "ace3/model/candidates/diagnose_q24_s16_final_head_final_rmsnorm_unselected_direct_hidden_mlp_stage17_stage11_attention_output_suffix_candidate_v1.py",
+      "sha256": "fc21e660a446d966afc6048c697e7fa17c0da1ebc6d758defaeff2126d78d2a7"
+    },
+    {
+      "path": "tests/test_diagnose_q24_s16_final_head_final_rmsnorm_unselected_direct_hidden_mlp_stage17_stage11_attention_output_suffix_candidate_v1.py",
+      "sha256": "4684ed341ba5f08721f0caeb611a10db920eac9a95b285adb7e53cf90203c03a"
+    },
+    {
+      "path": "ace3/model/stage11_current_runtime_release.py",
+      "sha256": "f1cc2277134e98bd96be321c99d0dee960bd3ca6a5367dfa4ae7ffa61f70f9dc"
+    },
+    {
+      "path": "tests/test_stage11_current_runtime_release.py",
+      "sha256": "822b5c85cc16bf63f5107ccd4c704d041537a4414783b51ef09b22cb4e75c366"
+    }
+  ],
+  "next_lawful_action": "Preserve 609b6cad06bc as terminal FAILED. A normal Manager must create a lawful successor, prevalidate in disposable storage outside the authorized root, clean it, and invoke a newly authorized builder once. Science restoration additionally requires real post-claim Manager issuance, one allowed CPU-only --check, normal Reviewer, and native terminal acceptance.",
+  "public_summary_is_authoritative_receipt": false,
+  "acceptance_rule": "Only original issuer binding, normal Reviewer verdict, and native terminal acceptance count.",
+  "source_snapshot_manifest": "source-manifest-2026-09-24.json",
+  "host_only_inventory": "HOST_ONLY_DEPENDENCIES.md"
+}

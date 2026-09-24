@@ -1,9 +1,6 @@
 .DEFAULT_GOAL := test
 .NOTPARALLEL:
 
-FINAL_RMSNORM_CHECKPOINT ?=
-FINAL_RMSNORM_RUN_DIR ?= $(BUILD_DIR)/final-rmsnorm/attempt-01
-
 ROOT := $(abspath $(dir $(lastword $(MAKEFILE_LIST))))
 BUILD_DIR := $(ROOT)/build
 VECTOR_DIR := $(BUILD_DIR)/vectors
@@ -20,51 +17,8 @@ PYTHON ?= python3
 IVERILOG ?= iverilog
 VVP ?= vvp
 VERILATOR ?= verilator
-
-STREAMING_LM_HEAD_CHECKPOINT ?=
-STREAMING_LM_HEAD_DIR := $(BUILD_DIR)/streaming_lm_head
-STREAMING_LM_HEAD_VECTOR_DIR := $(STREAMING_LM_HEAD_DIR)/official_vectors
-STREAMING_LM_HEAD_IVERILOG_DIR := $(STREAMING_LM_HEAD_DIR)/iverilog
-STREAMING_LM_HEAD_IVERILOG_BIN := $(STREAMING_LM_HEAD_IVERILOG_DIR)/protocol.vvp
-STREAMING_LM_HEAD_VERILATOR_DIR := $(STREAMING_LM_HEAD_DIR)/verilator
-STREAMING_LM_HEAD_VERILATOR_BIN := $(STREAMING_LM_HEAD_VERILATOR_DIR)/Vace3_streaming_tied_lm_head_topk
-STREAMING_LM_HEAD_FIXED_RTL := $(ROOT)/ace3/rtl/ace3_fp16_fixed.sv
-STREAMING_LM_HEAD_ROUNDER_RTL := $(ROOT)/ace3/rtl/ace3_q47_48_to_f16_rne.sv
-STREAMING_LM_HEAD_RTL := $(ROOT)/ace3/rtl/ace3_streaming_tied_lm_head_topk.sv
-STREAMING_LM_HEAD_TB := $(ROOT)/ace3/tb/ace3_streaming_tied_lm_head_topk_tb.sv
-STREAMING_LM_HEAD_CPP_TB := $(ROOT)/ace3/tb/ace3_streaming_tied_lm_head_topk_main.cpp
-STREAMING_LM_HEAD_REFERENCE := $(ROOT)/ace3/model/streaming_lm_head_reference.py
-GENERATION_FEEDBACK_CHECKPOINT ?=
-GENERATION_FEEDBACK_TOKENIZER_DIR ?=
-GENERATION_FEEDBACK_DIR := $(BUILD_DIR)/generation_feedback
-GENERATION_FEEDBACK_VECTOR_DIR := $(GENERATION_FEEDBACK_DIR)/official_vectors
-GENERATION_FEEDBACK_IVERILOG_BIN := $(GENERATION_FEEDBACK_DIR)/protocol.vvp
-GENERATION_FEEDBACK_VERILATOR_DIR := $(GENERATION_FEEDBACK_DIR)/verilator
-GENERATION_FEEDBACK_VERILATOR_BIN := $(GENERATION_FEEDBACK_VERILATOR_DIR)/Vace3_generation_feedback_chain
-GENERATION_FEEDBACK_RTL := $(ROOT)/ace3/rtl/ace3_generated_token_feedback.sv $(ROOT)/ace3/rtl/ace3_generation_feedback_chain.sv
-GENERATION_FEEDBACK_TB := $(ROOT)/ace3/tb/ace3_generation_feedback_chain_tb.sv
-GENERATION_FEEDBACK_CPP := $(ROOT)/ace3/tb/ace3_generation_feedback_chain_main.cpp
-GENERATION_FEEDBACK_REFERENCE := $(ROOT)/ace3/model/generation_feedback_reference.py
-GENERATION_FEEDBACK_COMPARE := $(ROOT)/ace3/model/generation_feedback_compare.py
-
-.PHONY: final-rmsnorm-contract final-rmsnorm-acceptance
-
-final-rmsnorm-contract:
-	$(PYTHON) $(ROOT)/ace3/model/tests/test_final_rmsnorm.py \
-		--repo-root $(ROOT) \
-		--checkpoint /dev/null \
-		--run-dir $(BUILD_DIR)/final-rmsnorm/contract-freeze \
-		--contract-only
-
-final-rmsnorm-acceptance:
-	@test -n "$(FINAL_RMSNORM_CHECKPOINT)" || \
-		{ echo "FINAL_RMSNORM_CHECKPOINT is required" >&2; exit 2; }
-	$(PYTHON) $(ROOT)/ace3/model/tests/test_final_rmsnorm.py \
-		--repo-root $(ROOT) \
-		--checkpoint $(FINAL_RMSNORM_CHECKPOINT) \
-		--run-dir $(FINAL_RMSNORM_RUN_DIR)
-STRIP ?= strip
 STRACE ?= strace
+CURL ?= curl
 OFFICIAL_TENSOR_DIR ?= $(ROOT)/ace3/fixtures/qwen2.5-0.5b-instruct-awq/layer0-q-proj
 
 RTL := $(ROOT)/ace3/rtl/ace3_awq_w4a16_g128_dot_lane.sv
@@ -239,38 +193,43 @@ MODEL24_CONTROLLER_CASCADE_EXECUTOR := $(ROOT)/ace3/model/controller_model24_cas
 MODEL24_CONTROLLER_CASCADE_TEST := $(ROOT)/ace3/model/tests/test_controller_model24_cascade.py
 MODEL24_RTL_CASCADE_DIR := $(BUILD_DIR)/model24_rtl_cascade
 MODEL24_RTL_CASCADE_EXECUTOR := $(ROOT)/ace3/model/controller_model24_rtl_cascade.py
-MODEL24_TOKEN0_DIAGNOSTIC := $(ROOT)/ace3/model/layer3_token0_diagnostic.py
-MODEL24_TOKEN0_DIAGNOSTIC_TEST := $(ROOT)/ace3/model/tests/test_layer3_token0_diagnostic.py
 MODEL24_RTL_LAYER_INDEX ?= 0
-MODEL24_RTL_ACCURATE_SILU ?= 0
+MODEL24_RTL_ACCURATE_SILU ?= 1
 MODEL24_RTL_LAYER_DIR := $(MODEL24_RTL_CASCADE_DIR)/compiled/layer$(MODEL24_RTL_LAYER_INDEX)
 MODEL24_RTL_LAYER_OBJ_DIR := $(MODEL24_RTL_LAYER_DIR)/obj_dir
 MODEL24_RTL_LAYER_BIN := $(MODEL24_RTL_LAYER_OBJ_DIR)/Vace3_decoder_layer0_token_engine
-FIRST_VOICE_DIR := $(BUILD_DIR)/model24_first_voice_hybrid
-FIRST_VOICE_CONTRACT := $(ROOT)/ace3/contracts/model24_first_voice_hybrid.json
-FIRST_VOICE_DRIVER := $(ROOT)/ace3/model/model24_first_voice_hybrid.py
-FIRST_VOICE_TEST := $(ROOT)/ace3/model/tests/test_model24_first_voice_hybrid.py
-FIRST_VOICE_MAX_NEW_TOKENS ?= 2
-FIRST_VOICE_RTL_LAYER_INDEX ?= 0
-FIRST_VOICE_RTL_TEMP_MDIR := $(FIRST_VOICE_DIR)/compact_mdir
-FIRST_VOICE_SAVABLE_DIR := $(FIRST_VOICE_DIR)/savable_self_test
-FIRST_VOICE_SAVABLE_OBJ_DIR := $(FIRST_VOICE_SAVABLE_DIR)/obj_dir
-FIRST_VOICE_SAVABLE_BIN := $(FIRST_VOICE_SAVABLE_OBJ_DIR)/Vace3_decoder_layer0_token_engine
 VL15_LAYER0_HANDOFF ?= $(BUILD_DIR)/model24-prep-worktree/build/freshlayer0execute37-vl15/raw-final.rows
 OFFICIAL_MODEL24_VECTOR_DIR := $(BUILD_DIR)/official_model24_next_token
 OFFICIAL_MODEL24_EXECUTOR := $(ROOT)/ace3/model/official_model24_next_token.py
 OFFICIAL_MODEL24_TEST := $(ROOT)/ace3/model/tests/test_official_model24_next_token.py
-OFFICIAL_MODEL24_CHECKPOINT ?= $(ROOT)/model24_execution_vectors/model.safetensors
+OFFICIAL_MODEL24_CHECKPOINT ?= $(MODEL24_RTL_CASCADE_DIR)/checkpoint/model.safetensors
 OFFICIAL_MODEL24_TOKENIZER_DIR ?= $(ROOT)/model24_execution_vectors/tokenizer
 OFFICIAL_MODEL24_DIALOGUE_VECTOR_DIR := $(BUILD_DIR)/official_model24_dialogue
 OFFICIAL_MODEL24_DIALOGUE_EXECUTOR := $(ROOT)/ace3/model/official_model24_dialogue.py
 OFFICIAL_MODEL24_DIALOGUE_TEST := $(ROOT)/ace3/model/tests/test_official_model24_dialogue.py
+MODEL24_HOST_RUNTIME_DIR := $(BUILD_DIR)/model24_host_runtime
+MODEL24_HOST_RUNTIME_EXECUTOR := $(ROOT)/ace3/model/model24_host_runtime.py
+MODEL24_HOST_RUNTIME_TEST := $(ROOT)/ace3/model/tests/test_model24_host_runtime.py
+MODEL24_HOST_TOKENIZER_DIR := $(MODEL24_HOST_RUNTIME_DIR)/tokenizer
+MODEL24_RECEIPT_CHAIN_EVIDENCE_DIR ?= $(BUILD_DIR)/host_dialogue_audit_20260829T182819Z/runtime/default
+MODEL24_RECEIPT_CHAIN_TOKENIZER_DIR ?= $(BUILD_DIR)/host_dialogue_audit_20260829T182819Z/tokenizer
+MODEL24_R20_V11_RUNTIME_PASS_ADMISSION_DIR := $(BUILD_DIR)/model24_selected_token_position3_continuations/r20-v11-runtime-pass-admission
+MODEL24_HOST_EXPLICIT_PROMPT ?= Reply with one short sentence about the moon.
 OFFICIAL_MODEL24_SHOWCASE_VECTOR_DIR := $(BUILD_DIR)/official_model24_showcase
 OFFICIAL_MODEL24_SHOWCASE_EXECUTOR := $(ROOT)/ace3/model/official_model24_showcase.py
 OFFICIAL_MODEL24_SHOWCASE_TEST := $(ROOT)/ace3/model/tests/test_official_model24_showcase.py
 OFFICIAL_MODEL24_SYSTEMATIC_VECTOR_DIR := $(BUILD_DIR)/official_model24_systematic_continuations
 OFFICIAL_MODEL24_SYSTEMATIC_EXECUTOR := $(ROOT)/ace3/model/official_model24_systematic_continuations.py
 OFFICIAL_MODEL24_SYSTEMATIC_TEST := $(ROOT)/ace3/model/tests/test_official_model24_systematic_continuations.py
+MODEL24_TOKENIZER_DIR := $(BUILD_DIR)/official_model24_tokenizer
+MODEL24_TOKENIZER_REVISION := db09cd27ead7fee40cdee309693cf83601b9c899
+MODEL24_TOKENIZER_URL := https://huggingface.co/Qwen/Qwen2.5-0.5B-Instruct-AWQ/resolve/$(MODEL24_TOKENIZER_REVISION)
+MODEL24_LATENCY_DIR := $(BUILD_DIR)/model24_latency
+MODEL24_LATENCY_EXECUTOR := $(ROOT)/ace3/model/measure_model24_latency.py
+MODEL24_LATENCY_TEST := $(ROOT)/ace3/model/tests/test_measure_model24_latency.py
+MODEL24_RUNTIME_ENVELOPE_DIR := $(BUILD_DIR)/model24_runtime_envelope
+MODEL24_RUNTIME_ENVELOPE_EXECUTOR := $(ROOT)/ace3/model/model24_runtime_envelope.py
+MODEL24_RUNTIME_ENVELOPE_TEST := $(ROOT)/ace3/model/tests/test_model24_runtime_envelope.py
 
 IVERILOG_BIN := $(IVERILOG_DIR)/ace3_awq_w4a16_g128_dot_lane.vvp
 PROTOCOL_BIN := $(IVERILOG_DIR)/ace3_awq_w4a16_g128_dot_lane_protocol.vvp
@@ -282,7 +241,7 @@ PROJECTION_VERILATOR_BIN := $(PROJECTION_VERILATOR_OBJ_DIR)/Vace3_awq_w4a16_proj
 export PYTHONDONTWRITEBYTECODE := 1
 
 .PHONY: \
-	help test tracked-source-path-regression _validate oracle vectors json-validation tamper-rejection \
+	test tracked-source-path-regression _validate oracle vectors json-validation tamper-rejection \
 	iverilog iverilog-compile iverilog-simulation \
 	iverilog-protocol-compile iverilog-protocol-simulation \
 	verilator verilator-compile verilator-simulation \
@@ -321,47 +280,31 @@ export PYTHONDONTWRITEBYTECODE := 1
 	decoder-layer2-verilator-compile decoder-layer012-verilator-cascade \
 	model24-execution model24-execution-vectors \
 	model24-execution-validation model24-execution-tests \
-	model24-layer-indexed-handoff model24-publication-tests \
-	model24-layer-controller model24-layer-controller-vectors \
-	model24-layer-controller-validation model24-layer-controller-iverilog \
-	model24-layer-controller-verilator model24-layer-controller-simulations \
-	model24-layer-controller-failure-gate model24-controller-cascade \
-	model24-controller-cascade-bindings model24-controller-cascade-execution \
-	model24-controller-cascade-comparison model24-controller-cascade-validation \
-	model24-controller-cascade-tests model24-controller-rtl-cascade \
-	model24-rtl-layer-compile model24-token0-diagnostic-tests \
-	model24-first-voice-hybrid model24-first-voice-hybrid-tests \
-	model24-first-voice-compact-builder-tests \
-	model24-first-voice-savable-compile model24-first-voice-savable-test \
-	model24-first-voice-layer-compile model24-first-voice-compile-all \
+	model24-layer-indexed-handoff model24-layer-controller \
+	model24-layer-controller-vectors model24-layer-controller-validation \
+	model24-layer-controller-iverilog model24-layer-controller-verilator \
+	model24-layer-controller-simulations model24-layer-controller-failure-gate \
+	model24-controller-cascade model24-controller-cascade-bindings \
+	model24-controller-cascade-execution model24-controller-cascade-comparison \
+	model24-controller-cascade-validation model24-controller-cascade-tests \
+	model24-controller-rtl-cascade model24-rtl-layer-compile \
+	model24-official-tokenizer model24-latency model24-latency-evidence \
+	model24-latency-validation model24-latency-tests \
+	model24-runtime-envelope model24-runtime-envelope-tests \
 	official-model24-next-token official-model24-next-token-vectors \
 	official-model24-next-token-validation official-model24-next-token-tests \
 	official-model24-dialogue official-model24-dialogue-vectors \
 	official-model24-dialogue-validation official-model24-dialogue-tests \
+	model24-host-runtime model24-host-runtime-evidence \
+	model24-host-runtime-validation model24-host-runtime-tests \
+	model24-receipt-chain-validation \
+	model24-r20-v11-runtime-pass-admission \
 	official-model24-showcase official-model24-showcase-vectors \
 	official-model24-showcase-validation official-model24-showcase-tests \
 	official-model24-systematic-continuations \
 	official-model24-systematic-continuations-vectors \
 	official-model24-systematic-continuations-validation \
 	official-model24-systematic-continuations-tests clean
-
-help:
-	@printf '%s\n' \
-	  'ACE-3 validation targets:' \
-	  '  make test                                      Full standalone RTL regression' \
-	  '  make oracle                                    Native AWQ arithmetic oracle' \
-	  '  make projection                                Full-input projection regression' \
-	  '  make fp16-adaptation                           FP16 residual/RMSNorm/SiLU regression' \
-	  '  make qkv-rope-cache                            QKV, RoPE, and K/V cache regression' \
-	  '  make attention                                 Attention regression' \
-	  '  make decoder-layer0                            Integrated indexed decoder regression' \
-	  '  make model24-publication-tests                 Model24 controller/publication checks' \
-	  '  make model24-controller-rtl-cascade            Checkpoint-bound full-24 RTL cascade' \
-	  '  make model24-first-voice-hybrid-tests          First Voice state-lineage checks' \
-	  '  make model24-first-voice-compact-builder-tests Compact indexed-layer build checks' \
-	  '' \
-	  'Model-bound targets require the official checkpoint/tokenizer paths documented in' \
-	  'docs/GETTING_STARTED.md. Generated outputs remain under ignored build directories.'
 
 tracked-source-path-regression:
 	@cd "$(ROOT)" && "$(PYTHON)" ace3/model/tests/test_tracked_source_paths.py
@@ -576,6 +519,12 @@ projection-tamper-rejection: projection-json-validation
 	fi; \
 	printf '%s\n' 'PROJECTION_TAMPER_REJECTION_PASS artifact=pairs.hex validator_exit=nonzero reason=sha256_mismatch originals=untouched' > "$$log"; \
 	cat "$$log"
+
+Q_PROJECTION_ATTEMPT ?= $(BUILD_DIR)/q_projection_single_round_attempt001
+.PHONY: q-projection-single-round-simulation
+q-projection-single-round-simulation:
+	"$(PYTHON)" -B "$(ROOT)/ace3/model/run_q_projection_single_round.py" \
+	    --output "$(Q_PROJECTION_ATTEMPT)"
 
 projection-geometry: projection-json-validation
 	@rm -rf "$(PROJECTION_GEOMETRY_DIR)"
@@ -1308,7 +1257,7 @@ decoder-layer0-verilator-compile: decoder-layer0-json-validation
 	@mkdir -p "$(DECODER_VERILATOR_DIR)" "$(LOG_DIR)"
 	@set -eu; log="$(LOG_DIR)/decoder-layer0-verilator-compile.log"; \
 	printf '%s\n' '$ verilator --cc --exe --build --Wall -Wno-fatal --top-module ace3_decoder_layer0_token_engine --Mdir build/decoder_layer0_verilator/obj_dir ...' > "$$log"; \
-	if cd "$(ROOT)" && "$(VERILATOR)" --cc --exe --build --savable --Wall -Wno-fatal \
+	if cd "$(ROOT)" && "$(VERILATOR)" --cc --exe --build --Wall -Wno-fatal \
 	    --top-module ace3_decoder_layer0_token_engine \
 	    --Mdir "$(DECODER_VERILATOR_OBJ_DIR)" $(DECODER_RTL) \
 	    "$(DECODER_CPP_TB)" >> "$$log" 2>&1; then :; \
@@ -1392,7 +1341,7 @@ decoder-layer1-verilator-compile: decoder-layer1-vectors
 	@mkdir -p "$(DECODER_LAYER1_VERILATOR_DIR)" "$(LOG_DIR)"
 	@set -eu; log="$(LOG_DIR)/decoder-layer1-verilator-compile.log"; \
 	printf '%s\n' '$ verilator --cc --exe --build -GLAYER_INDEX=1 --top-module ace3_decoder_layer0_token_engine ...' > "$$log"; \
-	if cd "$(ROOT)" && "$(VERILATOR)" --cc --exe --build --savable --Wall -Wno-fatal \
+	if cd "$(ROOT)" && "$(VERILATOR)" --cc --exe --build --Wall -Wno-fatal \
 	    -GLAYER_INDEX=1 --top-module ace3_decoder_layer0_token_engine \
 	    --Mdir "$(DECODER_LAYER1_VERILATOR_OBJ_DIR)" $(DECODER_RTL) \
 	    "$(DECODER_CPP_TB)" >> "$$log" 2>&1; then :; \
@@ -1502,7 +1451,7 @@ decoder-layer2-verilator-compile: decoder-layer2-vectors
 	@mkdir -p "$(DECODER_LAYER2_VERILATOR_DIR)" "$(LOG_DIR)"
 	@set -eu; log="$(LOG_DIR)/decoder-layer2-verilator-compile.log"; \
 	printf '%s\n' '$ verilator --cc --exe --build -GLAYER_INDEX=2 --top-module ace3_decoder_layer0_token_engine ...' > "$$log"; \
-	if cd "$(ROOT)" && "$(VERILATOR)" --cc --exe --build --savable --Wall -Wno-fatal \
+	if cd "$(ROOT)" && "$(VERILATOR)" --cc --exe --build --Wall -Wno-fatal \
 	    -GLAYER_INDEX=2 --top-module ace3_decoder_layer0_token_engine \
 	    --Mdir "$(DECODER_LAYER2_VERILATOR_OBJ_DIR)" $(DECODER_RTL) \
 	    "$(DECODER_CPP_TB)" >> "$$log" 2>&1; then :; \
@@ -1590,8 +1539,8 @@ model24-execution-validation: model24-execution-vectors
 model24-execution-tests:
 	@mkdir -p "$(LOG_DIR)"
 	@set -eu; log="$(LOG_DIR)/model24-execution-tests.log"; \
-	export ACE3_OFFICIAL_MODEL24_CHECKPOINT="$(OFFICIAL_MODEL24_CHECKPOINT)" \
-	    ACE3_OFFICIAL_MODEL24_TOKENIZER_DIR="$(OFFICIAL_MODEL24_TOKENIZER_DIR)"; \
+	export ACE3_OFFICIAL_CHECKPOINT="$(OFFICIAL_MODEL24_CHECKPOINT)" \
+	    ACE3_OFFICIAL_TOKENIZER_DIR="$(OFFICIAL_MODEL24_TOKENIZER_DIR)"; \
 	printf '%s\n' '$ python3 -m unittest ace3/model/tests/test_model24_execution.py' > "$$log"; \
 	if cd "$(ROOT)" && "$(PYTHON)" -m unittest \
 	    ace3/model/tests/test_model24_execution.py >> "$$log" 2>&1; then :; \
@@ -1604,10 +1553,6 @@ model24-layer-indexed-handoff:
 	    --checkpoint "$(OFFICIAL_MODEL24_CHECKPOINT)" \
 	    --tensor-map "$(MODEL24_TENSOR_MAP)" \
 	    --handoff "$(VL15_LAYER0_HANDOFF)"
-
-model24-publication-tests: model24-layer-controller \
-	model24-controller-cascade-tests model24-token0-diagnostic-tests
-	@printf '%s\n' 'MODEL24_PUBLICATION_TESTS_PASS controller=pass cascade_units=pass token0_units=pass full24_rerun=not_run'
 
 model24-layer-controller: model24-layer-controller-simulations
 	@printf '%s\n' 'MODEL24_LAYER_CONTROLLER_PASS simulators=iverilog,verilator layers=24 checkpoints=24 strict_order=pass reset=pass fault=pass backpressure=pass numerical_rtl=not_claimed'
@@ -1693,16 +1638,11 @@ model24-controller-cascade-tests:
 	@cd "$(ROOT)" && "$(PYTHON)" -m py_compile \
 	    "$(MODEL24_CONTROLLER_CASCADE_EXECUTOR)" \
 	    "$(MODEL24_RTL_CASCADE_EXECUTOR)" \
-	    "$(MODEL24_CONTROLLER_CASCADE_TEST)"
+	    "$(MODEL24_CONTROLLER_CASCADE_TEST)" \
+	    ace3/model/tests/test_controller_model24_rtl_cascade.py
 	@cd "$(ROOT)" && "$(PYTHON)" -m unittest \
-	    ace3/model/tests/test_controller_model24_cascade.py
-
-model24-token0-diagnostic-tests:
-	@cd "$(ROOT)" && "$(PYTHON)" -m py_compile \
-	    "$(MODEL24_TOKEN0_DIAGNOSTIC)" \
-	    "$(MODEL24_TOKEN0_DIAGNOSTIC_TEST)"
-	@cd "$(ROOT)" && "$(PYTHON)" -m unittest \
-	    ace3/model/tests/test_layer3_token0_diagnostic.py
+	    ace3/model/tests/test_controller_model24_cascade.py \
+	    ace3/model/tests/test_controller_model24_rtl_cascade.py
 
 model24-layer-controller-failure-gate: model24-layer-controller-validation \
 	model24-controller-cascade-bindings
@@ -1746,78 +1686,13 @@ model24-rtl-layer-compile:
 	@test "$(MODEL24_RTL_LAYER_INDEX)" -ge 0 -a "$(MODEL24_RTL_LAYER_INDEX)" -le 23
 	@rm -rf "$(MODEL24_RTL_LAYER_OBJ_DIR)"
 	@mkdir -p "$(MODEL24_RTL_LAYER_DIR)"
-	@"$(VERILATOR)" --cc --exe --build --savable --Wall -Wno-fatal \
+	@cd "$(ROOT)" && "$(VERILATOR)" --cc --exe --build --savable --Wall -Wno-fatal \
 	    -GLAYER_INDEX="$(MODEL24_RTL_LAYER_INDEX)" \
 	    -GACCURATE_SILU="$(MODEL24_RTL_ACCURATE_SILU)" \
 	    --top-module ace3_decoder_layer0_token_engine \
 	    --Mdir "$(MODEL24_RTL_LAYER_OBJ_DIR)" $(DECODER_RTL) \
 	    "$(DECODER_CPP_TB)"
 	@test -x "$(MODEL24_RTL_LAYER_BIN)"
-
-model24-first-voice-savable-compile:
-	@rm -rf "$(FIRST_VOICE_SAVABLE_OBJ_DIR)"
-	@mkdir -p "$(FIRST_VOICE_SAVABLE_DIR)"
-	@cd "$(ROOT)" && "$(VERILATOR)" --cc --exe --build --savable --Wall -Wno-fatal \
-	    --top-module ace3_decoder_layer0_token_engine \
-	    --Mdir "$(FIRST_VOICE_SAVABLE_OBJ_DIR)" $(DECODER_RTL) \
-	    "$(DECODER_CPP_TB)"
-	@test -x "$(FIRST_VOICE_SAVABLE_BIN)"
-
-model24-first-voice-savable-test: model24-first-voice-savable-compile
-	@rm -f "$(FIRST_VOICE_SAVABLE_DIR)/rtl.state" \
-	    "$(FIRST_VOICE_SAVABLE_DIR)/rtl.state.partial"
-	@"$(FIRST_VOICE_SAVABLE_BIN)" \
-	    --savable-self-test "$(FIRST_VOICE_SAVABLE_DIR)/rtl.state"
-	@test -s "$(FIRST_VOICE_SAVABLE_DIR)/rtl.state"
-
-model24-first-voice-layer-compile:
-	@test "$(FIRST_VOICE_RTL_LAYER_INDEX)" -ge 0 \
-	    -a "$(FIRST_VOICE_RTL_LAYER_INDEX)" -le 23
-	@cd "$(ROOT)" && "$(PYTHON)" "$(FIRST_VOICE_DRIVER)" \
-	    --repository-root "$(ROOT)" \
-	    --compiled-dir "$(FIRST_VOICE_DIR)/compiled" \
-	    --build-compact-layer \
-	    --layer-index "$(FIRST_VOICE_RTL_LAYER_INDEX)" \
-	    --temporary-mdir "$(FIRST_VOICE_RTL_TEMP_MDIR)" \
-	    --verilator "$(VERILATOR)" \
-	    --strip "$(STRIP)"
-	@test ! -e "$(FIRST_VOICE_RTL_TEMP_MDIR)"
-
-model24-first-voice-compile-all:
-	@set -eu; for layer in $$(seq 0 23); do \
-	    "$(MAKE)" --no-print-directory model24-first-voice-layer-compile \
-	        FIRST_VOICE_RTL_LAYER_INDEX="$$layer"; \
-	done
-	@cd "$(ROOT)" && "$(PYTHON)" "$(FIRST_VOICE_DRIVER)" \
-	    --repository-root "$(ROOT)" \
-	    --compiled-dir "$(FIRST_VOICE_DIR)/compiled" \
-	    --bind-compiled
-
-model24-first-voice-hybrid-tests: model24-first-voice-savable-test
-	@cd "$(ROOT)" && PYTHONPYCACHEPREFIX="$(FIRST_VOICE_DIR)/pycache" \
-	    "$(PYTHON)" -m py_compile \
-	    "$(FIRST_VOICE_DRIVER)" "$(FIRST_VOICE_TEST)" \
-	    "$(ROOT)/ace3/model/tests/test_model24_first_voice_trusted_tip.py"
-	@cd "$(ROOT)" && PYTHONPYCACHEPREFIX="$(FIRST_VOICE_DIR)/pycache" \
-	    "$(PYTHON)" -m unittest \
-	    ace3/model/tests/test_model24_first_voice_hybrid.py \
-	    ace3/model/tests/test_model24_first_voice_trusted_tip.py
-
-model24-first-voice-compact-builder-tests:
-	@cd "$(ROOT)" && PYTHONDONTWRITEBYTECODE=1 "$(PYTHON)" -m unittest \
-	    ace3/model/tests/test_model24_first_voice_hybrid.py
-
-model24-first-voice-hybrid: model24-first-voice-compile-all \
-	model24-first-voice-hybrid-tests
-	@rm -rf "$(FIRST_VOICE_DIR)/execution"
-	@cd "$(ROOT)" && "$(PYTHON)" "$(FIRST_VOICE_DRIVER)" \
-	    --repository-root "$(ROOT)" \
-	    --checkpoint "$(OFFICIAL_MODEL24_CHECKPOINT)" \
-	    --tokenizer-dir "$(OFFICIAL_MODEL24_TOKENIZER_DIR)" \
-	    --tensor-map "$(MODEL24_TENSOR_MAP)" \
-	    --compiled-dir "$(FIRST_VOICE_DIR)/compiled" \
-	    --output-dir "$(FIRST_VOICE_DIR)/execution" \
-	    --max-new-tokens "$(FIRST_VOICE_MAX_NEW_TOKENS)"
 
 model24-controller-rtl-cascade: model24-controller-cascade-bindings \
 	model24-controller-cascade-tests
@@ -1828,6 +1703,91 @@ model24-controller-rtl-cascade: model24-controller-cascade-bindings \
 	    --bindings "$(MODEL24_CONTROLLER_CASCADE_BINDINGS)" \
 	    --simulation-dir "$(MODEL24_LAYER_CONTROLLER_IVERILOG_RAW_DIR)" \
 	    --output-dir "$(MODEL24_RTL_CASCADE_DIR)"
+
+model24-runtime-envelope:
+	@rm -rf "$(MODEL24_RUNTIME_ENVELOPE_DIR)"
+	@mkdir -p "$(MODEL24_RUNTIME_ENVELOPE_DIR)"
+	@cd "$(ROOT)" && "$(PYTHON)" "$(MODEL24_RUNTIME_ENVELOPE_EXECUTOR)" \
+	    --rtl-output-dir "$(MODEL24_RTL_CASCADE_DIR)" \
+	    --output "$(MODEL24_RUNTIME_ENVELOPE_DIR)/envelope.json"
+
+model24-runtime-envelope-tests:
+	@cd "$(ROOT)" && "$(PYTHON)" -m py_compile \
+	    "$(MODEL24_RUNTIME_ENVELOPE_EXECUTOR)" \
+	    "$(MODEL24_RUNTIME_ENVELOPE_TEST)"
+	@cd "$(ROOT)" && "$(PYTHON)" -m unittest \
+	    ace3/model/tests/test_model24_runtime_envelope.py
+
+model24-official-tokenizer:
+	@rm -rf "$(MODEL24_TOKENIZER_DIR)"
+	@mkdir -p "$(MODEL24_TOKENIZER_DIR)" "$(LOG_DIR)"
+	@set -eu; log="$(LOG_DIR)/model24-official-tokenizer.log"; \
+	printf '%s\n' \
+	    '$ curl fixed-revision tokenizer.json' \
+	    '$ curl fixed-revision tokenizer_config.json' \
+	    '$ sha256sum --check accepted tokenizer hashes' > "$$log"; \
+	"$(CURL)" --fail --location --silent --show-error \
+	    "$(MODEL24_TOKENIZER_URL)/tokenizer.json" \
+	    --output "$(MODEL24_TOKENIZER_DIR)/tokenizer.json" >> "$$log" 2>&1; \
+	"$(CURL)" --fail --location --silent --show-error \
+	    "$(MODEL24_TOKENIZER_URL)/tokenizer_config.json" \
+	    --output "$(MODEL24_TOKENIZER_DIR)/tokenizer_config.json" >> "$$log" 2>&1; \
+	cd "$(MODEL24_TOKENIZER_DIR)" && printf '%s\n' \
+	    'c0382117ea329cdf097041132f6d735924b697924d6f6fc3945713e96ce87539  tokenizer.json' \
+	    '5b5d4f65d0acd3b2d56a35b56d374a36cbc1c8fa5cf3b3febbbfabf22f359583  tokenizer_config.json' \
+	    | sha256sum --check - >> "$$log" 2>&1; \
+	cat "$$log"
+
+model24-latency: model24-latency-validation model24-latency-tests
+	@cd "$(ROOT)" && "$(PYTHON)" -c 'import json; from pathlib import Path; m=json.loads(Path("build/model24_latency/measurement.json").read_text())["measurements"]; s=m["software_dialogue_continuation"]; r=m["rtl_controller_cascade"]; print(f"MODEL24_LATENCY_PASS software_wall_seconds={s['\''wall_seconds_diagnostic'\'']:.6f} rtl_wall_seconds={r['\''wall_seconds_diagnostic'\'']:.6f} controller_cycles={r['\''controller_scheduler_cycles'\'']} decoder_harness_cycles={r['\''aggregate_decoder_harness_cycles'\'']} evidence=diagnostic_only synthesis=not_run fpga=not_run hardware_latency=not_measured hardware_throughput=not_measured")'
+
+model24-latency-evidence: model24-official-tokenizer \
+	model24-controller-cascade-bindings model24-latency-tests
+	@rm -rf "$(MODEL24_LATENCY_DIR)" "$(MODEL24_RTL_CASCADE_DIR)"
+	@mkdir -p "$(LOG_DIR)"
+	@set -eu; log="$(LOG_DIR)/model24-latency-generation.log"; \
+	printf '%s\n' '$ python3 ace3/model/measure_model24_latency.py generate' > "$$log"; \
+	if cd "$(ROOT)" && "$(PYTHON)" "$(MODEL24_LATENCY_EXECUTOR)" generate \
+	    --repository-root "$(ROOT)" \
+	    --checkpoint "$(OFFICIAL_MODEL24_CHECKPOINT)" \
+	    --tokenizer-dir "$(MODEL24_TOKENIZER_DIR)" \
+	    --tensor-map "$(MODEL24_TENSOR_MAP)" \
+	    --bindings "$(MODEL24_CONTROLLER_CASCADE_BINDINGS)" \
+	    --controller-vector-dir "$(MODEL24_LAYER_CONTROLLER_DIR)" \
+	    --controller-binary "$(MODEL24_LAYER_CONTROLLER_VERILATOR_BIN)" \
+	    --output-dir "$(MODEL24_LATENCY_DIR)" \
+	    --rtl-output-dir "$(MODEL24_RTL_CASCADE_DIR)" >> "$$log" 2>&1; then :; \
+	else status=$$?; cat "$$log"; exit $$status; fi; \
+	cat "$$log"
+
+model24-latency-validation: model24-latency-evidence
+	@set -eu; log="$(LOG_DIR)/model24-latency-validation.log"; \
+	printf '%s\n' '$ python3 ace3/model/measure_model24_latency.py validate' > "$$log"; \
+	if cd "$(ROOT)" && "$(PYTHON)" "$(MODEL24_LATENCY_EXECUTOR)" validate \
+	    --repository-root "$(ROOT)" \
+	    --checkpoint "$(OFFICIAL_MODEL24_CHECKPOINT)" \
+	    --tokenizer-dir "$(MODEL24_TOKENIZER_DIR)" \
+	    --tensor-map "$(MODEL24_TENSOR_MAP)" \
+	    --bindings "$(MODEL24_CONTROLLER_CASCADE_BINDINGS)" \
+	    --controller-vector-dir "$(MODEL24_LAYER_CONTROLLER_DIR)" \
+	    --controller-binary "$(MODEL24_LAYER_CONTROLLER_VERILATOR_BIN)" \
+	    --output-dir "$(MODEL24_LATENCY_DIR)" \
+	    --rtl-output-dir "$(MODEL24_RTL_CASCADE_DIR)" >> "$$log" 2>&1; then :; \
+	else status=$$?; cat "$$log"; exit $$status; fi; \
+	cat "$$log"
+
+model24-latency-tests:
+	@mkdir -p "$(LOG_DIR)"
+	@set -eu; log="$(LOG_DIR)/model24-latency-tests.log"; \
+	printf '%s\n' \
+	    '$ python3 -m py_compile ace3/model/measure_model24_latency.py ace3/model/tests/test_measure_model24_latency.py' \
+	    '$ python3 -m unittest ace3/model/tests/test_measure_model24_latency.py' > "$$log"; \
+	if cd "$(ROOT)" && "$(PYTHON)" -m py_compile \
+	    "$(MODEL24_LATENCY_EXECUTOR)" "$(MODEL24_LATENCY_TEST)" >> "$$log" 2>&1 \
+	    && "$(PYTHON)" -m unittest \
+	    ace3/model/tests/test_measure_model24_latency.py >> "$$log" 2>&1; then :; \
+	else status=$$?; cat "$$log"; exit $$status; fi; \
+	cat "$$log"
 
 official-model24-next-token: official-model24-next-token-validation \
 	official-model24-next-token-tests
@@ -1859,8 +1819,8 @@ official-model24-next-token-validation: official-model24-next-token-vectors
 official-model24-next-token-tests: official-model24-next-token-vectors
 	@mkdir -p "$(LOG_DIR)"
 	@set -eu; log="$(LOG_DIR)/official-model24-next-token-tests.log"; \
-	export ACE3_OFFICIAL_MODEL24_CHECKPOINT="$(OFFICIAL_MODEL24_CHECKPOINT)" \
-	    ACE3_OFFICIAL_MODEL24_TOKENIZER_DIR="$(OFFICIAL_MODEL24_TOKENIZER_DIR)"; \
+	export ACE3_OFFICIAL_CHECKPOINT="$(OFFICIAL_MODEL24_CHECKPOINT)" \
+	    ACE3_OFFICIAL_TOKENIZER_DIR="$(OFFICIAL_MODEL24_TOKENIZER_DIR)"; \
 	printf '%s\n' '$ python3 -m py_compile ace3/model/official_model24_next_token.py ace3/model/tests/test_official_model24_next_token.py' > "$$log"; \
 	printf '%s\n' '$ python3 -m unittest ace3/model/tests/test_official_model24_next_token.py' >> "$$log"; \
 	if cd "$(ROOT)" && "$(PYTHON)" -m py_compile \
@@ -1900,14 +1860,105 @@ official-model24-dialogue-validation: official-model24-dialogue-vectors
 official-model24-dialogue-tests: official-model24-dialogue-vectors
 	@mkdir -p "$(LOG_DIR)"
 	@set -eu; log="$(LOG_DIR)/official-model24-dialogue-tests.log"; \
-	export ACE3_OFFICIAL_MODEL24_CHECKPOINT="$(OFFICIAL_MODEL24_CHECKPOINT)" \
-	    ACE3_OFFICIAL_MODEL24_TOKENIZER_DIR="$(OFFICIAL_MODEL24_TOKENIZER_DIR)"; \
+	export ACE3_OFFICIAL_CHECKPOINT="$(OFFICIAL_MODEL24_CHECKPOINT)" \
+	    ACE3_OFFICIAL_TOKENIZER_DIR="$(OFFICIAL_MODEL24_TOKENIZER_DIR)"; \
 	printf '%s\n' '$ python3 -m py_compile ace3/model/official_model24_dialogue.py ace3/model/tests/test_official_model24_dialogue.py' > "$$log"; \
 	printf '%s\n' '$ python3 -m unittest ace3/model/tests/test_official_model24_dialogue.py' >> "$$log"; \
 	if cd "$(ROOT)" && "$(PYTHON)" -m py_compile \
 	    "$(OFFICIAL_MODEL24_DIALOGUE_EXECUTOR)" "$(OFFICIAL_MODEL24_DIALOGUE_TEST)" >> "$$log" 2>&1 \
 	    && "$(PYTHON)" -m unittest \
 	    ace3/model/tests/test_official_model24_dialogue.py >> "$$log" 2>&1; then :; \
+	else status=$$?; cat "$$log"; exit $$status; fi; \
+	cat "$$log"
+
+model24-host-runtime: model24-host-runtime-validation model24-host-runtime-tests
+	@cd "$(ROOT)" && "$(PYTHON)" -c 'import json; from pathlib import Path; root=Path("build/model24_host_runtime"); d=json.loads((root/"default/model24_host_runtime.json").read_text()); e=json.loads((root/"explicit/model24_host_runtime.json").read_text()); print(f"MODEL24_HOST_RUNTIME_PASS default_tokens={d['\''generation'\'']['\''generated_token_ids'\'']} default_text={d['\''generation'\'']['\''decoded_text'\'']!r} explicit_tokens={e['\''generation'\'']['\''generated_token_ids'\'']} explicit_text={e['\''generation'\'']['\''decoded_text'\'']!r} selection=deterministic_greedy checkpoint=authenticated tokenizer=authenticated rtl=not_demonstrated synthesis=not_run ppa=not_measured fpga=not_run latency=not_measured throughput=not_measured")'
+
+model24-receipt-chain-validation:
+	@set -eu; \
+	export ACE3_ACCEPTED_HOST_EVIDENCE_DIR="$(MODEL24_RECEIPT_CHAIN_EVIDENCE_DIR)" \
+	    ACE3_ACCEPTED_HOST_TOKENIZER_DIR="$(MODEL24_RECEIPT_CHAIN_TOKENIZER_DIR)"; \
+	cd "$(ROOT)"; \
+	"$(PYTHON)" -m unittest \
+	    ace3.model.tests.test_model24_host_runtime.AcceptedEvidenceReceiptExportTests; \
+	printf '%s\n' 'MODEL24_RECEIPT_CHAIN_VALIDATION_PASS source=accepted_existing_evidence receipt_chain=continuous transcript=authenticated manifest=authenticated source_hashes=accepted_fixture_bound execution=not_invoked authority=unmodified mutations=rejected'
+
+model24-r20-v11-runtime-pass-admission:
+	@set -eu; \
+	if [ ! -e "$(MODEL24_R20_V11_RUNTIME_PASS_ADMISSION_DIR)" ]; then \
+	    cd "$(ROOT)" && "$(PYTHON)" \
+	        ace3/model/prepare_model24_r20_v11_runtime_pass_admission.py \
+	        --output "$(MODEL24_R20_V11_RUNTIME_PASS_ADMISSION_DIR)"; \
+	fi; \
+	cd "$(ROOT)" && "$(PYTHON)" -m unittest \
+	    ace3.model.tests.test_model24_r20_v11_runtime_pass_admission; \
+	cd "$(ROOT)" && "$(PYTHON)" \
+	    ace3/model/validate_model24_r20_v11_runtime_pass_admission.py \
+	    --candidate "$(MODEL24_R20_V11_RUNTIME_PASS_ADMISSION_DIR)"; \
+	printf '%s\n' 'MODEL24_R20_V11_RUNTIME_PASS_ADMISSION_PASS status=awaiting_independent_review directive=exact preflight=exact receipt_chain=accepted_source_bound launch=exact one_shot=exact workload=zero authority=unconsumed execution=not_authorized mutations=rejected'
+
+model24-host-runtime-evidence:
+	@rm -rf "$(MODEL24_HOST_RUNTIME_DIR)"
+	@mkdir -p "$(MODEL24_HOST_RUNTIME_DIR)/default" \
+	    "$(MODEL24_HOST_RUNTIME_DIR)/explicit" \
+	    "$(MODEL24_HOST_TOKENIZER_DIR)" "$(LOG_DIR)"
+	@set -eu; log="$(LOG_DIR)/model24-host-runtime-generation.log"; \
+	printf '%s\n' \
+	    '$ curl fixed-revision tokenizer.json and tokenizer_config.json' \
+	    '$ python3 ace3/model/model24_host_runtime.py generate --output-dir build/model24_host_runtime/default' \
+	    '$ python3 ace3/model/model24_host_runtime.py generate --output-dir build/model24_host_runtime/explicit --prompt "$(MODEL24_HOST_EXPLICIT_PROMPT)"' > "$$log"; \
+	"$(CURL)" --fail --location --silent --show-error \
+	    "$(MODEL24_TOKENIZER_URL)/tokenizer.json" \
+	    --output "$(MODEL24_HOST_TOKENIZER_DIR)/tokenizer.json" >> "$$log" 2>&1; \
+	"$(CURL)" --fail --location --silent --show-error \
+	    "$(MODEL24_TOKENIZER_URL)/tokenizer_config.json" \
+	    --output "$(MODEL24_HOST_TOKENIZER_DIR)/tokenizer_config.json" >> "$$log" 2>&1; \
+	cd "$(MODEL24_HOST_TOKENIZER_DIR)" && printf '%s\n' \
+	    'c0382117ea329cdf097041132f6d735924b697924d6f6fc3945713e96ce87539  tokenizer.json' \
+	    '5b5d4f65d0acd3b2d56a35b56d374a36cbc1c8fa5cf3b3febbbfabf22f359583  tokenizer_config.json' \
+	    | sha256sum --check - >> "$$log" 2>&1; \
+	if cd "$(ROOT)" && "$(PYTHON)" "$(MODEL24_HOST_RUNTIME_EXECUTOR)" generate \
+	    --output-dir "$(MODEL24_HOST_RUNTIME_DIR)/default" \
+	    --official-checkpoint "$(OFFICIAL_MODEL24_CHECKPOINT)" \
+	    --official-tokenizer-dir "$(MODEL24_HOST_TOKENIZER_DIR)" >> "$$log" 2>&1 \
+	    && "$(PYTHON)" "$(MODEL24_HOST_RUNTIME_EXECUTOR)" generate \
+	    --output-dir "$(MODEL24_HOST_RUNTIME_DIR)/explicit" \
+	    --official-checkpoint "$(OFFICIAL_MODEL24_CHECKPOINT)" \
+	    --official-tokenizer-dir "$(MODEL24_HOST_TOKENIZER_DIR)" \
+	    --prompt "$(MODEL24_HOST_EXPLICIT_PROMPT)" >> "$$log" 2>&1; then :; \
+	else status=$$?; cat "$$log"; exit $$status; fi; \
+	cat "$$log"
+
+model24-host-runtime-validation: model24-host-runtime-evidence
+	@mkdir -p "$(LOG_DIR)"
+	@set -eu; log="$(LOG_DIR)/model24-host-runtime-validation.log"; \
+	printf '%s\n' \
+	    '$ python3 ace3/model/model24_host_runtime.py validate --evidence-dir build/model24_host_runtime/default' \
+	    '$ python3 ace3/model/model24_host_runtime.py validate --evidence-dir build/model24_host_runtime/explicit --prompt "$(MODEL24_HOST_EXPLICIT_PROMPT)"' > "$$log"; \
+	if cd "$(ROOT)" && "$(PYTHON)" "$(MODEL24_HOST_RUNTIME_EXECUTOR)" validate \
+	    --evidence-dir "$(MODEL24_HOST_RUNTIME_DIR)/default" \
+	    --official-checkpoint "$(OFFICIAL_MODEL24_CHECKPOINT)" \
+	    --official-tokenizer-dir "$(MODEL24_HOST_TOKENIZER_DIR)" >> "$$log" 2>&1 \
+	    && "$(PYTHON)" "$(MODEL24_HOST_RUNTIME_EXECUTOR)" validate \
+	    --evidence-dir "$(MODEL24_HOST_RUNTIME_DIR)/explicit" \
+	    --official-checkpoint "$(OFFICIAL_MODEL24_CHECKPOINT)" \
+	    --official-tokenizer-dir "$(MODEL24_HOST_TOKENIZER_DIR)" \
+	    --prompt "$(MODEL24_HOST_EXPLICIT_PROMPT)" >> "$$log" 2>&1; then :; \
+	else status=$$?; cat "$$log"; exit $$status; fi; \
+	cat "$$log"
+
+model24-host-runtime-tests: model24-host-runtime-evidence
+	@mkdir -p "$(LOG_DIR)"
+	@set -eu; log="$(LOG_DIR)/model24-host-runtime-tests.log"; \
+	export ACE3_OFFICIAL_CHECKPOINT="$(OFFICIAL_MODEL24_CHECKPOINT)" \
+	    ACE3_OFFICIAL_TOKENIZER_DIR="$(MODEL24_HOST_TOKENIZER_DIR)"; \
+	printf '%s\n' \
+	    '$ python3 -m py_compile ace3/model/model24_host_runtime.py ace3/model/tests/test_model24_host_runtime.py' \
+	    '$ python3 -m unittest ace3/model/tests/test_model24_host_runtime.py' > "$$log"; \
+	if cd "$(ROOT)" && "$(PYTHON)" -m py_compile \
+	    "$(MODEL24_HOST_RUNTIME_EXECUTOR)" "$(MODEL24_HOST_RUNTIME_TEST)" >> "$$log" 2>&1 \
+	    && "$(PYTHON)" -m unittest \
+	    ace3/model/tests/test_model24_host_runtime.py >> "$$log" 2>&1; then :; \
 	else status=$$?; cat "$$log"; exit $$status; fi; \
 	cat "$$log"
 
@@ -1941,8 +1992,8 @@ official-model24-showcase-validation: official-model24-showcase-vectors
 official-model24-showcase-tests: official-model24-showcase-vectors
 	@mkdir -p "$(LOG_DIR)"
 	@set -eu; log="$(LOG_DIR)/official-model24-showcase-tests.log"; \
-	export ACE3_OFFICIAL_MODEL24_CHECKPOINT="$(OFFICIAL_MODEL24_CHECKPOINT)" \
-	    ACE3_OFFICIAL_MODEL24_TOKENIZER_DIR="$(OFFICIAL_MODEL24_TOKENIZER_DIR)"; \
+	export ACE3_OFFICIAL_CHECKPOINT="$(OFFICIAL_MODEL24_CHECKPOINT)" \
+	    ACE3_OFFICIAL_TOKENIZER_DIR="$(OFFICIAL_MODEL24_TOKENIZER_DIR)"; \
 	printf '%s\n' '$ python3 -m py_compile ace3/model/official_model24_dialogue.py ace3/model/official_model24_showcase.py ace3/model/tests/test_official_model24_showcase.py' > "$$log"; \
 	printf '%s\n' '$ python3 -m unittest ace3/model/tests/test_official_model24_showcase.py' >> "$$log"; \
 	if cd "$(ROOT)" && "$(PYTHON)" -m py_compile \
@@ -1986,8 +2037,8 @@ official-model24-systematic-continuations-tests: \
 	official-model24-systematic-continuations-vectors
 	@mkdir -p "$(LOG_DIR)"
 	@set -eu; log="$(LOG_DIR)/official-model24-systematic-continuations-tests.log"; \
-	export ACE3_OFFICIAL_MODEL24_CHECKPOINT="$(OFFICIAL_MODEL24_CHECKPOINT)" \
-	    ACE3_OFFICIAL_MODEL24_TOKENIZER_DIR="$(OFFICIAL_MODEL24_TOKENIZER_DIR)"; \
+	export ACE3_OFFICIAL_CHECKPOINT="$(OFFICIAL_MODEL24_CHECKPOINT)" \
+	    ACE3_OFFICIAL_TOKENIZER_DIR="$(OFFICIAL_MODEL24_TOKENIZER_DIR)"; \
 	printf '%s\n' '$ python3 -m py_compile ace3/model/official_model24_systematic_continuations.py ace3/model/tests/test_official_model24_systematic_continuations.py' > "$$log"; \
 	printf '%s\n' '$ python3 -m unittest ace3/model/tests/test_official_model24_systematic_continuations.py' >> "$$log"; \
 	if cd "$(ROOT)" && "$(PYTHON)" -m py_compile \
@@ -1999,131 +2050,560 @@ official-model24-systematic-continuations-tests: \
 	else status=$$?; cat "$$log"; exit $$status; fi; \
 	cat "$$log"
 
-.PHONY: streaming-lm-head streaming-lm-head-json-validation \
-	streaming-lm-head-iverilog streaming-lm-head-official-vectors \
-	streaming-lm-head-verilator-compile streaming-lm-head-official-verilator
+REPAIR8_LM_HEAD_PREPARER := ace3/model/prepare_repair8_lm_head_position2.py
+REPAIR8_LM_HEAD_PREPARER_TEST := ace3/model/tests/test_prepare_repair8_lm_head_position2.py
 
-streaming-lm-head: streaming-lm-head-json-validation streaming-lm-head-iverilog \
-	streaming-lm-head-official-verilator
+.PHONY: repair8-lm-head-position2-tests repair8-lm-head-position2-preflight \
+	position2-kv-contract-tests
 
-streaming-lm-head-json-validation:
-	@$(PYTHON) -m json.tool $(ROOT)/ace3/contracts/streaming_tied_lm_head_topk.json >/dev/null
-	@$(PYTHON) -m py_compile $(STREAMING_LM_HEAD_REFERENCE)
+MODEL24_SELECTED_TOKEN_POSITION2_VALIDATOR := \
+	ace3/model/validate_selected_token_position2_traversal.py
+MODEL24_SELECTED_TOKEN_POSITION2_TEST := \
+	ace3/model/tests/test_validate_selected_token_position2_traversal.py
+MODEL24_SELECTED_TOKEN_POSITION2_DIR := \
+	$(BUILD_DIR)/model24_selected_token_position2
+POSITION2_LIVE_LM_HEAD := ace3/model/position2_live_lm_head.py
+POSITION2_LIVE_LM_HEAD_TEST := \
+	ace3/model/tests/test_position2_live_lm_head.py
+POSITION2_LIVE_LM_HEAD_DIR := \
+	$(BUILD_DIR)/model24_selected_token_position2_lm_head
+POSITION3_CONTINUATION_PREPARER := \
+	ace3/model/prepare_position3_continuation.py
+POSITION3_CONTINUATION_TEST := \
+	ace3/model/tests/test_prepare_position3_continuation.py
+POSITION3_CONTINUATION_PREPARATION_DIR := \
+	$(BUILD_DIR)/model24_selected_token_position3_preparation
+POSITION3_TRAVERSAL_LAUNCH_ACCEPTOR := \
+	ace3/model/accept_position3_traversal_launch.py
+POSITION3_TRAVERSAL_LAUNCH_TEST := \
+	ace3/model/tests/test_accept_position3_traversal_launch.py
+POSITION3_TRAVERSAL_LAUNCH_DIR := \
+	$(BUILD_DIR)/model24_selected_token_position3_launch_acceptance
+POSITION3_TRAVERSAL_EXECUTOR := \
+	ace3/model/validate_selected_token_position3_traversal.py
+POSITION3_TRAVERSAL_TEST := \
+	ace3/model/tests/test_validate_selected_token_position3_traversal.py
+POSITION3_TRAVERSAL_DIR := \
+	$(BUILD_DIR)/model24_selected_token_position3
+POSITION3_LIVE_LM_HEAD := ace3/model/position3_live_lm_head.py
+POSITION3_LIVE_LM_HEAD_TEST := \
+	ace3/model/tests/test_position3_live_lm_head.py
+POSITION3_LIVE_LM_HEAD_DIR := \
+	$(BUILD_DIR)/model24_selected_token_position3_lm_head
+POSITION4_CONTINUATION_PREPARER := \
+	ace3/model/prepare_position4_continuation.py
+POSITION4_CONTINUATION_TEST := \
+	ace3/model/tests/test_prepare_position4_continuation.py
+POSITION4_CONTINUATION_PREPARATION_DIR := \
+	$(BUILD_DIR)/model24_selected_token_position4_preparation
+POSITION4_TRAVERSAL_EXECUTOR := \
+	ace3/model/validate_selected_token_position4_traversal.py
+POSITION4_TRAVERSAL_TEST := \
+	ace3/model/tests/test_validate_selected_token_position4_traversal.py
+POSITION4_TRAVERSAL_DIR := \
+	$(BUILD_DIR)/model24_selected_token_position4
 
-streaming-lm-head-iverilog: streaming-lm-head-json-validation
-	@$(RM) -r $(STREAMING_LM_HEAD_IVERILOG_DIR)
-	@mkdir -p $(STREAMING_LM_HEAD_IVERILOG_DIR)
-	@printf '%s\n' '$(IVERILOG) -g2012 -Wall -s ace3_streaming_tied_lm_head_topk_tb -o $(STREAMING_LM_HEAD_IVERILOG_BIN) $(STREAMING_LM_HEAD_FIXED_RTL) $(STREAMING_LM_HEAD_ROUNDER_RTL) $(STREAMING_LM_HEAD_RTL) $(STREAMING_LM_HEAD_TB)' > $(STREAMING_LM_HEAD_IVERILOG_DIR)/compile.command
-	@$(IVERILOG) -g2012 -Wall -s ace3_streaming_tied_lm_head_topk_tb \
-		-o $(STREAMING_LM_HEAD_IVERILOG_BIN) \
-		$(STREAMING_LM_HEAD_FIXED_RTL) $(STREAMING_LM_HEAD_ROUNDER_RTL) \
-		$(STREAMING_LM_HEAD_RTL) $(STREAMING_LM_HEAD_TB) \
-		>$(STREAMING_LM_HEAD_IVERILOG_DIR)/compile.stdout \
-		2>$(STREAMING_LM_HEAD_IVERILOG_DIR)/compile.stderr
-	@printf '%s\n' '$(VVP) $(STREAMING_LM_HEAD_IVERILOG_BIN)' > $(STREAMING_LM_HEAD_IVERILOG_DIR)/run.command
-	@set -eu; status=0; \
-		$(VVP) $(STREAMING_LM_HEAD_IVERILOG_BIN) \
-			>$(STREAMING_LM_HEAD_IVERILOG_DIR)/run.stdout \
-			2>$(STREAMING_LM_HEAD_IVERILOG_DIR)/run.stderr || status=$$?; \
-		printf '%s\n' "$$status" > $(STREAMING_LM_HEAD_IVERILOG_DIR)/exit_code; \
-		test "$$status" -eq 0; \
-		test ! -s $(STREAMING_LM_HEAD_IVERILOG_DIR)/run.stderr; \
-		grep -F 'STREAMING_LM_HEAD_PROTOCOL_PASS logits=5 top_k=3 four_state=2' \
-			$(STREAMING_LM_HEAD_IVERILOG_DIR)/run.stdout; \
-		cat $(STREAMING_LM_HEAD_IVERILOG_DIR)/run.stdout
+.PHONY: model24-selected-token-position2 \
+	model24-selected-token-position2-tests \
+	model24-selected-token-position2-lm-head \
+	model24-selected-token-position2-lm-head-tests \
+	model24-selected-token-position3-continuation-preparation \
+	model24-selected-token-position3-continuation-tests \
+	model24-selected-token-position3-continuation-current-state-check \
+	model24-selected-token-position3-traversal-launch-acceptance \
+	model24-selected-token-position3-traversal-launch-tests \
+	model24-selected-token-position3-traversal-launch-current-state-check \
+	model24-selected-token-position3-traversal \
+	model24-selected-token-position3-traversal-tests \
+	model24-selected-token-position3-traversal-current-state-check \
+	model24-selected-token-position3-lm-head \
+	model24-selected-token-position3-lm-head-tests \
+	model24-selected-token-position3-lm-head-current-state-check \
+	model24-selected-token-position4-continuation-preparation \
+	model24-selected-token-position4-continuation-tests \
+	model24-selected-token-position4-continuation-current-state-check \
+	model24-selected-token-position4-traversal \
+	model24-selected-token-position4-traversal-tests \
+	model24-selected-token-position4-traversal-current-state-check
 
-streaming-lm-head-official-vectors: streaming-lm-head-json-validation
-	@test -n "$(STREAMING_LM_HEAD_CHECKPOINT)" || \
-		{ echo "STREAMING_LM_HEAD_CHECKPOINT is required" >&2; exit 2; }
-	@$(RM) -r $(STREAMING_LM_HEAD_VECTOR_DIR)
-	@mkdir -p $(STREAMING_LM_HEAD_VECTOR_DIR)
-	@printf '%s\n' '$(PYTHON) $(STREAMING_LM_HEAD_REFERENCE) --checkpoint $(STREAMING_LM_HEAD_CHECKPOINT) --output-dir $(STREAMING_LM_HEAD_VECTOR_DIR)' > $(STREAMING_LM_HEAD_VECTOR_DIR)/reference.command
-	@set -eu; status=0; \
-		$(PYTHON) $(STREAMING_LM_HEAD_REFERENCE) \
-			--checkpoint $(STREAMING_LM_HEAD_CHECKPOINT) \
-			--output-dir $(STREAMING_LM_HEAD_VECTOR_DIR) \
-			>$(STREAMING_LM_HEAD_VECTOR_DIR)/reference.stdout \
-			2>$(STREAMING_LM_HEAD_VECTOR_DIR)/reference.stderr || status=$$?; \
-		printf '%s\n' "$$status" > $(STREAMING_LM_HEAD_VECTOR_DIR)/reference.exit_code; \
-		test "$$status" -eq 0; \
-		test ! -s $(STREAMING_LM_HEAD_VECTOR_DIR)/reference.stderr; \
-		grep -F 'LM_HEAD_REFERENCE_PASS vocab=151936 hidden=896 top_token=2114 checks=12' \
-			$(STREAMING_LM_HEAD_VECTOR_DIR)/reference.stdout; \
-		cat $(STREAMING_LM_HEAD_VECTOR_DIR)/reference.stdout
+model24-selected-token-position2-tests:
+	@cd "$(ROOT)" && "$(PYTHON)" -m py_compile \
+	    "$(MODEL24_SELECTED_TOKEN_POSITION2_VALIDATOR)" \
+	    "$(MODEL24_SELECTED_TOKEN_POSITION2_TEST)"
+	@cd "$(ROOT)" && "$(PYTHON)" -m unittest \
+	    ace3.model.tests.test_validate_selected_token_position2_traversal
 
-streaming-lm-head-verilator-compile: streaming-lm-head-json-validation
-	@$(RM) -r $(STREAMING_LM_HEAD_VERILATOR_DIR)
-	@mkdir -p $(STREAMING_LM_HEAD_VERILATOR_DIR)
-	@$(VERILATOR) --cc --exe --build --Wall -Wno-fatal \
-		--top-module ace3_streaming_tied_lm_head_topk \
-		--Mdir $(STREAMING_LM_HEAD_VERILATOR_DIR) \
-		$(STREAMING_LM_HEAD_FIXED_RTL) $(STREAMING_LM_HEAD_ROUNDER_RTL) \
-		$(STREAMING_LM_HEAD_RTL) $(STREAMING_LM_HEAD_CPP_TB) \
-		>$(STREAMING_LM_HEAD_DIR)/verilator-compile.stdout \
-		2>$(STREAMING_LM_HEAD_DIR)/verilator-compile.stderr
-	@test -x $(STREAMING_LM_HEAD_VERILATOR_BIN)
+model24-selected-token-position2: model24-selected-token-position2-tests
+	@rm -rf "$(MODEL24_SELECTED_TOKEN_POSITION2_DIR)"
+	@mkdir -p "$(MODEL24_SELECTED_TOKEN_POSITION2_DIR)"
+	@set -eu; log="$(MODEL24_SELECTED_TOKEN_POSITION2_DIR)/validation.log"; \
+	printf '%s\n' \
+	    '$ python3 ace3/model/validate_selected_token_position2_traversal.py generate' \
+	    '$ python3 ace3/model/validate_selected_token_position2_traversal.py validate' \
+	    > "$$log"; \
+	cd "$(ROOT)" && "$(PYTHON)" \
+	    "$(MODEL24_SELECTED_TOKEN_POSITION2_VALIDATOR)" generate \
+	    --output "$(MODEL24_SELECTED_TOKEN_POSITION2_DIR)/evidence.json" \
+	    >> "$$log" 2>&1; \
+	cd "$(ROOT)" && "$(PYTHON)" \
+	    "$(MODEL24_SELECTED_TOKEN_POSITION2_VALIDATOR)" validate \
+	    --output "$(MODEL24_SELECTED_TOKEN_POSITION2_DIR)/evidence.json" \
+	    >> "$$log" 2>&1; \
+	cat "$$log"
 
-streaming-lm-head-official-verilator: streaming-lm-head-official-vectors \
-	streaming-lm-head-verilator-compile
-	@printf '%s\n' '$(STREAMING_LM_HEAD_VERILATOR_BIN) --checkpoint $(STREAMING_LM_HEAD_CHECKPOINT) --config $(STREAMING_LM_HEAD_VECTOR_DIR)/run.cfg --hidden $(STREAMING_LM_HEAD_VECTOR_DIR)/hidden.hex --checks $(STREAMING_LM_HEAD_VECTOR_DIR)/checks.txt --topk $(STREAMING_LM_HEAD_VECTOR_DIR)/topk.txt' > $(STREAMING_LM_HEAD_DIR)/official.command
-	@set -eu; status=0; \
-		$(STREAMING_LM_HEAD_VERILATOR_BIN) \
-			--checkpoint $(STREAMING_LM_HEAD_CHECKPOINT) \
-			--config $(STREAMING_LM_HEAD_VECTOR_DIR)/run.cfg \
-			--hidden $(STREAMING_LM_HEAD_VECTOR_DIR)/hidden.hex \
-			--checks $(STREAMING_LM_HEAD_VECTOR_DIR)/checks.txt \
-			--topk $(STREAMING_LM_HEAD_VECTOR_DIR)/topk.txt \
-			>$(STREAMING_LM_HEAD_DIR)/official.stdout \
-			2>$(STREAMING_LM_HEAD_DIR)/official.stderr || status=$$?; \
-		printf '%s\n' "$$status" > $(STREAMING_LM_HEAD_DIR)/official.exit_code; \
-		test "$$status" -eq 0; \
-		test ! -s $(STREAMING_LM_HEAD_DIR)/official.stderr; \
-		grep -F 'STREAMING_LM_HEAD_OFFICIAL_PASS hidden=896 vocab=151936 weights=136134656 top_token=2114 checks=12 ' \
-			$(STREAMING_LM_HEAD_DIR)/official.stdout; \
-		printf '%s\n' 'schema=ace3-streaming-lm-head-terminal-v1' \
-			'natural_terminal=1' 'exit_code=0' 'hidden=896' 'vocab=151936' \
-			'weights=136134656' 'logits=151936' 'checks=12' 'top_token=2114' \
-			> $(STREAMING_LM_HEAD_DIR)/official.terminal; \
-		cat $(STREAMING_LM_HEAD_DIR)/official.stdout
+model24-selected-token-position2-lm-head-tests:
+	@cd "$(ROOT)" && "$(PYTHON)" -m py_compile \
+	    "$(POSITION2_LIVE_LM_HEAD)" "$(POSITION2_LIVE_LM_HEAD_TEST)"
+	@cd "$(ROOT)" && "$(PYTHON)" -m unittest \
+	    ace3.model.tests.test_position2_live_lm_head
+
+model24-selected-token-position2-lm-head:
+	@rm -rf "$(POSITION2_LIVE_LM_HEAD_DIR)"
+	@mkdir -p "$(POSITION2_LIVE_LM_HEAD_DIR)"
+	@set -eu; tests="$(POSITION2_LIVE_LM_HEAD_DIR)/tests.log"; \
+	$(MAKE) --no-print-directory \
+	    model24-selected-token-position2-lm-head-tests > "$$tests" 2>&1
+	@cd "$(ROOT)" && "$(PYTHON)" "$(POSITION2_LIVE_LM_HEAD)" prepare \
+	    --checkpoint "$(OFFICIAL_MODEL24_CHECKPOINT)" \
+	    --parent-evidence "$(MODEL24_SELECTED_TOKEN_POSITION2_DIR)/evidence.json" \
+	    --output-dir "$(POSITION2_LIVE_LM_HEAD_DIR)" \
+	    > "$(POSITION2_LIVE_LM_HEAD_DIR)/prepare.log" 2>&1
+	@verilator --cc --exe --build -Wno-fatal \
+	    --top-module ace3_streaming_tied_lm_head_topk \
+	    -Mdir "$(POSITION2_LIVE_LM_HEAD_DIR)/obj_dir" \
+	    "$(ROOT)/ace3/rtl/ace3_fp16_fixed.sv" \
+	    "$(ROOT)/ace3/rtl/ace3_q47_48_to_f16_rne.sv" \
+	    "$(ROOT)/ace3/rtl/ace3_streaming_tied_lm_head_topk.sv" \
+	    "$(ROOT)/ace3/tb/ace3_streaming_tied_lm_head_topk_main.cpp" \
+	    > "$(POSITION2_LIVE_LM_HEAD_DIR)/compile.log" 2>&1
+	@"$(POSITION2_LIVE_LM_HEAD_DIR)/obj_dir/Vace3_streaming_tied_lm_head_topk" \
+	    --checkpoint "$(OFFICIAL_MODEL24_CHECKPOINT)" \
+	    --config "$(POSITION2_LIVE_LM_HEAD_DIR)/vectors/run.cfg" \
+	    --hidden "$(POSITION2_LIVE_LM_HEAD_DIR)/vectors/hidden.hex" \
+	    --checks "$(POSITION2_LIVE_LM_HEAD_DIR)/vectors/checks.txt" \
+	    --topk "$(POSITION2_LIVE_LM_HEAD_DIR)/vectors/topk.txt" \
+	    > "$(POSITION2_LIVE_LM_HEAD_DIR)/rtl.log" 2>&1
+	@cd "$(ROOT)" && "$(PYTHON)" "$(POSITION2_LIVE_LM_HEAD)" seal \
+	    --output-dir "$(POSITION2_LIVE_LM_HEAD_DIR)" \
+	    --binary "$(POSITION2_LIVE_LM_HEAD_DIR)/obj_dir/Vace3_streaming_tied_lm_head_topk" \
+	    --evidence "$(POSITION2_LIVE_LM_HEAD_DIR)/evidence.json" \
+	    > "$(POSITION2_LIVE_LM_HEAD_DIR)/seal.log" 2>&1
+	@cd "$(ROOT)" && "$(PYTHON)" "$(POSITION2_LIVE_LM_HEAD)" validate \
+	    --output-dir "$(POSITION2_LIVE_LM_HEAD_DIR)" \
+	    --binary "$(POSITION2_LIVE_LM_HEAD_DIR)/obj_dir/Vace3_streaming_tied_lm_head_topk" \
+	    --parent-evidence "$(MODEL24_SELECTED_TOKEN_POSITION2_DIR)/evidence.json" \
+	    --evidence "$(POSITION2_LIVE_LM_HEAD_DIR)/evidence.json" \
+	    | tee "$(POSITION2_LIVE_LM_HEAD_DIR)/validation.log"
+
+model24-selected-token-position3-continuation-tests:
+	@mkdir -p "$(POSITION3_CONTINUATION_PREPARATION_DIR)"
+	@set -eu; log="$(POSITION3_CONTINUATION_PREPARATION_DIR)/focused-tests.log"; \
+	printf '%s\n' \
+	    '$ python3 -m py_compile ace3/model/prepare_position3_continuation.py ace3/model/tests/test_prepare_position3_continuation.py' \
+	    '$ python3 -m unittest ace3.model.tests.test_prepare_position3_continuation' \
+	    > "$$log"; \
+	if cd "$(ROOT)" && "$(PYTHON)" -m py_compile \
+	    "$(POSITION3_CONTINUATION_PREPARER)" \
+	    "$(POSITION3_CONTINUATION_TEST)" >> "$$log" 2>&1 \
+	    && "$(PYTHON)" -m unittest \
+	    ace3.model.tests.test_prepare_position3_continuation \
+	    >> "$$log" 2>&1; then :; \
+	else status=$$?; cat "$$log"; exit $$status; fi; \
+	cat "$$log"
+
+model24-selected-token-position3-continuation-current-state-check:
+	@mkdir -p "$(POSITION3_CONTINUATION_PREPARATION_DIR)"
+	@rm -rf "$(POSITION3_CONTINUATION_PREPARATION_DIR)/current-state-package"
+	@set -eu; \
+	log="$(POSITION3_CONTINUATION_PREPARATION_DIR)/current-state-not-ready.log"; \
+	printf '%s\n' \
+	    '$ python3 ace3/model/prepare_position3_continuation.py prepare --output-dir build/model24_selected_token_position3_preparation/current-state-package' \
+	    > "$$log"; \
+	if cd "$(ROOT)" && "$(PYTHON)" "$(POSITION3_CONTINUATION_PREPARER)" \
+	    prepare \
+	    --output-dir \
+	    "$(POSITION3_CONTINUATION_PREPARATION_DIR)/current-state-package" \
+	    >> "$$log" 2>&1; then \
+	    printf '%s\n' 'unexpected position-3 preparation success' >> "$$log"; \
+	    cat "$$log"; exit 1; \
+	fi; \
+	grep -F 'POSITION3_CONTINUATION_NOT_READY position-2 traversal evidence is missing:' \
+	    "$$log" >/dev/null; \
+	grep -F 'recheck when build/model24_selected_token_position2/evidence.json exists with status COMPLETE' \
+	    "$$log" >/dev/null; \
+	test ! -e \
+	    "$(POSITION3_CONTINUATION_PREPARATION_DIR)/current-state-package"; \
+	cat "$$log"
+
+model24-selected-token-position3-continuation-preparation: \
+	model24-selected-token-position3-continuation-tests
+	@rm -rf "$(POSITION3_CONTINUATION_PREPARATION_DIR)/package"
+	@cd "$(ROOT)" && "$(PYTHON)" "$(POSITION3_CONTINUATION_PREPARER)" prepare \
+	    --output-dir "$(POSITION3_CONTINUATION_PREPARATION_DIR)/package"
+	@cd "$(ROOT)" && "$(PYTHON)" "$(POSITION3_CONTINUATION_PREPARER)" validate \
+	    --output-dir "$(POSITION3_CONTINUATION_PREPARATION_DIR)/package"
+
+model24-selected-token-position3-traversal-launch-tests:
+	@mkdir -p "$(POSITION3_TRAVERSAL_LAUNCH_DIR)"
+	@set -eu; log="$(POSITION3_TRAVERSAL_LAUNCH_DIR)/focused-tests.log"; \
+	printf '%s\n' \
+	    '$ python3 -m py_compile ace3/model/accept_position3_traversal_launch.py ace3/model/tests/test_accept_position3_traversal_launch.py' \
+	    '$ python3 -m unittest ace3.model.tests.test_accept_position3_traversal_launch' \
+	    > "$$log"; \
+	if cd "$(ROOT)" && "$(PYTHON)" -m py_compile \
+	    "$(POSITION3_TRAVERSAL_LAUNCH_ACCEPTOR)" \
+	    "$(POSITION3_TRAVERSAL_LAUNCH_TEST)" >> "$$log" 2>&1 \
+	    && "$(PYTHON)" -m unittest \
+	    ace3.model.tests.test_accept_position3_traversal_launch \
+	    >> "$$log" 2>&1; then :; \
+	else status=$$?; cat "$$log"; exit $$status; fi; \
+	cat "$$log"
+
+model24-selected-token-position3-traversal-launch-current-state-check:
+	@mkdir -p "$(POSITION3_TRAVERSAL_LAUNCH_DIR)"
+	@rm -rf "$(POSITION3_TRAVERSAL_LAUNCH_DIR)/current-state-preflight"
+	@set -eu; \
+	log="$(POSITION3_TRAVERSAL_LAUNCH_DIR)/current-state-not-ready.log"; \
+	printf '%s\n' \
+	    '$ python3 ace3/model/accept_position3_traversal_launch.py accept --output-dir build/model24_selected_token_position3_launch_acceptance/current-state-preflight' \
+	    > "$$log"; \
+	if cd "$(ROOT)" && "$(PYTHON)" \
+	    "$(POSITION3_TRAVERSAL_LAUNCH_ACCEPTOR)" accept \
+	    --output-dir \
+	    "$(POSITION3_TRAVERSAL_LAUNCH_DIR)/current-state-preflight" \
+	    >> "$$log" 2>&1; then \
+	    printf '%s\n' 'unexpected position-3 launch preflight success' \
+	        >> "$$log"; \
+	    cat "$$log"; exit 1; \
+	fi; \
+	grep -F 'POSITION3_TRAVERSAL_LAUNCH_NOT_READY position-3 READY package is missing:' \
+	    "$$log" >/dev/null; \
+	grep -F 'recheck when build/model24_selected_token_position3_preparation/package/launch_manifest.json exists with status READY and passes fresh validation of its exact embedding, token history, 24-layer FP16 K/V parentage, position-2 parents, source/artifact closure, and selected-token-position3-full-traversal operation' \
+	    "$$log" >/dev/null; \
+	test ! -e "$(POSITION3_TRAVERSAL_LAUNCH_DIR)/current-state-preflight"; \
+	! grep -F 'POSITION3_TRAVERSAL_LAUNCH_PREFLIGHT_PASS' "$$log"; \
+	! grep -F 'execution_performed=1' "$$log"; \
+	cat "$$log"
+
+model24-selected-token-position3-traversal-launch-acceptance: \
+	model24-selected-token-position3-traversal-launch-tests
+	@rm -rf "$(POSITION3_TRAVERSAL_LAUNCH_DIR)/preflight"
+	@cd "$(ROOT)" && "$(PYTHON)" \
+	    "$(POSITION3_TRAVERSAL_LAUNCH_ACCEPTOR)" accept \
+	    --package-dir "$(POSITION3_CONTINUATION_PREPARATION_DIR)/package" \
+	    --output-dir "$(POSITION3_TRAVERSAL_LAUNCH_DIR)/preflight"
+	@cd "$(ROOT)" && "$(PYTHON)" \
+	    "$(POSITION3_TRAVERSAL_LAUNCH_ACCEPTOR)" validate \
+	    --package-dir "$(POSITION3_CONTINUATION_PREPARATION_DIR)/package" \
+	    --output-dir "$(POSITION3_TRAVERSAL_LAUNCH_DIR)/preflight"
+
+model24-selected-token-position3-traversal-tests:
+	@mkdir -p "$(POSITION3_TRAVERSAL_DIR)"
+	@set -eu; log="$(POSITION3_TRAVERSAL_DIR)/focused-tests.log"; \
+	printf '%s\n' \
+	    '$ python3 -m py_compile ace3/model/validate_selected_token_position3_traversal.py ace3/model/tests/test_validate_selected_token_position3_traversal.py' \
+	    '$ python3 -m unittest ace3.model.tests.test_validate_selected_token_position3_traversal' \
+	    > "$$log"; \
+	if cd "$(ROOT)" && "$(PYTHON)" -m py_compile \
+	    "$(POSITION3_TRAVERSAL_EXECUTOR)" \
+	    "$(POSITION3_TRAVERSAL_TEST)" >> "$$log" 2>&1 \
+	    && "$(PYTHON)" -m unittest \
+	    ace3.model.tests.test_validate_selected_token_position3_traversal \
+	    >> "$$log" 2>&1; then :; \
+	else status=$$?; cat "$$log"; exit $$status; fi; \
+	cat "$$log"
+
+model24-selected-token-position3-traversal-current-state-check:
+	@mkdir -p "$(POSITION3_TRAVERSAL_DIR)"
+	@rm -rf "$(POSITION3_TRAVERSAL_DIR)/current-state"
+	@set -eu; \
+	log="$(POSITION3_TRAVERSAL_DIR)/current-state-not-ready.log"; \
+	printf '%s\n' \
+	    '$ python3 ace3/model/validate_selected_token_position3_traversal.py generate --preflight build/model24_selected_token_position3_launch_acceptance/preflight/launch_preflight.json --output build/model24_selected_token_position3/current-state/evidence.json' \
+	    > "$$log"; \
+	if cd "$(ROOT)" && "$(PYTHON)" "$(POSITION3_TRAVERSAL_EXECUTOR)" \
+	    generate \
+	    --preflight \
+	    "$(POSITION3_TRAVERSAL_LAUNCH_DIR)/preflight/launch_preflight.json" \
+	    --output "$(POSITION3_TRAVERSAL_DIR)/current-state/evidence.json" \
+	    >> "$$log" 2>&1; then \
+	    printf '%s\n' 'unexpected position-3 traversal success' >> "$$log"; \
+	    cat "$$log"; exit 1; \
+	fi; \
+	grep -F 'POSITION3_TRAVERSAL_NOT_READY position-3 launch preflight is missing:' \
+	    "$$log" >/dev/null; \
+	grep -F 'build/model24_selected_token_position3_launch_acceptance/preflight/launch_preflight.json exists with status ACCEPTED' \
+	    "$$log" >/dev/null; \
+	test ! -e "$(POSITION3_TRAVERSAL_DIR)/current-state"; \
+	! grep -F 'MODEL24_SELECTED_TOKEN_POSITION3_TRAVERSAL_PASS' "$$log"; \
+	! grep -F '"status": "COMPLETE"' "$$log"; \
+	cat "$$log"
+
+model24-selected-token-position3-traversal: \
+	model24-selected-token-position3-traversal-tests
+	@rm -rf "$(POSITION3_TRAVERSAL_DIR)/traversal" \
+	    "$(POSITION3_TRAVERSAL_DIR)/evidence.json"
+	@cd "$(ROOT)" && "$(PYTHON)" "$(POSITION3_TRAVERSAL_EXECUTOR)" generate \
+	    --preflight \
+	    "$(POSITION3_TRAVERSAL_LAUNCH_DIR)/preflight/launch_preflight.json" \
+	    --output "$(POSITION3_TRAVERSAL_DIR)/evidence.json"
+	@cd "$(ROOT)" && "$(PYTHON)" "$(POSITION3_TRAVERSAL_EXECUTOR)" validate \
+	    --preflight \
+	    "$(POSITION3_TRAVERSAL_LAUNCH_DIR)/preflight/launch_preflight.json" \
+	    --output "$(POSITION3_TRAVERSAL_DIR)/evidence.json"
+
+model24-selected-token-position3-lm-head-tests:
+	@mkdir -p "$(POSITION3_LIVE_LM_HEAD_DIR)"
+	@set -eu; log="$(POSITION3_LIVE_LM_HEAD_DIR)/focused-tests.log"; \
+	printf '%s\n' \
+	    '$ python3 -m py_compile ace3/model/position3_live_lm_head.py ace3/model/tests/test_position3_live_lm_head.py' \
+	    '$ python3 -m unittest ace3.model.tests.test_position3_live_lm_head' \
+	    > "$$log"; \
+	if cd "$(ROOT)" && "$(PYTHON)" -m py_compile \
+	    "$(POSITION3_LIVE_LM_HEAD)" \
+	    "$(POSITION3_LIVE_LM_HEAD_TEST)" >> "$$log" 2>&1 \
+	    && "$(PYTHON)" -m unittest \
+	    ace3.model.tests.test_position3_live_lm_head \
+	    >> "$$log" 2>&1; then :; \
+	else status=$$?; cat "$$log"; exit $$status; fi; \
+	cat "$$log"
+
+model24-selected-token-position3-lm-head-current-state-check: \
+	model24-selected-token-position3-lm-head-tests
+	@rm -rf "$(POSITION3_LIVE_LM_HEAD_DIR)/current-state"
+	@set -eu; \
+	log="$(POSITION3_LIVE_LM_HEAD_DIR)/current-state-not-ready.log"; \
+	printf '%s\n' \
+	    '$ python3 ace3/model/position3_live_lm_head.py prepare --parent-evidence build/model24_selected_token_position3/evidence.json --output-dir build/model24_selected_token_position3_lm_head/current-state' \
+	    > "$$log"; \
+	if cd "$(ROOT)" && "$(PYTHON)" "$(POSITION3_LIVE_LM_HEAD)" prepare \
+	    --checkpoint "$(OFFICIAL_MODEL24_CHECKPOINT)" \
+	    --tokenizer-dir "$(OFFICIAL_MODEL24_TOKENIZER_DIR)" \
+	    --parent-evidence "$(POSITION3_TRAVERSAL_DIR)/evidence.json" \
+	    --output-dir "$(POSITION3_LIVE_LM_HEAD_DIR)/current-state" \
+	    >> "$$log" 2>&1; then \
+	    printf '%s\n' 'unexpected position-3 lm_head success' >> "$$log"; \
+	    cat "$$log"; exit 1; \
+	fi; \
+	grep -F 'POSITION3_LIVE_LM_HEAD_NOT_READY position-3 traversal evidence is missing:' \
+	    "$$log" >/dev/null; \
+	grep -F 'recheck when build/model24_selected_token_position3/evidence.json exists with status COMPLETE and passes fresh validation of its exact position-3 selected token, 24 ordered current-worktree Verilator layers, layer-23 terminal hidden row, official checkpoint/tokenizer hashes, and source/artifact closure' \
+	    "$$log" >/dev/null; \
+	test ! -e "$(POSITION3_LIVE_LM_HEAD_DIR)/current-state"; \
+	! grep -F 'POSITION3_LIVE_LM_HEAD_PASS' "$$log"; \
+	cat "$$log"
+
+model24-selected-token-position3-lm-head: \
+	model24-selected-token-position3-lm-head-tests
+	@rm -rf "$(POSITION3_LIVE_LM_HEAD_DIR)"
+	@mkdir -p "$(POSITION3_LIVE_LM_HEAD_DIR)"
+	@set -eu; tests="$(POSITION3_LIVE_LM_HEAD_DIR)/tests.log"; \
+	$(MAKE) --no-print-directory \
+	    model24-selected-token-position3-lm-head-tests > "$$tests" 2>&1
+	@cd "$(ROOT)" && "$(PYTHON)" "$(POSITION3_LIVE_LM_HEAD)" prepare \
+	    --checkpoint "$(OFFICIAL_MODEL24_CHECKPOINT)" \
+	    --tokenizer-dir "$(OFFICIAL_MODEL24_TOKENIZER_DIR)" \
+	    --parent-evidence "$(POSITION3_TRAVERSAL_DIR)/evidence.json" \
+	    --output-dir "$(POSITION3_LIVE_LM_HEAD_DIR)" \
+	    > "$(POSITION3_LIVE_LM_HEAD_DIR)/prepare.log" 2>&1
+	@verilator --cc --exe --build -Wno-fatal \
+	    --top-module ace3_streaming_tied_lm_head_topk \
+	    -Mdir "$(POSITION3_LIVE_LM_HEAD_DIR)/obj_dir" \
+	    "$(ROOT)/ace3/rtl/ace3_fp16_fixed.sv" \
+	    "$(ROOT)/ace3/rtl/ace3_q47_48_to_f16_rne.sv" \
+	    "$(ROOT)/ace3/rtl/ace3_streaming_tied_lm_head_topk.sv" \
+	    "$(ROOT)/ace3/tb/ace3_streaming_tied_lm_head_topk_main.cpp" \
+	    > "$(POSITION3_LIVE_LM_HEAD_DIR)/compile.log" 2>&1
+	@"$(POSITION3_LIVE_LM_HEAD_DIR)/obj_dir/Vace3_streaming_tied_lm_head_topk" \
+	    --checkpoint "$(OFFICIAL_MODEL24_CHECKPOINT)" \
+	    --config "$(POSITION3_LIVE_LM_HEAD_DIR)/vectors/run.cfg" \
+	    --hidden "$(POSITION3_LIVE_LM_HEAD_DIR)/vectors/hidden.hex" \
+	    --checks "$(POSITION3_LIVE_LM_HEAD_DIR)/vectors/checks.txt" \
+	    --topk "$(POSITION3_LIVE_LM_HEAD_DIR)/vectors/topk.txt" \
+	    > "$(POSITION3_LIVE_LM_HEAD_DIR)/rtl.log" 2>&1
+	@cd "$(ROOT)" && "$(PYTHON)" "$(POSITION3_LIVE_LM_HEAD)" seal \
+	    --output-dir "$(POSITION3_LIVE_LM_HEAD_DIR)" \
+	    --binary "$(POSITION3_LIVE_LM_HEAD_DIR)/obj_dir/Vace3_streaming_tied_lm_head_topk" \
+	    --evidence "$(POSITION3_LIVE_LM_HEAD_DIR)/evidence.json" \
+	    > "$(POSITION3_LIVE_LM_HEAD_DIR)/seal.log" 2>&1
+	@cd "$(ROOT)" && "$(PYTHON)" "$(POSITION3_LIVE_LM_HEAD)" validate \
+	    --output-dir "$(POSITION3_LIVE_LM_HEAD_DIR)" \
+	    --binary "$(POSITION3_LIVE_LM_HEAD_DIR)/obj_dir/Vace3_streaming_tied_lm_head_topk" \
+	    --parent-evidence "$(POSITION3_TRAVERSAL_DIR)/evidence.json" \
+	    --tokenizer-dir "$(OFFICIAL_MODEL24_TOKENIZER_DIR)" \
+	    --evidence "$(POSITION3_LIVE_LM_HEAD_DIR)/evidence.json" \
+	    | tee "$(POSITION3_LIVE_LM_HEAD_DIR)/validation.log"
+
+model24-selected-token-position4-continuation-tests:
+	@mkdir -p "$(POSITION4_CONTINUATION_PREPARATION_DIR)"
+	@set -eu; log="$(POSITION4_CONTINUATION_PREPARATION_DIR)/focused-tests.log"; \
+	printf '%s\n' \
+	    '$ python3 -m py_compile ace3/model/prepare_position4_continuation.py ace3/model/tests/test_prepare_position4_continuation.py' \
+	    '$ python3 -m unittest ace3.model.tests.test_prepare_position4_continuation' \
+	    > "$$log"; \
+	if cd "$(ROOT)" && "$(PYTHON)" -m py_compile \
+	    "$(POSITION4_CONTINUATION_PREPARER)" \
+	    "$(POSITION4_CONTINUATION_TEST)" >> "$$log" 2>&1 \
+	    && "$(PYTHON)" -m unittest \
+	    ace3.model.tests.test_prepare_position4_continuation \
+	    >> "$$log" 2>&1; then :; \
+	else status=$$?; cat "$$log"; exit $$status; fi; \
+	cat "$$log"
+
+model24-selected-token-position4-continuation-current-state-check:
+	@mkdir -p "$(POSITION4_CONTINUATION_PREPARATION_DIR)"
+	@rm -rf "$(POSITION4_CONTINUATION_PREPARATION_DIR)/current-state-package"
+	@set -eu; \
+	log="$(POSITION4_CONTINUATION_PREPARATION_DIR)/current-state-not-ready.log"; \
+	printf '%s\n' \
+	    '$ python3 ace3/model/prepare_position4_continuation.py prepare --output-dir build/model24_selected_token_position4_preparation/current-state-package' \
+	    > "$$log"; \
+	if cd "$(ROOT)" && "$(PYTHON)" "$(POSITION4_CONTINUATION_PREPARER)" \
+	    prepare \
+	    --output-dir \
+	    "$(POSITION4_CONTINUATION_PREPARATION_DIR)/current-state-package" \
+	    >> "$$log" 2>&1; then \
+	    printf '%s\n' 'unexpected position-4 preparation success' >> "$$log"; \
+	    cat "$$log"; exit 1; \
+	fi; \
+	grep -F 'POSITION4_CONTINUATION_NOT_READY position-3 lm_head evidence is missing:' \
+	    "$$log" >/dev/null; \
+	grep -F 'recheck when build/model24_selected_token_position3_lm_head/evidence.json exists with status COMPLETE and is bound to build/model24_selected_token_position3/evidence.json with status COMPLETE, and both authenticate the exact selected token, official checkpoint/tokenizer hashes, all 24 position-3 FP16 K/V states, and source/artifact closure' \
+	    "$$log" >/dev/null; \
+	grep -F '"status": "NOT_READY"' \
+	    "$(POSITION4_CONTINUATION_PREPARATION_DIR)/current-state-package/not_ready.json" \
+	    >/dev/null; \
+	grep -F '"recheck_condition": "recheck when build/model24_selected_token_position3_lm_head/evidence.json exists with status COMPLETE and is bound to build/model24_selected_token_position3/evidence.json with status COMPLETE, and both authenticate the exact selected token, official checkpoint/tokenizer hashes, all 24 position-3 FP16 K/V states, and source/artifact closure"' \
+	    "$(POSITION4_CONTINUATION_PREPARATION_DIR)/current-state-package/not_ready.json" \
+	    >/dev/null; \
+	test ! -e \
+	    "$(POSITION4_CONTINUATION_PREPARATION_DIR)/current-state-package/launch_manifest.json"; \
+	test ! -e \
+	    "$(POSITION4_CONTINUATION_PREPARATION_DIR)/current-state-package/position4_input.hex"; \
+	cat "$$log"
+
+model24-selected-token-position4-continuation-preparation: \
+	model24-selected-token-position4-continuation-tests
+	@rm -rf "$(POSITION4_CONTINUATION_PREPARATION_DIR)/package"
+	@cd "$(ROOT)" && "$(PYTHON)" "$(POSITION4_CONTINUATION_PREPARER)" prepare \
+	    --output-dir "$(POSITION4_CONTINUATION_PREPARATION_DIR)/package"
+	@cd "$(ROOT)" && "$(PYTHON)" "$(POSITION4_CONTINUATION_PREPARER)" validate \
+	    --output-dir "$(POSITION4_CONTINUATION_PREPARATION_DIR)/package"
+
+model24-selected-token-position4-traversal-tests:
+	@mkdir -p "$(POSITION4_TRAVERSAL_DIR)"
+	@set -eu; log="$(POSITION4_TRAVERSAL_DIR)/focused-tests.log"; \
+	printf '%s\n' \
+	    '$ python3 -m py_compile ace3/model/validate_selected_token_position4_traversal.py ace3/model/tests/test_validate_selected_token_position4_traversal.py' \
+	    '$ python3 -m unittest ace3.model.tests.test_validate_selected_token_position4_traversal' \
+	    > "$$log"; \
+	if cd "$(ROOT)" && "$(PYTHON)" -m py_compile \
+	    "$(POSITION4_TRAVERSAL_EXECUTOR)" \
+	    "$(POSITION4_TRAVERSAL_TEST)" >> "$$log" 2>&1 \
+	    && "$(PYTHON)" -m unittest \
+	    ace3.model.tests.test_validate_selected_token_position4_traversal \
+	    >> "$$log" 2>&1; then :; \
+	else status=$$?; cat "$$log"; exit $$status; fi; \
+	cat "$$log"
+
+model24-selected-token-position4-traversal-current-state-check:
+	@mkdir -p "$(POSITION4_TRAVERSAL_DIR)"
+	@rm -rf "$(POSITION4_TRAVERSAL_DIR)/current-state"
+	@set -eu; \
+	log="$(POSITION4_TRAVERSAL_DIR)/current-state-not-ready.log"; \
+	printf '%s\n' \
+	    '$ python3 ace3/model/validate_selected_token_position4_traversal.py generate --manifest build/model24_selected_token_position4_preparation/package/launch_manifest.json --output build/model24_selected_token_position4/current-state/complete-evidence.json --not-ready-output build/model24_selected_token_position4/current-state/evidence.json' \
+	    > "$$log"; \
+	if cd "$(ROOT)" && "$(PYTHON)" "$(POSITION4_TRAVERSAL_EXECUTOR)" \
+	    generate \
+	    --manifest \
+	    "$(POSITION4_CONTINUATION_PREPARATION_DIR)/package/launch_manifest.json" \
+	    --output \
+	    "$(POSITION4_TRAVERSAL_DIR)/current-state/complete-evidence.json" \
+	    --not-ready-output \
+	    "$(POSITION4_TRAVERSAL_DIR)/current-state/evidence.json" \
+	    >> "$$log" 2>&1; then \
+	    printf '%s\n' 'unexpected position-4 traversal success' >> "$$log"; \
+	    cat "$$log"; exit 1; \
+	fi; \
+	grep -F 'POSITION4_TRAVERSAL_NOT_READY position-4 READY launch manifest is missing:' \
+	    "$$log" >/dev/null; \
+	grep -F 'recheck when build/model24_selected_token_position4_preparation/package/launch_manifest.json exists with status READY and passes fresh validation of its exact selected-token embedding, token history, source/artifact bindings, all 24 FP16 K/V parent states, and selected-token-position4-full-traversal operation' \
+	    "$$log" >/dev/null; \
+	grep -F '"status": "NOT_READY"' \
+	    "$(POSITION4_TRAVERSAL_DIR)/current-state/evidence.json" >/dev/null; \
+	grep -F '"complete_traversal_evidence_created": false' \
+	    "$(POSITION4_TRAVERSAL_DIR)/current-state/evidence.json" >/dev/null; \
+	grep -F '"recheck_condition": "recheck when build/model24_selected_token_position4_preparation/package/launch_manifest.json exists with status READY and passes fresh validation of its exact selected-token embedding, token history, source/artifact bindings, all 24 FP16 K/V parent states, and selected-token-position4-full-traversal operation"' \
+	    "$(POSITION4_TRAVERSAL_DIR)/current-state/evidence.json" >/dev/null; \
+	test ! -e \
+	    "$(POSITION4_TRAVERSAL_DIR)/current-state/complete-evidence.json"; \
+	test ! -e "$(POSITION4_TRAVERSAL_DIR)/current-state/traversal"; \
+	! grep -F 'MODEL24_SELECTED_TOKEN_POSITION4_TRAVERSAL_PASS' "$$log"; \
+	! grep -F '"status": "COMPLETE"' "$$log"; \
+	cat "$$log"
+
+model24-selected-token-position4-traversal: \
+	model24-selected-token-position4-traversal-tests
+	@rm -rf "$(POSITION4_TRAVERSAL_DIR)/traversal" \
+	    "$(POSITION4_TRAVERSAL_DIR)/evidence.json" \
+	    "$(POSITION4_TRAVERSAL_DIR)/current_state.json"
+	@cd "$(ROOT)" && "$(PYTHON)" "$(POSITION4_TRAVERSAL_EXECUTOR)" generate \
+	    --manifest \
+	    "$(POSITION4_CONTINUATION_PREPARATION_DIR)/package/launch_manifest.json" \
+	    --output "$(POSITION4_TRAVERSAL_DIR)/evidence.json"
+	@cd "$(ROOT)" && "$(PYTHON)" "$(POSITION4_TRAVERSAL_EXECUTOR)" validate \
+	    --manifest \
+	    "$(POSITION4_CONTINUATION_PREPARATION_DIR)/package/launch_manifest.json" \
+	    --output "$(POSITION4_TRAVERSAL_DIR)/evidence.json"
+
+position2-kv-contract-tests:
+	@cd "$(ROOT)" && "$(PYTHON)" -m py_compile \
+	    ace3/model/official_model24_dialogue.py \
+	    ace3/model/model24_one_shot_python_launcher.py \
+	    ace3/model/tests/test_official_model24_dialogue.py
+	@cd "$(ROOT)" && "$(PYTHON)" -m unittest \
+	    ace3.model.tests.test_official_model24_dialogue.Repair8Position2KvTests \
+	    ace3.model.tests.test_official_model24_dialogue.Model24OneShotRuntimeTests
+
+repair8-lm-head-position2-tests:
+	@cd "$(ROOT)" && "$(PYTHON)" -m py_compile \
+	    "$(REPAIR8_LM_HEAD_PREPARER)" "$(REPAIR8_LM_HEAD_PREPARER_TEST)"
+	@cd "$(ROOT)" && "$(PYTHON)" -m unittest \
+	    ace3/model/tests/test_prepare_repair8_lm_head_position2.py
+
+repair8-lm-head-position2-preflight: repair8-lm-head-position2-tests
+	@set -eu; tmp=$$(mktemp -d /tmp/ace3-repair8-lm-head-preflight.XXXXXX); \
+	trap 'rm -rf "$$tmp"' EXIT; \
+	cd "$(ROOT)"; \
+	"$(PYTHON)" "$(REPAIR8_LM_HEAD_PREPARER)" export-sources \
+	    --repository "$(ROOT)" --output-dir "$$tmp/source"; \
+	iverilog -g2012 -s ace3_streaming_tied_lm_head_topk_tb \
+	    -o "$$tmp/iverilog.out" \
+	    "$$tmp/source/ace3/rtl/ace3_fp16_fixed.sv" \
+	    "$$tmp/source/ace3/rtl/ace3_q47_48_to_f16_rne.sv" \
+	    "$$tmp/source/ace3/rtl/ace3_streaming_tied_lm_head_topk.sv" \
+	    "$$tmp/source/ace3/tb/ace3_streaming_tied_lm_head_topk_tb.sv"; \
+	vvp "$$tmp/iverilog.out"; \
+	verilator --cc --exe --build -Wno-fatal \
+	    --top-module ace3_streaming_tied_lm_head_topk \
+	    -GHIDDEN_SIZE=2 -GVOCAB_SIZE=4 -GTOP_K=3 \
+	    -GTOKEN_INDEX_WIDTH=2 -GFEATURE_INDEX_WIDTH=1 -GTOP_RANK_WIDTH=2 \
+	    -Mdir "$$tmp/verilator_tb" \
+	    "$$tmp/source/ace3/rtl/ace3_fp16_fixed.sv" \
+	    "$$tmp/source/ace3/rtl/ace3_q47_48_to_f16_rne.sv" \
+	    "$$tmp/source/ace3/rtl/ace3_streaming_tied_lm_head_topk.sv" \
+	    "$(ROOT)/ace3/tb/ace3_streaming_tied_lm_head_topk_preflight.cpp"; \
+	"$$tmp/verilator_tb/Vace3_streaming_tied_lm_head_topk"; \
+	verilator --cc --exe --build -Wno-fatal \
+	    --top-module ace3_streaming_tied_lm_head_topk \
+	    -Mdir "$$tmp/verilator_official" \
+	    "$$tmp/source/ace3/rtl/ace3_fp16_fixed.sv" \
+	    "$$tmp/source/ace3/rtl/ace3_q47_48_to_f16_rne.sv" \
+	    "$$tmp/source/ace3/rtl/ace3_streaming_tied_lm_head_topk.sv" \
+	    "$$tmp/source/ace3/tb/ace3_streaming_tied_lm_head_topk_main.cpp"; \
+	test -x "$$tmp/verilator_official/Vace3_streaming_tied_lm_head_topk"; \
+	printf '%s\n' 'REPAIR8_LM_HEAD_POSITION2_PREFLIGHT_PASS icarus=four_state verilator=numerical_protocol official_binary=built official_lm_head=not_executed position2=not_executed'
 
 clean:
 	rm -rf "$(BUILD_DIR)"
-
-.PHONY: generation-feedback generation-feedback-validation generation-feedback-iverilog generation-feedback-reference generation-feedback-verilator-compile generation-feedback-official-run generation-feedback-compare generation-feedback-failure-gate
-generation-feedback: generation-feedback-validation generation-feedback-iverilog generation-feedback-compare
-generation-feedback-validation:
-	@$(PYTHON) -m json.tool $(ROOT)/ace3/contracts/generated_token_feedback.json >/dev/null
-	@$(PYTHON) -m py_compile $(GENERATION_FEEDBACK_REFERENCE) $(GENERATION_FEEDBACK_COMPARE)
-	@$(PYTHON) $(ROOT)/ace3/model/tests/test_generation_feedback.py
-generation-feedback-iverilog: generation-feedback-validation
-	@$(RM) -r $(GENERATION_FEEDBACK_DIR)/iverilog $(GENERATION_FEEDBACK_IVERILOG_BIN); mkdir -p $(GENERATION_FEEDBACK_DIR)/iverilog
-	@$(IVERILOG) -g2012 -Wall -s ace3_generation_feedback_chain_tb -o $(GENERATION_FEEDBACK_IVERILOG_BIN) $(STREAMING_LM_HEAD_FIXED_RTL) $(STREAMING_LM_HEAD_ROUNDER_RTL) $(STREAMING_LM_HEAD_RTL) $(GENERATION_FEEDBACK_RTL) $(GENERATION_FEEDBACK_TB) >$(GENERATION_FEEDBACK_DIR)/iverilog/compile.stdout 2>$(GENERATION_FEEDBACK_DIR)/iverilog/compile.stderr
-	@$(VVP) $(GENERATION_FEEDBACK_IVERILOG_BIN) >$(GENERATION_FEEDBACK_DIR)/iverilog/run.stdout 2>$(GENERATION_FEEDBACK_DIR)/iverilog/run.stderr
-	@grep -F 'GENERATION_FEEDBACK_PROTOCOL_PASS tie=ascending_token backpressure=pass malformed=3' $(GENERATION_FEEDBACK_DIR)/iverilog/run.stdout
-	@cat $(GENERATION_FEEDBACK_DIR)/iverilog/run.stdout
-generation-feedback-reference: generation-feedback-validation
-	@test -n "$(GENERATION_FEEDBACK_CHECKPOINT)" && test -n "$(GENERATION_FEEDBACK_TOKENIZER_DIR)"
-	@$(RM) -r $(GENERATION_FEEDBACK_VECTOR_DIR); mkdir -p $(GENERATION_FEEDBACK_VECTOR_DIR)
-	@$(PYTHON) $(GENERATION_FEEDBACK_REFERENCE) --checkpoint $(GENERATION_FEEDBACK_CHECKPOINT) --tokenizer-dir $(GENERATION_FEEDBACK_TOKENIZER_DIR) --output-dir $(GENERATION_FEEDBACK_VECTOR_DIR) >$(GENERATION_FEEDBACK_VECTOR_DIR)/reference.stdout 2>$(GENERATION_FEEDBACK_VECTOR_DIR)/reference.stderr
-	@grep -F 'GENERATION_FEEDBACK_REFERENCE_PASS token=2114 embedding=896' $(GENERATION_FEEDBACK_VECTOR_DIR)/reference.stdout
-generation-feedback-verilator-compile: generation-feedback-validation
-	@$(RM) -r $(GENERATION_FEEDBACK_VERILATOR_DIR); mkdir -p $(GENERATION_FEEDBACK_VERILATOR_DIR)
-	@$(VERILATOR) --cc --exe --build --Wall -Wno-fatal --top-module ace3_generation_feedback_chain --Mdir $(GENERATION_FEEDBACK_VERILATOR_DIR) $(STREAMING_LM_HEAD_FIXED_RTL) $(STREAMING_LM_HEAD_ROUNDER_RTL) $(STREAMING_LM_HEAD_RTL) $(GENERATION_FEEDBACK_RTL) $(GENERATION_FEEDBACK_CPP) >$(GENERATION_FEEDBACK_DIR)/verilator-compile.stdout 2>$(GENERATION_FEEDBACK_DIR)/verilator-compile.stderr
-	@test -x $(GENERATION_FEEDBACK_VERILATOR_BIN)
-generation-feedback-official-run: generation-feedback-reference generation-feedback-verilator-compile
-	@printf '%s\n' '$(GENERATION_FEEDBACK_VERILATOR_BIN) --checkpoint $(GENERATION_FEEDBACK_CHECKPOINT) --config $(GENERATION_FEEDBACK_VECTOR_DIR)/input.cfg --hidden $(GENERATION_FEEDBACK_VECTOR_DIR)/hidden.hex --raw $(GENERATION_FEEDBACK_DIR)/raw.txt --terminal $(GENERATION_FEEDBACK_DIR)/terminal.txt' >$(GENERATION_FEEDBACK_DIR)/official.command
-	@set -eu; status=0; $(GENERATION_FEEDBACK_VERILATOR_BIN) --checkpoint $(GENERATION_FEEDBACK_CHECKPOINT) --config $(GENERATION_FEEDBACK_VECTOR_DIR)/input.cfg --hidden $(GENERATION_FEEDBACK_VECTOR_DIR)/hidden.hex --raw $(GENERATION_FEEDBACK_DIR)/raw.txt --terminal $(GENERATION_FEEDBACK_DIR)/terminal.txt >$(GENERATION_FEEDBACK_DIR)/official.stdout 2>$(GENERATION_FEEDBACK_DIR)/official.stderr || status=$$?; printf '%s\n' "$$status" >$(GENERATION_FEEDBACK_DIR)/official.exit_code; test "$$status" -eq 0
-generation-feedback-compare: generation-feedback-official-run
-	@$(PYTHON) $(GENERATION_FEEDBACK_COMPARE) --terminal $(GENERATION_FEEDBACK_DIR)/terminal.txt --exit-code $(GENERATION_FEEDBACK_DIR)/official.exit_code --raw $(GENERATION_FEEDBACK_DIR)/raw.txt --oracle $(GENERATION_FEEDBACK_VECTOR_DIR)/oracle.json --embedding $(GENERATION_FEEDBACK_VECTOR_DIR)/oracle_embedding.hex --report $(GENERATION_FEEDBACK_DIR)/comparison.json >$(GENERATION_FEEDBACK_DIR)/comparison.stdout 2>$(GENERATION_FEEDBACK_DIR)/comparison.stderr
-	@grep -F 'GENERATION_FEEDBACK_COMPARE_PASS token=2114 embedding=896 next_position=1' $(GENERATION_FEEDBACK_DIR)/comparison.stdout
-	@cat $(GENERATION_FEEDBACK_DIR)/official.stdout $(GENERATION_FEEDBACK_DIR)/comparison.stdout
-generation-feedback-failure-gate: generation-feedback-official-run
-	@command -v strace >/dev/null
-	@$(RM) $(GENERATION_FEEDBACK_DIR)/failure.raw $(GENERATION_FEEDBACK_DIR)/failure.terminal $(GENERATION_FEEDBACK_DIR)/failure.exit_code $(GENERATION_FEEDBACK_DIR)/failure-comparison.json $(GENERATION_FEEDBACK_DIR)/failure-gate.trace
-	@set -eu; status=0; $(GENERATION_FEEDBACK_VERILATOR_BIN) --checkpoint $(GENERATION_FEEDBACK_CHECKPOINT) --config $(GENERATION_FEEDBACK_VECTOR_DIR)/input.cfg --hidden $(GENERATION_FEEDBACK_VECTOR_DIR)/hidden.hex --raw $(GENERATION_FEEDBACK_DIR)/failure.raw --terminal $(GENERATION_FEEDBACK_DIR)/failure.terminal --inject-after-feedback 8 >$(GENERATION_FEEDBACK_DIR)/failure.stdout 2>$(GENERATION_FEEDBACK_DIR)/failure.stderr || status=$$?; printf '%s\n' "$$status" >$(GENERATION_FEEDBACK_DIR)/failure.exit_code; test "$$status" -eq 1
-	@test "$$(grep -c '^feedback ' $(GENERATION_FEEDBACK_DIR)/failure.raw)" -eq 8
-	@grep -Fx 'natural_terminal=0' $(GENERATION_FEEDBACK_DIR)/failure.terminal >/dev/null
-	@set -eu; status=0; strace -f -e trace=openat -o $(GENERATION_FEEDBACK_DIR)/failure-gate.trace $(PYTHON) $(GENERATION_FEEDBACK_COMPARE) --terminal $(GENERATION_FEEDBACK_DIR)/failure.terminal --exit-code $(GENERATION_FEEDBACK_DIR)/failure.exit_code --raw $(GENERATION_FEEDBACK_DIR)/failure.raw --oracle $(GENERATION_FEEDBACK_VECTOR_DIR)/oracle.json --embedding $(GENERATION_FEEDBACK_VECTOR_DIR)/oracle_embedding.hex --report $(GENERATION_FEEDBACK_DIR)/failure-comparison.json >$(GENERATION_FEEDBACK_DIR)/failure-compare.stdout 2>$(GENERATION_FEEDBACK_DIR)/failure-compare.stderr || status=$$?; test "$$status" -ne 0
-	@test ! -e $(GENERATION_FEEDBACK_DIR)/failure-comparison.json
-	@! grep -E 'oracle\.json|oracle_embedding\.hex' $(GENERATION_FEEDBACK_DIR)/failure-gate.trace
-	@printf '%s\n' 'GENERATION_FEEDBACK_FAILURE_GATE_PASS partial_feedback=8 natural_terminal=0 oracle_opened=0 report_created=0'

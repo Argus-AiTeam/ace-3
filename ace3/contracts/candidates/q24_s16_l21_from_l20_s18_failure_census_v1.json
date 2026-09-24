@@ -1,0 +1,49 @@
+{
+  "diagnostic_id": "ace3-q24-s16-l21-from-l20-s18-failure-census-v1",
+  "version": 1,
+  "cwd": "/home/argustest/ace3-argus",
+  "evidence": {
+    "review": {
+      "path": "/home/argustest/.argus-skill-ace3/projects/s-62150b05/handoffs/e0ffefcd1586/round-0003.json",
+      "sha256": "d8a961a4eb0ea09526febb557b2ddc0f74d1ff4094cd2b2b2101237b023cf12f"
+    },
+    "result": {
+      "path": "/home/argustest/ace3-argus/build/q24_s16_l21_from_l20_coordinate62_suffix_v1_fresh_e0ffefcd1586_attempt001/result.json",
+      "bytes": 723870,
+      "sha256": "32fe8fa45a34770e326ba3763fd032a227a33b621eda7732fa9b45ff7b91353c"
+    },
+    "validation": {
+      "path": "/home/argustest/ace3-argus/build/q24_s16_l21_from_l20_coordinate62_suffix_v1_fresh_e0ffefcd1586_attempt001/validation.json",
+      "bytes": 745760,
+      "sha256": "7ee2d13f60eaffbecd5905a81a2cfa53cc0e9babf123a95bec46dd1d8ed27102"
+    }
+  },
+  "controls": [
+    "frozen_inherited", "frozen_inherited_o", "frozen_inherited_down",
+    "frozen_inherited_o_down", "scratch", "scratch_down", "mapped62",
+    "mapped_all", "inherited_native"
+  ],
+  "node": [21, 0, 18],
+  "coordinates_per_control": 896,
+  "policy_id": "ace3-w4a16-local-operator-global-binary64-authority-v3",
+  "profile_id": "ace3-w4a16-layer-final-binary64-fp16-excess-v1",
+  "excess_budget": "1/8",
+  "local_threshold": "finite AND (absolute_error <= 0.125 OR (relative_error < 0.001 AND ordered_FP16_ULP <= 1)); denominator max(abs(reference), 2^-14)",
+  "interface": ["--check"],
+  "command_sidecar": "PYTHONPATH=/home/argustest/ace3-argus PYTHONDONTWRITEBYTECODE=1 /home/argustest/miniconda3/bin/python -B -m ace3.model.candidates.diagnose_q24_s16_l21_from_l20_s18_failure_census_v1 --check",
+  "expected_tests": 18,
+  "flags": {
+    "native_layer_invocations": 0,
+    "native_L0_L21_invocations": 0,
+    "rtl_invocations": 0,
+    "reference_recomputation": false,
+    "reference_reanchoring": false,
+    "accepted_prefix_replay": false,
+    "candidate_admitted": false,
+    "policy_adopted": false,
+    "successor_published": false
+  },
+  "normal_host_review": "REQUIRED",
+  "claim_boundary": "Bounded CPU-software non-admission evidence only. Q24 residual state is wider than FP16; native G128 asymmetric packed INT4 weights, GEMM nibble ordering, no qzero plus-one, FP16 scales/operator boundaries/KV and S16 RTZ are unchanged. No prefix replay, native dispatch, RTL, hardware, simulation, reference recomputation/re-anchoring or successor publication. No unique cause, repair, strict-FP16-state W4A16, new-token or full-model admission is established. Independent Host Reviewer acceptance is required.",
+  "authentication_scope": "Pinned round-3 review, L21 result/validation, all 37 L21 artifacts, retained source/history files, L20 parent result/review/stage archives and original L20/L21 reference files. The 2593 input-binding records are preserved by the pinned result/validation; their entire ancestral payload closure is not replayed or reread. Source/operand/state/KV/RTZ gates are authenticated retained facts, not newly executed checks."
+}

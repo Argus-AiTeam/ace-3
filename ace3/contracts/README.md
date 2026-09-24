@@ -1,12 +1,5 @@
 # Contracts
 
-`generated_token_feedback.json` binds the accepted RTL rank-zero token to its
-tokenizer metadata, exact tied embedding row, and next-position state commitment.
-
-`final_rmsnorm.json` freezes the parameter-free `ace3_final_rmsnorm` public top,
-the fixed 896-element transaction, checkpoint provenance, arithmetic semantics,
-and bounded verification counts.
-
 Implemented precision, packing, rounding, streaming, and reset contracts live
 here. A contract is descriptive evidence and does not by itself certify RTL.
 
@@ -35,5 +28,5 @@ explicit runtime limitation rather than a passing numerical claim.
 
 `model24_layer_controller.json` defines the arithmetic-free 24-layer launch,
 completion, checkpoint, terminal, and fail-closed sequencing boundary. It does
-not extend the numerical decoder claim beyond the separately verified,
-layer-indexed engines.
+not extend the numerical decoder-layer claim beyond the separately verified
+layer engines.

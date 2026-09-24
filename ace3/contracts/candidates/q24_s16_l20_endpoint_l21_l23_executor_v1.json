@@ -1,0 +1,62 @@
+{
+  "diagnostic_id": "ace3-q24-s16-l20-endpoint-l21-l23-executor-v1",
+  "version": 2,
+  "interface": ["--check", "--execute"],
+  "focused_tests": 28,
+  "input": "build/q24_s16_l20_to_l21_coordinate62_admissible_threshold_v1_attempt001",
+  "input_sha256": {
+    "diagnostic.stdout.json": "7be3b69940585cb1ab5797f0acf18cbdcb6372348c21d0586090313856748500",
+    "result.json": "2d946c38863e905b5eb009f721e12388b53b24b8206e8317493d33c278e1af08"
+  },
+  "executor": {
+    "version": 1,
+    "mode": "no-native-preflight",
+    "candidate_endpoint_count": 2,
+    "candidate_order": ["minimum", "maximum"],
+    "boundary": "authenticated frozen L20 output / L21 input",
+    "coordinate": 62,
+    "position": 0,
+    "history": [9707],
+    "prospective_suffix": [21, 22, 23],
+    "native_layers": [],
+    "state": "copy I/Z/H; change only I[62]; preserve Z; recompute H[62] by RNE16",
+    "baseline": "separate unchanged frozen control; not a third endpoint; not executed",
+    "output": "stdout evidence only; no state archive, successor, publication or admission"
+  },
+  "policy_id": "ace3-w4a16-local-operator-global-binary64-authority-v3",
+  "local_gate": {
+    "absolute_budget": "1/8",
+    "relative_strict_bound": "1/1000",
+    "ordered_FP16_ULP": 1,
+    "relative_denominator_floor": "1/16384"
+  },
+  "excess_budget": "1/8",
+  "reference_policy": "unchanged independently propagated original-input global reference",
+  "authentication": "Pin both existing prepared artifacts before parsing. Reuse read-only ancestor source, operand, I/Z/H, own P0 FP16 KV, lineage and independently propagated original-input reference checks. Reconstruct the complete L20 admissible interval and full-vector boundary checks and compare the prepared analysis exactly. Derive two endpoints from that authenticated analysis, never hard-coded endpoint values or an alternate source. Hash each in-memory endpoint I/Z/H, retaining equal-H endpoints as distinct I candidates. Rebind all inputs, sources and contracts before reporting.",
+  "reproduction": "cd /home/argustest/ace3-argus && PYTHONPATH=/home/argustest/ace3-argus /home/argustest/miniconda3/bin/python -B -m ace3.model.candidates.diagnose_q24_s16_l20_endpoint_l21_l23_executor_v1 --check",
+  "execution": "cd /home/argustest/ace3-argus && PYTHONPATH=/home/argustest/ace3-argus /home/argustest/miniconda3/bin/python -B -m ace3.model.candidates.diagnose_q24_s16_l20_endpoint_l21_l23_executor_v1 --execute",
+  "execution_surface": {
+    "version": 2,
+    "native_layers": [21, 22, 23],
+    "maximum_native_layer_invocations": 6,
+    "runtime_module": "ace3.model.candidates.diagnose_q24_s16_l20_endpoint_l21_l23_execute_v2",
+    "baseline": "unchanged frozen control; not executed",
+    "stop": "first mandatory failure per endpoint; BLOCKED or failed L20 precondition aborts batch",
+    "output": "stdout evidence only; no state archive, successor, publication or admission"
+  },
+  "validation": "Assert the explicit cwd/interpreter/PYTHONPATH context. Import upstream tests only for origin authentication, including tests.test_q24_s16_toward_zero_l3_l8_v1; do not execute accepted or upstream suites. Record every candidate/test module origin inside this worktree, including the reused suffix engine, and compile the actual repository source closure in memory. Collect and execute exactly 28 focused tests once, with zero failures/errors/skips. Authenticate once under native, external-execution and state-publication guards. Tests use synthetic callbacks, never native layers. Emit JSON on stdout and test diagnostics on stderr; no files or caches are created by the diagnostic. External evidence capture, if separately authorized, must use a fresh exclusive ignored build path, never replace existing evidence.",
+  "historical_boundary": "Preserve the prepared wrapper as BLOCKED/PREPARED_DIAGNOSTIC_HAS_NO_NATIVE_EXECUTION_INTERFACE, not native execution failure or PASS. Preserve the earlier INCONCLUSIVE/L20_GLOBAL_GATE_BOUNDARY after 43 L21 invocations and 44 samples; those are frozen historical counts, not this preflight's invocations. No search exhaustion or minimality proof follows.",
+  "reviewer_rejection_criteria": "Independent normal Host Reviewer reproduction is mandatory. Reject endpoint count other than two, deduplication by H, origin/digest/context mismatch, wrong test count, failures/errors/skips, altered threshold/reference/state/KV/lineage, historical relabeling, publication/admission/policy adoption, any native execution during --check/tests, any L0-L8 or other out-of-scope native dispatch, or RTL execution. --execute reuses only the guarded CPU layer engine, not its historical preflight or admission paths. Each endpoint starts from a separate authenticated L20 parent copy and stops at its first mandatory failure; the baseline is never executed. Frozen references and model operands must be bound before dispatch and all source/input bindings rechecked afterward. This source change is not a scientific execution result or retrospective certification of historical commands; a native execution task requires separate Planner selection and review.",
+  "native_layers": [],
+  "native_invocations": 0,
+  "native_layer_invocations": 0,
+  "native_L0_L8_invocations": 0,
+  "native_L9_plus_invocations": 0,
+  "rtl_invocations": 0,
+  "candidate_admitted": false,
+  "policy_adopted": false,
+  "successor_published": false,
+  "scientific_result_claim": false,
+  "normal_host_review": "REQUIRED",
+  "claim_boundary": "CPU software only, native S16 RTZ with signed int64 Q24 residual state wider than FP16. INT4 weights and FP16 scales/operator boundaries/KV remain unchanged. No native execution in --check/tests. --execute permits only two bounded L21-L23 endpoint suffixes, at most six native layer invocations, with no admission or state publication. No native L0-L8 replay, RTL, GPU, FPGA, hardware, simulation, synthesis, PPA, strict-FP16-state W4A16, new-token or full-model PASS. No policy, model, budget, precision, scale, framework, Host-global, review-policy or ACE2 changes."
+}

@@ -1,0 +1,81 @@
+{
+  "diagnostic_id": "ace3-q24-s16-l11-coordinate62-producer-cone-v2",
+  "policy_id": "ace3-w4a16-local-operator-global-binary64-authority-v3",
+  "position": 0,
+  "coordinate": 62,
+  "cwd": "/home/argustest/ace3-argus",
+  "command": "PYTHONPATH=/home/argustest/ace3-argus PYTHONDONTWRITEBYTECODE=1 /home/argustest/miniconda3/bin/python -B -m ace3.model.candidates.preflight_q24_s16_l11_coordinate62_producer_cone_v2 --check",
+  "interface": ["--check"],
+  "focused_tests": 20,
+  "native_layer_invocations": 0,
+  "native_diagnostic_invocations": 0,
+  "rtl_invocations": 0,
+  "accepted_prefix_replay": false,
+  "execution_authorized": false,
+  "candidate_admitted": false,
+  "policy_adopted": false,
+  "successor_published": false,
+  "scientific_result_claim": false,
+  "normal_host_review": "REQUIRED",
+  "binding_provider": "ace3.model.candidates.diagnose_q24_s16_l12_coordinate62_producer_cone_v2",
+  "reviewed_result_sha256": "4073e5da85af77e0770a399e724c64f8326abb1a636f21554f4966b50b7299a9",
+  "retained_freeze_sha256": "a87f01cdb117e4eefa4f9f2c9d27eb9c01c124b61053f3f3d85738308ebe7395",
+  "history_sha256": {
+    "ace3/model/candidates/diagnose_q24_s16_l11_coordinate62_producer_cone_v1.py": "837cba394b032e3fdadbcdc5a8b9d6d9022b4f8c46d008f37d4c817ace522b38",
+    "ace3/contracts/candidates/q24_s16_l11_coordinate62_producer_cone_v1.json": "7a56450c59110ee1b4a307f68deb5760eae7b5b1a350617c6e2538c49ba0b0ec",
+    "tests/test_q24_s16_l11_coordinate62_producer_cone_v1.py": "73663ee78fe24180f8897077b331978e96f6c20db06547ec83e3cf10e27a8d2c",
+    "build/q24_s16_l11_coordinate62_producer_cone_4340d090a3b2_attempt001/validation.json": "151c81f9d367c671787bc5dcc7ae2d67fce9408fa41f10fc4684fc4860832e7a",
+    "build/q24_s16_l11_coordinate62_producer_cone_4340d090a3b2_attempt001/unittest.log": "6836dacbc9e92d233c9f220701cfb5fc994e72170a21cac4ab6dbcb256208bb6",
+    "build/q24_s16_l11_coordinate62_producer_cone_4340d090a3b2_attempt001/compiled_0.pyc": "166ef5550fed21b8e18215c85bfda2d11978aa8cc78ecc58e2d781276562e709",
+    "build/q24_s16_l11_coordinate62_producer_cone_4340d090a3b2_attempt001/compiled_1.pyc": "261e84214f3cec135a3ece006cef0d4a566b8da83f0f5271110e288f0b6844f8"
+  },
+  "source_updates": {
+    "ace3/contracts/candidates/q24_s16_toward_zero_l9_l23_v1.json": {
+      "snapshot": "002_q24_s16_toward_zero_l9_l23_v1.json",
+      "retained_bytes": 2865,
+      "retained_sha256": "f9c2234c5d0c40cddacb94c20abc36abb79ebbf851098b0fdb0ab0da3ea4d6bf",
+      "current_bytes": 3005,
+      "current_sha256": "ae5985b558d365a4967949535658a243f63b754062d18af2f83f9a3a4100b2b3"
+    },
+    "ace3/model/candidates/run_q24_s16_toward_zero_l9_l23_v1.py": {
+      "snapshot": "019_run_q24_s16_toward_zero_l9_l23_v1.py",
+      "retained_bytes": 25964,
+      "retained_sha256": "2019d1ad0472eb2090ec7881e44644efcf9203c0dd428fdedc5b20395ab5098a",
+      "current_bytes": 26065,
+      "current_sha256": "08e19ca69e8db6b3875478188d6febada9c18f231b13ba089af023ac7fcddaa6"
+    },
+    "tests/test_q24_s16_toward_zero_l9_l23_v1.py": {
+      "snapshot": "024_test_q24_s16_toward_zero_l9_l23_v1.py",
+      "retained_bytes": 12878,
+      "retained_sha256": "9727cf0ca7137e4175960449a30e0573b580e99b0f839c7548fd9d1c480cc2af",
+      "current_bytes": 12883,
+      "current_sha256": "4a5aacbeda7455b6333d737cbd97b9bb3a8ee84e01f8f988ca18f18605d98e61"
+    }
+  },
+  "controls": [
+    "actual", "frozen_inherited", "frozen_o", "frozen_down",
+    "frozen_inherited_o", "frozen_inherited_down", "frozen_o_down",
+    "frozen_inherited_o_down", "scratch", "scratch_down",
+    "mapped62", "mapped_all", "inherited_native"
+  ],
+  "branch_definitions": {
+    "inherited": "Complete incoming L10-output/L11-input I/Z/H coordinate 62 mapped nearest-Q24 ties-even from the original-input L10 reference; actual L11 O/down are frozen.",
+    "o": "L11 S11 coordinate 62 replaced by direct FP16 RNE of the authenticated original-input binary64 O contribution.",
+    "down": "L11 S17 coordinate 62 replaced by direct FP16 RNE of the authenticated original-input binary64 down contribution.",
+    "scratch": "Complete L11 S12 coordinate 62 mapped nearest-Q24 ties-even from original input plus original O; actual down or its explicitly named FP16-RNE cut is added in unchanged exact Q24 arithmetic.",
+    "inherited_native": "Change incoming coordinate 62 and recompute all native L11 stages, including nonlinear MLP effects; then execute L12-L13.",
+    "mapped62": "Exogenous nearest-Q24 original L11 output at coordinate 62 only.",
+    "mapped_all": "Exogenous nearest-Q24 original L11 output at all 896 coordinates."
+  },
+  "mapping": "Reuse unchanged L10/L12 cut arithmetic. Incoming/S12/S18 use exact rational nearest-Q24 ties-even, maximum error 2^-25, preserving zero signs and independent FP16 RNE H. O/down remain FP16 RNE. S12 and S18 remain exact Q24 additions; H is not a new state seed. Record exact signed branch decomposition, mapping/projection and binary64 addition roundoff and zero frozen additive interactions.",
+  "thresholds": {
+    "S0_S17": "Unchanged finite AND (absolute_error <= 0.125 OR (relative_error < 0.001 AND ordered_FP16_ULP <= 1)); denominator max(abs(reference), 2^-14), independent same-actual-operand local references.",
+    "S18": "Unchanged binary64-fp16-excess-v1 exact excess <= 1/8 against the independently propagated original-input global reference. No actual, mapped or local reference substitution.",
+    "FP16_trajectory": "Existing diagnostic-only comparisons and all failures remain intact under v3."
+  },
+  "classification": "Report singleton and joint conditional sufficiency, scratch and inherited-native rescue. Never infer a unique upstream producer, necessity, an admitted repair, or a performance bottleneck.",
+  "claim_boundary": "Only isolated versioned native-S16-RTZ Q24 CPU software. Wide Q24 residual state is not strict-FP16-state W4A16. Native AWQ G128 asymmetric packed INT4 weights/nibble order/no qzero plus-one, FP16 scales/operator boundaries/KV, references, thresholds, policy, evidence and failures remain unchanged. No RTL/hardware/GPU/FPGA/simulation/synthesis/PPA, precision/profile/model/budget/Host/framework changes, ACE2 access changes, token/scale expansion, full-model PASS, admission, successor publication or task selection.",
+  "authentication": "Use the existing versioned retained/current source binder and pinned reviewed coordinate evidence, not the stale L10 selected-input authenticator. Every loaded module resolves to actual sources in /home/argustest/ace3-argus; historical snapshots are authenticated read-only data, never imported or executed as replacement sources. Preserve and expose the exact three historical/current source distinctions. Inherit the complete retained source/artifact/operand/I/Z/H/own-empty-P0-FP16-KV/receipt/RTZ/reference-chain closure. Recheck the independently accepted L8 receipt, arrays, gates and review; explicitly bind retained L10 output to actual L11 input and authenticate L11 canonical tensors. Original-input references remain independent of actual and mapped states. Recheck every bound input and loaded origin at completion. The L11 v1 failed attempt remains 20 collected, 0 executed, 1 setup error with no diagnostic result or command log.",
+  "execution_boundary": "Binding preflight only: --check is required, with no execute, output, resume, or diagnostic interface. The preserved controls, branch definitions, mapping and classification describe the unchanged scientific boundary only; none is dispatched. Zero native diagnostic, native layer, RTL or external-process dispatch. No original prefix/admission replay, historical suite execution, result/admission publication, or queued follow-on claim. Normal independent Host Reviewer acceptance is required before Planner can select any later execution task.",
+  "reproduction": "From cwd run the exact command once using the absolute interpreter and explicit command-local PYTHONPATH. Compile all loaded actual repository Python files in memory, including the new preflight and tests; genuinely collect and execute exactly the 20 v2 tests with no failures/errors/skips. Historical suites, including tests.test_q24_s16_toward_zero_l3_l8_v1, are imported for source resolution only, never run. stdout is validation JSON and stderr is the focused test log. Capture the exact command in a sidecar before running; retain output under a fresh exclusive ignored build location. This certifies only this repo-bound command, never a historical failed bare command."
+}

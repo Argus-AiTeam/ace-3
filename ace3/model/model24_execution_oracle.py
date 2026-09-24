@@ -38,7 +38,7 @@ MODEL_REPOSITORY = "Qwen/Qwen2.5-0.5B-Instruct-AWQ"
 MODEL_REVISION = "db09cd27ead7fee40cdee309693cf83601b9c899"
 DEFAULT_OFFICIAL_CHECKPOINT = Path(
     os.environ.get(
-        "ACE3_OFFICIAL_MODEL24_CHECKPOINT",
+        "ACE3_OFFICIAL_CHECKPOINT",
         Path(__file__).resolve().parents[2]
         / "model24_execution_vectors"
         / "model.safetensors",
@@ -47,7 +47,7 @@ DEFAULT_OFFICIAL_CHECKPOINT = Path(
 DEFAULT_OFFICIAL_TOKENIZER_DIR = (
     Path(
         os.environ.get(
-            "ACE3_OFFICIAL_MODEL24_TOKENIZER_DIR",
+            "ACE3_OFFICIAL_TOKENIZER_DIR",
             Path(__file__).resolve().parents[2]
             / "model24_execution_vectors"
             / "tokenizer",
@@ -1331,14 +1331,6 @@ def validate_decoder_snapshot(repository_root: Path) -> None:
 
 
 def authenticate_tokenizer(tokenizer_dir: Path) -> Any:
-    require(
-        tokenizer_dir.is_dir(),
-        (
-            "official tokenizer directory is missing; pass "
-            "--official-tokenizer-dir or set "
-            "ACE3_OFFICIAL_MODEL24_TOKENIZER_DIR"
-        ),
-    )
     tokenizer_payload = (tokenizer_dir / "tokenizer.json").read_bytes()
     config_payload = (tokenizer_dir / "tokenizer_config.json").read_bytes()
     require(

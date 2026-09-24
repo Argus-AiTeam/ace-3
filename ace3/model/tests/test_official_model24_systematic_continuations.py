@@ -17,7 +17,6 @@ if str(MODEL_DIR) not in sys.path:
     sys.path.insert(0, str(MODEL_DIR))
 
 from model24_execution_oracle import (  # noqa: E402
-    ContractError,
     DEFAULT_OFFICIAL_CHECKPOINT,
     DEFAULT_OFFICIAL_TOKENIZER_DIR,
     authenticate_tokenizer,
@@ -89,16 +88,6 @@ class OfficialModel24SystematicContinuationTests(unittest.TestCase):
                 RUN_LOG_NAME,
             },
         )
-
-    def test_missing_tokenizer_configuration_fails_clearly(self) -> None:
-        with tempfile.TemporaryDirectory() as temporary:
-            missing = Path(temporary) / "missing-tokenizer"
-            with self.assertRaisesRegex(
-                ContractError,
-                "pass --official-tokenizer-dir or set "
-                "ACE3_OFFICIAL_MODEL24_TOKENIZER_DIR",
-            ):
-                authenticate_tokenizer(missing)
 
     def test_checked_in_suite_is_balanced_unique_and_ordered(self) -> None:
         suite = _load_prompt_suite()

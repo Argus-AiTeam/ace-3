@@ -1,0 +1,79 @@
+{
+  "diagnostic_id": "ace3-q24-s16-l12-coordinate62-producer-cone-v2",
+  "policy_id": "ace3-w4a16-local-operator-global-binary64-authority-v3",
+  "reviewed_task": "1d567e59cfac",
+  "reviewed_result": "/home/argustest/ace3-argus/build/q24_s16_l13_l12_parent_coordinate_cut_v3_1d567e59cfac_attempt001/result.json",
+  "reviewed_result_sha256": "4073e5da85af77e0770a399e724c64f8326abb1a636f21554f4966b50b7299a9",
+  "reviewed_upstream_sha256": "f9a98abf3c266ecf79ee1822223617436d91037851137b8d25f0fa33ee5eb732",
+  "retained_freeze_sha256": "a87f01cdb117e4eefa4f9f2c9d27eb9c01c124b61053f3f3d85738308ebe7395",
+  "candidate_admitted": false,
+  "policy_adopted": false,
+  "successor_published": false,
+  "rtl_invocations": 0,
+  "normal_host_review": "REQUIRED",
+  "native_layer_invocations": 0,
+  "scientific_result_claim": false,
+  "accepted_prefix_replay": false,
+  "cwd": "/home/argustest/ace3-argus",
+  "command": "PYTHONPATH=/home/argustest/ace3-argus PYTHONDONTWRITEBYTECODE=1 /home/argustest/miniconda3/bin/python -B -m ace3.model.candidates.diagnose_q24_s16_l12_coordinate62_producer_cone_v2 --check",
+  "interface": ["--check"],
+  "expected_tests": 26,
+  "reproduction": "Run command once from cwd. It compiles the actual repository candidate and focused test source in memory, authenticates retained evidence read-only, and collects/executes exactly 26 v2 tests with zero failures/errors/skips. All loaded repository candidate/test modules, including tests.test_q24_s16_toward_zero_l3_l8_v1, must resolve inside this isolated repository. Importing historical test modules does not execute their suites. No accepted 19-test replay, native diagnostic dispatch, generated files, or historical bare-Python PASS claim. Independent Host Reviewer must reproduce this same disclosed command.",
+  "execution_boundary": "Build/check-only delivery. No native diagnostic dispatch is exposed or authorized. The reused 13-control producer-cone plan is a future isolated non-admission attribution surface, not a scheduled run. Any future execution needs its own bounded Planner task, frozen lineage, exact necessary suffix extent, invocation budget and independent review.",
+  "inputs": [
+    "build/q24_s16_l13_l12_parent_coordinate_cut_v3_1d567e59cfac_attempt001",
+    "build/q24_s16_l13_upstream_parent_cut_a81669925e0b_attempt001",
+    "build/q24_software_l9_l23_4d1cfdfc15c0_attempt002"
+  ],
+  "history_sha256": {
+    "ace3/model/candidates/diagnose_q24_s16_l12_coordinate62_producer_cone_v1.py": "cd5ab1a02301c2477b3ca860962a9f35bc68ed21ff4323c75d94c9774e5c02d7",
+    "ace3/contracts/candidates/q24_s16_l12_coordinate62_producer_cone_v1.json": "e958abc05369640a91e63f73c9ce2298c3401b482dccd97f5603e59b2f4468b1",
+    "tests/test_q24_s16_l12_coordinate62_producer_cone_v1.py": "92cba95112c6633a99e1cc70d16093e016b912adff82f546faca6d68b65c5e47"
+  },
+  "source_updates": {
+    "ace3/contracts/candidates/q24_s16_toward_zero_l9_l23_v1.json": {
+      "snapshot": "002_q24_s16_toward_zero_l9_l23_v1.json",
+      "retained_bytes": 2865,
+      "retained_sha256": "f9c2234c5d0c40cddacb94c20abc36abb79ebbf851098b0fdb0ab0da3ea4d6bf",
+      "current_bytes": 3005,
+      "current_sha256": "ae5985b558d365a4967949535658a243f63b754062d18af2f83f9a3a4100b2b3"
+    },
+    "ace3/model/candidates/run_q24_s16_toward_zero_l9_l23_v1.py": {
+      "snapshot": "019_run_q24_s16_toward_zero_l9_l23_v1.py",
+      "retained_bytes": 25964,
+      "retained_sha256": "2019d1ad0472eb2090ec7881e44644efcf9203c0dd428fdedc5b20395ab5098a",
+      "current_bytes": 26065,
+      "current_sha256": "08e19ca69e8db6b3875478188d6febada9c18f231b13ba089af023ac7fcddaa6"
+    },
+    "tests/test_q24_s16_toward_zero_l9_l23_v1.py": {
+      "snapshot": "024_test_q24_s16_toward_zero_l9_l23_v1.py",
+      "retained_bytes": 12878,
+      "retained_sha256": "9727cf0ca7137e4175960449a30e0573b580e99b0f839c7548fd9d1c480cc2af",
+      "current_bytes": 12883,
+      "current_sha256": "4a5aacbeda7455b6333d737cbd97b9bb3a8ee84e01f8f988ca18f18605d98e61"
+    }
+  },
+  "controls": [
+    "actual", "frozen_inherited", "frozen_o", "frozen_down", "frozen_inherited_o",
+    "frozen_inherited_down", "frozen_o_down", "frozen_inherited_o_down",
+    "scratch", "scratch_down", "mapped62", "mapped_all", "inherited_native"
+  ],
+  "branch_definitions": {
+    "inherited": "L12 incoming L11 output signed Q24 I/Z/H coordinate 62. Replace the complete coordinate by the disclosed nearest-Q24 ties-even mapped original-input L11 reference. Frozen controls hold actual O/down fixed.",
+    "o": "L12 S11 O-projection coordinate 62 contributes to S12. Replace only this FP16 word with direct FP16 RNE of the captured original-input binary64 L12 O projection, keeping every other coordinate actual.",
+    "down": "L12 S17 down-projection coordinate 62 contributes to S18. Replace only this FP16 word with direct FP16 RNE of the captured original-input binary64 L12 down projection. Frozen controls do not recompute MLP following other branch cuts.",
+    "scratch": "L12 S12 unrounded residual scratch I/Z and its RNE16 H, mapped nearest-Q24 ties-even from original input plus original O. Replace complete scratch coordinate 62, retain actual S17 or its disclosed original-FP16-RNE coordinate cut, and perform the unchanged exact Q24 final addition.",
+    "inherited_native": "Replace only incoming L11 coordinate 62, then recompute all 19 native L12 stages and unchanged gates before running unchanged L13. This includes all reachable nonlinear L12 effects, unlike the frozen branch factorial.",
+    "mapped62_and_mapped_all": "Reproduce reviewed single_062 and mapped L12-output cuts bitwise through unchanged native L13, without inventing accepted lineage for either counterfactual."
+  },
+  "mapping": "Inputs/scratch/output coordinate controls use the reviewed exact rational nearest-Q24 ties-even mapping, maximum mapping error 2^-25, with zero signs retained and independent RNE16 H projection. O/down controls stay FP16, use struct-pack direct binary64-to-FP16 RNE via the unchanged native helper, and do not change the runtime rounding profile. Record exact signed actual-versus-original branch decomposition including final projection and original binary64 addition roundoff.",
+  "authentication": "Pin current reviewed v3 result 1d567e59cfac and all recorded artifacts, validation, source origins and inputs. Reuse the reviewed v2 retained/current source-update closure for a816 and L9-L23, preserving historical snapshots separately from current sources. Authenticate L9-L12 I/Z/H, exact residual stages, receipts, reports, own-empty-P0 KV and the original-input independently propagated binary64/FP16 reference chain through L13. Authenticate canonical L12/L13 tensors without executing native stages or recapturing an oracle. Reuse v1 original_branches unchanged for the non-dispatched surface. Compare retained actual/mapped endpoint arrays; recheck bound bytes and module origins at completion. No frozen parent, current source, or mapped reference is relabelled as accepted history.",
+  "thresholds": {
+    "S0_S17": "Unchanged finite AND (absolute_error <= 0.125 OR (relative_error < 0.001 AND ordered_FP16_ULP <= 1)); relative denominator max(abs(reference), 2^-14), independently computed same-actual-operand local references.",
+    "S18": "Unchanged original-input binary64-fp16-excess-v1 exact excess <= 1/8. The independently propagated original reference is never replaced by actual state, mapped state, local references, or intervention outputs.",
+    "FP16_trajectory": "Existing diagnostic-only comparisons remain intact under v3."
+  },
+  "gate_scope": "This check authenticates retained source/operand/state/KV/lineage and unchanged gate evidence read-only; it does not rerun native layers, claim freshly passing numerical gates, or classify new producer controls. Future controls must preserve all 19 native suffix stages and gates; frozen scalar assemblies are conditional interventions, not omitted-operator PASS or valid replacement producers. Scalar rescue is never admission.",
+  "classification": "Report all sufficient frozen singleton/joint branches, scratch rescue and recomputed inherited-native rescue. Exactly one sufficient frozen singleton permits only conditional single-branch sufficiency; otherwise producer attribution remains an unresolved interaction. Never infer a unique upstream producer from the thresholded outcome, additive error magnitude, or a scalar rescue.",
+  "claim_boundary": "Only an isolated versioned native-S16-RTZ Q24 CPU-software diagnostic. Wide Q24 residual state is not strict-FP16-state W4A16. G128 asymmetric packed INT4 AWQ weights, native nibble order, no qzero plus-one, FP16 scales/operator boundaries/KV, thresholds, original-input global reference, accepted evidence and historical failures remain unchanged. No RTL invocation or modification, GPU, FPGA, simulation, synthesis, PPA, precision/profile/model/budget change, new-token, full-model PASS, policy adoption, successor publication or follow-on task selection."
+}

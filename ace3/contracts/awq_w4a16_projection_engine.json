@@ -2,6 +2,19 @@
   "schema_version": 1,
   "conclusion": "FULL_INPUT_SEQUENTIAL_PROJECTION_ENGINE",
   "implementation": "ace3/rtl/ace3_awq_w4a16_projection_engine.sv",
+  "bias_rounding_modes": {
+    "parameter": "SINGLE_ROUND_BIAS",
+    "default_0": "Legacy: round exact dot to finite-saturating FP16, then FP16-add bias; existing ports, flags and pre-bias accumulator are unchanged.",
+    "mode_1": "Native finite-operand AWQ: exact FP16 activation * FP16 scale * (unsigned nibble - unsigned qzero), exact cross-group sum plus exact FP16 bias, then one FP16 RNE.",
+    "selection": "ace3_qkv_projection_cluster.q_projection selects 1; K/V and other existing engine instances retain 0.",
+    "packing": "G128; native GEMM physical lanes [0,4,1,5,2,6,3,7]; no qzero plus-one adjustment.",
+    "mode_1_edge_policy": "Signed underflow zero; exact cancellation gives +0; overflow gives signed infinity and saturation_o=1. Nonfinite operands retain invalid_operand_o=1, out_f16_o=0, saturation_o=0. Nonfinite outputs do not pass the accepted model finite-output requirement.",
+    "public_contract": "Only trailing optional parameters are added: engine SINGLE_ROUND_BIAS=0 and rounder IEEE_F16=0. No module names, ports, widths, transaction ordering or accumulator port meaning change.",
+    "accumulator": "acc_q53_48_o remains the exact pre-bias dot in both modes. Bias is sign-extended from Q24 into Q53.48 before the selected final rounding.",
+    "oracle": "projection_oracle.complete_projection_output(single_round_bias=True), independently compared to accepted_awq_projection.project_fp16_stage on finite operands.",
+    "focused_command": "make q-projection-single-round-simulation Q_PROJECTION_ATTEMPT=build/<fresh-attempt>",
+    "evidence_boundary": "Bounded Q arithmetic only; independent Reviewer acceptance and actual-output-fed 24-layer validation/re-prefill remain required. Old compiled binaries and software-injected diagnostics are not corrected-RTL evidence."
+  },
   "composition": {
     "group_primitive": "ace3/rtl/ace3_awq_w4a16_g128_dot_lane.sv",
     "group_primitive_sha256": "5cb3e3534cb0f556010c91c9888d2634cffc46410296227a5c2e524de3745e7c",
@@ -101,6 +114,16 @@
     "OUT_FEATURES": {
       "default": 896,
       "constraints": "multiple of 8, 8 through 4864"
+    },
+    "BIAS_ENABLE": {
+      "default": 0,
+      "constraints": "0 disables the bias channel; 1 accepts one FP16 bias per output after the final group. Q/K/V cluster instances select 1."
+    },
+    "SINGLE_ROUND_BIAS": {
+      "default": 0,
+      "constraints": "0 selects legacy dot-round-then-bias behavior; 1 adds enabled bias to the exact dot before one FP16 RNE. Q explicitly selects 1; K/V retain default 0.",
+      "rounding": "Selects IEEE_F16 for the dot rounder even when BIAS_ENABLE=0; mode 1 preserves signed underflow zero and flags signed-infinity overflow. See bias_rounding_modes for the full numerical policy.",
+      "accumulator": "acc_q53_48_o remains the exact pre-bias dot in both modes."
     }
   },
   "accumulator": {

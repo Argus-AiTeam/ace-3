@@ -1,0 +1,49 @@
+{
+  "diagnostic_id": "ace3-q24-s16-l9-coordinate62-threshold-refine-v1",
+  "policy_id": "ace3-w4a16-local-operator-global-binary64-authority-v3",
+  "cwd": "/home/argustest/ace3-argus",
+  "command": "PYTHONPATH=/home/argustest/ace3-argus PYTHONDONTWRITEBYTECODE=1 /home/argustest/miniconda3/bin/python -B -m ace3.model.candidates.diagnose_q24_s16_l9_coordinate62_threshold_refine_v1 --check",
+  "observed_sweep": ["q24_s16_l9_coordinate62_input_threshold_v2_f7a51665f510_attempt001", "b1cdc798e5847477a287a2646c6fa7fca5d66f1d5830c2e95b114db1bbd51abb", "ace3-q24-s16-l9-coordinate62-input-threshold-v2"],
+  "observed_passing_Q24_units62": 26501685138,
+  "observed_failing_Q24_units62": 26502192670,
+  "position": 0,
+  "coordinate": 62,
+  "prospective_layers": [9, 10, 11, 12, 13],
+  "controls": [
+    {"label": "refine_0_of_8", "input_Q24_units62": 26501685138},
+    {"label": "refine_1_of_8", "input_Q24_units62": 26501748580},
+    {"label": "refine_2_of_8", "input_Q24_units62": 26501812021},
+    {"label": "refine_3_of_8", "input_Q24_units62": 26501875462},
+    {"label": "refine_4_of_8", "input_Q24_units62": 26501938904},
+    {"label": "refine_5_of_8", "input_Q24_units62": 26502002346},
+    {"label": "refine_6_of_8", "input_Q24_units62": 26502065787},
+    {"label": "refine_7_of_8", "input_Q24_units62": 26502129228},
+    {"label": "refine_8_of_8", "input_Q24_units62": 26502192670}
+  ],
+  "check_only": true,
+  "native_L0_L8_invocations": 0,
+  "native_L9_L13_invocations": 0,
+  "rtl_invocations": 0,
+  "scientific_result_claim": false,
+  "candidate_admitted": false,
+  "policy_adopted": false,
+  "successor_published": false,
+  "normal_host_review": "REQUIRED",
+  "execution": {
+    "backend": "native_cpu",
+    "layers": [9, 10, 11, 12, 13],
+    "position": 0,
+    "native_layer_evaluations": 45,
+    "output_prefix": "q24_s16_l9_coordinate62_threshold_refine_v1_",
+    "fresh_exclusive_directory": true,
+    "command": "PYTHONPATH=/home/argustest/ace3-argus PYTHONDONTWRITEBYTECODE=1 /home/argustest/miniconda3/bin/python -B -m ace3.model.candidates.diagnose_q24_s16_l9_coordinate62_threshold_refine_v1 --out build/q24_s16_l9_coordinate62_threshold_refine_v1_<name>"
+  },
+  "thresholds": {
+    "S0_S17": "Unchanged finite AND (abs_error <= 0.125 OR (relative_error < 0.001 AND ordered_FP16_ULP <= 1)); denominator max(abs(reference), 2^-14); independent same-actual-operand local reference.",
+    "S18": "Unchanged original-input binary64-fp16-excess-v1 exact excess <= 1/8.",
+    "trajectory": "Retain all original FP16 trajectory diagnostics. Counterfactual outputs never seed or replace the independently propagated original-input global reference."
+  },
+  "validation": "Run the published command from cwd. Compile the actual repository candidate and focused test file in memory, authenticate all loaded ace3/tests origins including tests.test_q24_s16_toward_zero_l3_l8_v1 without collecting accepted tests, and run exactly 26 focused tests once. Authenticate full selected L8/L9/L10 inputs and the pinned prior sweep read-only, including source/contract/policy/artifact bindings and endpoint I/Z/H, operand, state, KV and gate evidence. Preserve and emit the authenticated independent original-input binary64 reference chain. Guard native dispatch/stages, subprocess creation, shell execution and publication; any attempt fails preflight. Planner and orchestration tests use mocked executors only. Emit check JSON to stdout only. check_only and top-level zero counters describe this --check command, not the separately authorized execution mode. Independent Host Reviewer must reproduce this command.",
+  "refinement": "Nine exact rational, round-to-nearest-even integer samples include both observed endpoints. Only incoming L9/P0 coordinate 62 is changed; every other coordinate and signed-zero tag is preserved, H is projected from Q24 I/Z by the existing rational helper. --out validates once and runs exactly 45 native L9-L13/P0 CPU layer evaluations; route planning rejects L0-L8, other layers, positions and RTL before numerical work. Dispatch and stage guards enforce the complete plan and prohibit subprocess/shell execution. Original-input global references remain independently propagated frozen inputs, never counterfactual outputs. Both historical endpoints must reproduce bitwise arrays, local references, I/Z/H, operand/state/KV archives and gate reports. Preserve all intermediate failures; report all adjacent observed scalar-decision transitions without monotonicity or exact-threshold assumptions. Output uses a fresh exclusive versioned build directory with command.log, preflight_validation.json, per-control layer archives, validation.json and result.json. No existing output may be replaced. Numerical execution is outside --check and requires separate authorization and the durable runner for commands over two minutes.",
+  "claim_boundary": "Software preflight is zero-dispatch regression only and publishes no scientific result. A separately authorized execution produces only a bounded nine-control L9-L13/P0 sensitivity diagnostic, not an exact threshold, monotonicity, unique-cause, admission, policy adoption or successor claim. Preserve all historical failures and bounded Reviewer acceptance. Accepted L0-L8 is frozen read-only input, never native replay. Q24 residual state is wider than FP16; native G128 asymmetric INT4 qweight/qzeros, GEMM nibble ordering, no qzero plus-one, FP16 scales/operator boundaries/KV and S16 RTZ remain unchanged. No strict-FP16-state W4A16, L14+, new-token, full-model, hardware, RTL, GPU, FPGA, simulation, synthesis, PPA, precision/reference/model/profile/budget/configuration/framework/Host or ACE2 changes or claims."
+}

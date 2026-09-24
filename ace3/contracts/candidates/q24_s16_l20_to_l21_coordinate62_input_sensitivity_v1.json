@@ -1,0 +1,79 @@
+{
+  "diagnostic_id": "ace3-q24-s16-l20-to-l21-coordinate62-input-sensitivity-v1",
+  "version": 1,
+  "focused_tests": 20,
+  "interface": ["--check", "--execute"],
+  "executor": {
+    "version": 1,
+    "native_layers": [21, 22, 23],
+    "maximum_native_layer_invocations": 54,
+    "output": "stdout only; no state publication or admission",
+    "suffix": "L22 then L23 only after a full-vector L21 pass",
+    "neighbor": "test one Q24 unit toward zero after a passing nonzero probe",
+    "minimality": "sampled sufficiency is not global minimality; unresolved minimality is INCONCLUSIVE"
+  },
+  "producer_input": ".argus_subagents/72ea3c5dc077-l21-producer-cone-r2_logs/stdout.log",
+  "producer_sha256": "aa504fefcf27f9be43d55ea1bc9da61eb66697f08e17ff5e6c1875989a21598f",
+  "suffix_input": "build/q24_s16_l21_coordinate62_adjusted_l22_l23_suffix_v1_attempt001",
+  "suffix_sha256": {
+    "result.json": "dedab0b177ae9fb7dc97445d5fedad1e9b2520f221ddf0febbae4acc9a4c16b9",
+    "validation.json": "5966493f2fcd555734d5b65df3f39f9f034e9481c50764c943fbe5140b66f095",
+    "command.json": "b124b5c19fa2b4da9c1cd0b03e01425d3c7f0077b1709a59e5440972c2b6cbdd"
+  },
+  "margin_sha256": {
+    "result.json": "334b47246ce4f8d66257f1cdbe6265fe462da6eb58923e020b5c8ac4d2bcd5bd",
+    "validation.json": "127757c73cf6784b1fa62f120c43479f42c70d9e9b6c6b2663810861f723cbdc",
+    "command.json": "6bf2ebb19047236cf9976e46543c9d146d552f9cb487bc7cc9ba502ebe64aafc"
+  },
+  "L15_cut_suffix_sha256": {
+    "result.json": "6d827ad412e70d59ba7bfcb28b9da056fdfc66c75299852c2645eeeab684290b",
+    "validation.json": "7555a88af5ec76546eb18288df2a9a2adbf12a8a2ceea2de5654093804c9e0ae",
+    "command.json": "0bac35d13e1aeadb5989319cf0150abf32ac48fb8dd1bbb60b35eeed71d5cebc",
+    "layer21/actual_stages.npz": "784c5af93e09f97fced8fae1fed66bcccc0ddb5f181f76bebeb9d7543ce66e49",
+    "layer21/reports.json": "b713d6a112768889915172eaa74cf8fb49faf184a4ae4a903f59f2d2f467f30c"
+  },
+  "policy_id": "ace3-w4a16-local-operator-global-binary64-authority-v3",
+  "local_gate": {
+    "absolute_budget": "1/8",
+    "relative_strict_bound": "1/1000",
+    "ordered_FP16_ULP": 1,
+    "relative_denominator_floor": "1/16384"
+  },
+  "excess_budget": "1/8",
+  "reference_policy": "unchanged independently propagated original-input global reference",
+  "search": {
+    "boundary": "frozen L20 output / L21 input",
+    "coordinate": 62,
+    "position": 0,
+    "history": [9707],
+    "units": "signed integer Q24 units",
+    "radius_Q24_units": 16777216,
+    "order": "0, then +2**k, -2**k for k=0..24",
+    "probe_count": 51,
+    "state": "copy I/Z/H; change only I[62]; preserve Z; recompute H[62] by RNE16",
+    "references": "unchanged independently propagated original-input global reference",
+    "precondition": "authenticate parent, then require full-vector L20 S18 global gate",
+    "prospective_native_layers": [21],
+    "mandatory_gates": "own empty P0 FP16 KV; source/operand/I/Z/H lineage; S0-S17 local; S18 global",
+    "stop": "first full-vector L21 pass or new mandatory failure; exhaustion is INCONCLUSIVE",
+    "minimality": "no monotonicity assumption, binary search, or minimal-input-delta claim",
+    "execution": "--execute only; bounded CPU search with mandatory independent Host review"
+  },
+  "arithmetic": "Native S16 RTZ; exact signed int64 Q24 residual I/Z and RNE16 H. Official G128 asymmetric packed INT4 qweight/qzeros, native GEMM nibble order, no qzero plus-one, FP16 scales, operator boundaries and KV. Q24 residual state is wider than FP16.",
+  "authentication": "Pin the retained L15-cut/L16-L20 state and L21 failure, accepted L21 margin result, adjusted L22-L23 suffix pass and inconclusive producer-cone stdout. Reuse read-only ancestor reconstruction; reproduce frozen suffix reports, exact S12/S18 I/Z/H transitions, S16 RTZ operands, own P0 FP16 KV and original-input reference linkage. Rebind source/contract/input bytes at completion. Frozen numerical reports are not new native executions or renewed acceptance.",
+  "reproduction": "cd /home/argustest/ace3-argus && PYTHONPATH=/home/argustest/ace3-argus /home/argustest/miniconda3/bin/python -B -m ace3.model.candidates.diagnose_q24_s16_l20_to_l21_coordinate62_input_sensitivity_v1 --execute",
+  "validation": "Compile the actual repository diagnostic and test files in memory, parse and check this contract, collect and execute exactly 20 focused tests once with zero failures/errors/skips, then authenticate upstream evidence once. Record all imported repository module origins and input digests on stdout. Import tests.test_q24_s16_toward_zero_l3_l8_v1 only for origin binding; never replay its accepted 19 tests or upstream suites. This command creates no files.",
+  "search_boundary": "--check remains read-only. --execute tests the 51 ordered signed probes, stopping at the first new mandatory gate boundary or L21 pass. Require full-vector L20 original-reference S18 validity before each native L21 invocation, bitwise baseline reproduction, native same-operand local gates and unchanged L21 original-reference global gate. After a pass, test one unit toward zero and execute only native L22 then L23. The radius is a probe domain, not a changed budget. Never transplant prior-layer KV, change Z or other coordinates, deduplicate by H, infer monotonicity, or equate the accepted output cut with an input correction. Exhaustion applies only to the listed samples. A sampled pass and adjacent failure do not prove global minimality; report INCONCLUSIVE unless the absolute delta is one and baseline failure plus suffix pass establish minimality.",
+  "reviewer_rejection_criteria": "Reject source-origin or digest mismatch, test count other than 20, any failure/error/skip, changed threshold/reference/state/operand/KV lineage, historical evidence edits, native execution outside L21-L23 or beyond the bounded schedule, any native execution in --check, RTL, publication/admission, unsupported minimality or non-local root-cause claims. Host owns genuine independent Reviewer reproduction.",
+  "native_layers": [],
+  "native_invocations": 0,
+  "native_layer_invocations": 0,
+  "native_L0_L8_invocations": 0,
+  "rtl_invocations": 0,
+  "candidate_admitted": false,
+  "policy_adopted": false,
+  "successor_published": false,
+  "scientific_result_claim": false,
+  "normal_host_review": "REQUIRED",
+  "claim_boundary": "Preflight is read-only; --execute is bounded non-admitting L21-L23 CPU input sensitivity. Preserve historical failures and independent acceptances. No native L0-L8 replay, RTL/hardware/GPU/FPGA/simulation/synthesis/PPA, new token, strict-FP16-state W4A16 or full-model PASS. No model, scale, precision, Host, framework, review-policy or ACE2 changes."
+}

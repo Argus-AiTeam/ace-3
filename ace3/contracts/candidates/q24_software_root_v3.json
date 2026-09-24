@@ -1,0 +1,51 @@
+{
+  "experiment_id": "ace3-q24-software-root-p0-v1",
+  "policy_id": "ace3-w4a16-local-operator-global-binary64-authority-v3",
+  "residual_reference_adapter": "ace3-q24-software-actual-state-local-v1",
+  "arithmetic_id": "ace3-residual-exact-grid-q24-v1",
+  "state_id": "ace3-q24-software-paired-state-v1",
+  "evidence_kind": "cpu_software_q24",
+  "rtl_admissible": false,
+  "authority": {
+    "directive": "resume_argus_software_only",
+    "operator_instruction_at": "2026-09-09T15:34:10Z",
+    "owner": "Argus",
+    "authorized": "Isolated versioned CPU Q24 residual experiment and independent review",
+    "forbidden": ["continuing pending RTL tasks", "new RTL execution", "production source or ABI changes", "reference or threshold relaxation", "tokens/full-model/hardware claims"],
+    "external_partial_work": "unaccepted; not used"
+  },
+  "model": "Qwen/Qwen2.5-0.5B-Instruct-AWQ",
+  "scope": {"layers": [0, 1, 2, 3, 4, 5, 6, 7, 8], "position": 0, "history": [9707]},
+  "precision": {
+    "weights": "native G128 asymmetric INT4; GEMM nibble order [0,4,1,5,2,6,3,7]; no qzero plus-one",
+    "scales": "FP16",
+    "operator_boundaries": "FP16",
+    "kv": "FP16, own empty P0 prior cache per layer",
+    "residual": "signed int64 Q24 with uint8 canonical zero-sign tag; NOT unchanged strict-FP16-state W4A16",
+    "other_modes": "unsupported"
+  },
+  "software_state_contract": {
+    "i": "896 little-endian signed int64 Q24 coordinates",
+    "z": "896 uint8 zero tags, 0 or 1; nonzero integers require tag 0",
+    "h": "896 little-endian uint16 FP16 RNE views",
+    "root": "i=B(official embedding[9707]); z=is_negative_zero(embedding); no invented remainder",
+    "ownership": "immediate actual CPU producer, model, token/position, layer, source and policy bound; no FP16-only imports",
+    "persistent_parent": "JSON metadata plus separately bound NPZ I/Z/H and per-layer FP16 K/V; never an RTL save"
+  },
+  "candidate": {
+    "projection": "integer group dots and unbounded cross-group Q48 sums; Q/K fused bias, V dot-round-then-bias",
+    "rmsnorm": "existing fixed Q24 integer RMSNorm, epsilon_q48=281474977",
+    "attention": "P0 identity RoPE, dot/8 via Q48-to-Q24 RNE then FP16 RNE; singleton softmax=1; singleton value copy",
+    "silu": "existing fixed Q24 exponential SiLU-times-up",
+    "residual": "T=I+B(actual O), S12=RNE16(T); MLP consumes actual S12; I_next=T+B(actual D), S18=RNE16(I_next); never relift rounded H/R"
+  },
+  "references": {
+    "S0_S17": "existing independent canonical v3 local operators, except S12 independently uses exact rational authenticated I/Z plus actual O",
+    "S18": "unchanged original-input independently propagated binary64-v1 arrays, exact excess <=1/8",
+    "local_gate": "finite AND (absolute<=1/8 OR (relative<1/1000 AND ordered_FP16_ULP<=1)); denominator=max(abs(local FP16 reference),2^-14)",
+    "trajectory": "all original independent FP16 S0-S18 comparisons remain diagnostics",
+    "state": "independent rational root, view and two state transitions at each layer; exact producer/consumer and own-layer cache identities"
+  },
+  "execution": "ordered generator; check each stage before its consumer; stop on first mandatory failure; publish L8 software parent only after all gates",
+  "review": "normal independent Host Reviewer required; no self-acceptance"
+}

@@ -1,0 +1,21 @@
+{
+  "diagnostic_id": "ace3-q24-s16-l13-s18-first-failure-attribution-v1",
+  "version": 1,
+  "scope": {"layer": 13, "position": 0, "stage": 18, "index": 62, "history": [9707]},
+  "input": "build/q24_software_l9_l23_4d1cfdfc15c0_attempt002",
+  "parent": "layer12/software_parent.json with complete authenticated I/Z/H and own-layer KV",
+  "selection": "First coordinate in the mandatory binary64_v1.failures list, cross-checked with result.first_failure; never rows[0], maximum error or FP16 diagnostic failures.",
+  "policy_id": "ace3-w4a16-local-operator-global-binary64-authority-v3",
+  "global_gate": "Unchanged exact abs(actual-original_binary64_reference)-nearest_FP16_representation_floor <= 1/8. No reference replacement.",
+  "local_gate": "Unchanged finite AND (abs_error<=1/8 OR (relative_error<1/1000 AND ordered_FP16_ULP<=1)); denominator=max(abs(reference),2^-14).",
+  "arithmetic": "Signed int64 Q24 residual I with zero-sign tag Z and RNE16 H view. S12 and S18 exact rational addition. S16 alone uses native RTZ16. INT4 G128 asymmetric native GEMM packing, no qzero plus-one, FP16 scales/operator boundaries/KV remain unchanged.",
+  "controls": "Retained actual L12 parent and L13 scratch stay fixed. Recompute canonical S17 on actual S16, canonical S17 on independently computed RNE S16, and canonical S17 on RNE of the same retained unrounded S16 operand. Compare each rational residual suffix with the identical original global coordinate. These are labeled counterfactual diagnostics, not new candidate policies, parents or trajectory acceptance.",
+  "classification": "Report exact floor, avoidable excess and signed residual decomposition. Exclude arithmetic defects only after full-vector state/KV and RTZ identity checks. A rescuing suffix proves conditional sensitivity only. Without independently retained binary64 intermediates and an isolated upstream-parent control, classify unique upstream attribution as inconclusive and list the missing evidence.",
+  "execution": "Use the published cwd, absolute interpreter, command-local PYTHONPATH and -B. Assert all imported candidate module origins plus the legacy L3-L8 test module origin without executing its accepted 19 tests. Compile touched Python and run this diagnostic's focused tests once. Emit result.json, command.log, validation.json and unittest.log in a fresh exclusive build directory.",
+  "preservation": "Read-only retained evidence, no accepted-prefix replay, no failed-layer successor publication, no queue or lifecycle edits, no threshold/precision/reference/model/budget changes.",
+  "rtl_invocations": 0,
+  "policy_adopted": false,
+  "successor_published": false,
+  "normal_host_review": "REQUIRED",
+  "claim_boundary": "Retained bounded CPU diagnostic only. Q24 state is wider than FP16. No strict-FP16-state W4A16, RTL, hardware, GPU, FPGA, simulation, synthesis, PPA, new-token or full-model PASS."
+}

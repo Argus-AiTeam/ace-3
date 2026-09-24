@@ -4,8 +4,12 @@
 
 The frozen numerical and protocol authorities are
 `ace3/contracts/fp16_adaptation_operators.json` and
-`ace3/contracts/qkv_rope_kv_cache.json`, plus
-`ace3/contracts/attention_block.json`. This note and
+`ace3/contracts/qkv_rope_kv_cache.json` with
+`ace3/contracts/awq_w4a16_projection_engine.json` for shared projection
+parameters and bias rounding modes, plus
+`ace3/contracts/attention_block.json`,
+`ace3/contracts/decoder_layer0_token_engine.json`, and
+`ace3/contracts/streaming_tied_lm_head_topk.json`. This note and
 `design/RTL_MANIFEST.json` describe the implementation; they do not amend,
 relax, or replace those contracts.
 
@@ -15,9 +19,12 @@ cores, plus the fixed Q/K/V projection cluster, one-pair Qwen2.5 RoPE core, and
 parameterized FP16 K/V cache, and the score, causal-softmax, and
 value-composition attention cores. The pre-existing
 `ace3_q47_48_to_f16_rne` converter and
-`ace3_awq_w4a16_projection_engine` remain accepted dependencies rather than
-new milestone modules. Claims remain limited to authenticated Icarus and
-Verilator RTL simulation. Decoder-layer or full-model execution, correctly
+`ace3_awq_w4a16_projection_engine` remain shared dependencies rather than
+new milestone modules. Their legacy defaults are preserved; Q now selects
+exact bias addition before one FP16 RNE through `SINGLE_ROUND_BIAS=1` and
+the rounder's `IEEE_F16=1` mode. This selected arithmetic requires independent
+Reviewer acceptance. Claims remain limited to authenticated RTL simulation;
+the focused Q boundary uses Icarus, not Verilator simulation. Decoder-layer or full-model execution, correctly
 rounded transcendental SiLU, synthesis/timing/area/power, FPGA, silicon,
 dialogue, and model quality are outside this trace.
 
@@ -35,8 +42,8 @@ reference/test hashes for the adaptation baseline remain recorded under
 | `ace3/rtl/ace3_fp16_fixed.sv` | `ace3_q24_to_fp16_rne` | `e7f38a3434b60849896a0a5bab549bd6d4b6a4908280a2860a33fc8e839c86c8` | Replaces requantization and INT8 saturation with the frozen binary16 RNE/saturation boundary. |
 | `ace3/rtl/ace3_fp16_residual_add_core.sv` | `ace3_fp16_residual_add_core` | `335954e0bf6909f3aa27330c241cc002f777e6eb5ef483e0b1f684c2fe35ba89` | Re-expresses ready-valid, handshake-gated advancement, retained output, reset, and clear structure; replaces Scale32 and INT8 residual arithmetic. |
 | `ace3/rtl/ace3_fp16_rmsnorm_core.sv` | `ace3_fp16_rmsnorm_core` | `f302975fa91aefc20bb48f768fc08ffbddc088e83ca9cdb23b219c2f70d9fc2a` | Re-expresses two-pass scheduling and stream control; adapts sum/square-root dataflow to the frozen Q24/Q48 contract. |
-| `ace3/rtl/ace3_fp16_silu_gate_core.sv` | `ace3_fp16_silu_gate_core` | `c5f26b50ba2396852e966a430719a6170df9adf5546903ec018049e9e084cf43` | Re-expresses stream scheduling and retained output; supports the reviewed rational sigmoid and the range-reduced exponential profile with the same wide gate product. |
-| `ace3/rtl/ace3_qkv_projection_cluster.sv` | `ace3_qkv_projection_cluster` | `a02880cc69110b226f0121053b3bad72355e33c1e576f7c749f9daf034305de1` | First-party fixed-checkpoint wrapper around three unchanged accepted ACE-3 projection engines; no ACE-2 source is copied. |
+| `ace3/rtl/ace3_fp16_silu_gate_core.sv` | `ace3_fp16_silu_gate_core` | `528b931da1f201c941e7f713a6ba0418f950bd44b64fbf10d92cb5a80f386997` | Re-expresses stream scheduling and retained output; replaces LUT/clipping and fixed INT8-domain arithmetic with the frozen rational sigmoid and wide product. |
+| `ace3/rtl/ace3_qkv_projection_cluster.sv` | `ace3_qkv_projection_cluster` | `1d30b79dbc591d5ceaf0190550151e2fafa56cc96b8aa8fb23d1b8ea2d2f9fc7` | First-party fixed-checkpoint wrapper around three shared ACE-3 projection engines; all enable bias, Q selects single-round bias, and K/V retain legacy rounding. No ACE-2 source is copied. |
 | `ace3/rtl/ace3_qwen2_rope_pair.sv` | `ace3_qwen2_rope_pair` | `d6da922485f1f9818a08e604b3559d56fe407ad42fc2f7605d3bfdded3ee36b8` | First-party half-split Qwen2.5 rotary arithmetic using accepted ACE-3 FP16 converters; no ACE-2 W4A8 path is used. |
 | `ace3/rtl/ace3_fp16_kv_cache.sv` | `ace3_fp16_kv_cache` | `fa2b30ca6f22fcc0e2f1fb7ac91761c1aa3d2440d3b9abed28bb76a0569ed179` | First-party SRAM-oriented indexed FP16 K/V storage; no ACE-2 source or cache format is copied. |
 | `ace3/rtl/ace3_attention_score_core.sv` | `ace3_attention_score_core` | `35db39940444c3f286c0110c94f46347e7192511b162a7ef4d10a6b299be5221` | First-party exact-Q24/Q48 scaled-QK reduction; no ACE-2 W4A8 arithmetic is copied. |
@@ -185,7 +192,7 @@ The requirement IDs below are defined machine-readably in
 
 `ace3_qkv_projection_cluster` has no parameters. Vector lane 0 is Q, lane 1 is
 K, and lane 2 is V. Each concatenated bus is three copies of the corresponding
-accepted projection-engine port.
+shared projection-engine port, including the per-lane bias handshake and data.
 
 ```systemverilog
 input  wire         clk_i
@@ -212,6 +219,10 @@ output wire [29:0]  pair_output_word_o
 output wire [8:0]   pair_logical_lane_o
 input  wire [47:0]  activation_f16_i
 input  wire [95:0]  qweight_i
+input  wire [2:0]   bias_valid_i
+output wire [2:0]   bias_ready_o
+output wire [38:0]  bias_output_channel_o
+input  wire [47:0]  bias_f16_i
 output wire [2:0]   out_valid_o
 input  wire [2:0]   out_ready_i
 output wire [38:0]  out_channel_o
@@ -224,10 +235,22 @@ output wire         all_idle_o
 ```
 
 The exact dependencies are
-`ace3_awq_w4a16_projection_engine(IN_FEATURES=896, OUT_FEATURES=896)` for Q
-and two instances with `(IN_FEATURES=896, OUT_FEATURES=128)` for K and V.
+`ace3_awq_w4a16_projection_engine(IN_FEATURES=896, OUT_FEATURES=896, BIAS_ENABLE=1, SINGLE_ROUND_BIAS=1)`
+as `q_projection`, and two instances with
+`(IN_FEATURES=896, OUT_FEATURES=128, BIAS_ENABLE=1)` as `k_projection` and
+`v_projection`. K/V omit `SINGLE_ROUND_BIAS` and retain its default 0.
+Q adds exact FP16 bias to the exact cross-group dot before one FP16 RNE;
+K/V retain dot-round-then-bias behavior. All three accumulator ports remain
+pre-bias. Bias is accepted after the last group and before output visibility.
 These retain native asymmetric packed INT4 G128 qweight/qzeros, FP16 scales,
-FP16 activations, and the accepted projection protocol.
+FP16 activations, and the existing projection protocol. Native Q mode preserves
+signed underflow zero and flags overflow to signed infinity; nonfinite operands
+retain invalid/zero-output handling. Legacy finite saturation is unchanged.
+The bounded command is
+`make q-projection-single-round-simulation Q_PROJECTION_ATTEMPT=build/<fresh-attempt>`.
+Actual-output-fed 24-layer validation, changed-arithmetic re-prefill, and
+continuation-state acceptance remain deferred; old binaries and software-injected
+diagnostics are not evidence for the selected arithmetic.
 
 ## Qwen2.5 RoPE-pair interface
 
@@ -327,7 +350,7 @@ QKV contract references are JSON Pointers into
 
 | Requirement | Contract authority | RTL implementation | Executable check |
 | --- | --- | --- | --- |
-| `QKV-PROJECTION-001` | `/projection_cluster/composition`, `/projection_cluster/engine` | Three unchanged projection engines at Q 896x896 and K/V 896x128, with lane-isolated interfaces and `all_idle_o`. | `ace3_qkv_projection_geometry_tb.sv` executes all three geometries in Icarus; Verilator lint elaborates the same cluster and dependencies. |
+| `QKV-PROJECTION-001` | `/projection_cluster/composition`, `/projection_cluster/engine`, `/projection_cluster/q_numerical_policy` | Three shared projection engines at Q 896x896 and K/V 896x128, all with `BIAS_ENABLE=1`; Q selects `SINGLE_ROUND_BIAS=1`, K/V retain default 0, with lane-isolated interfaces and `all_idle_o`. | `ace3_qkv_projection_geometry_tb.sv` covers the three geometries. `ace3_q_projection_single_round_tb.sv` compiles the real Q selection and a separate legacy instance; `run_q_projection_single_round.py` compares official and directed outputs to independent binary64 and exact-integer oracles. Verilator coverage of this changed cluster is lint only. |
 | `QKV-ROPE-GEOMETRY-001` | `/model/query_heads`, `/model/key_value_heads`, `/model/head_dim`, `/model/max_position_embeddings`, `/model/rope_theta`, `/rope/pairing`, `/rope/coefficient_interface` | Half-split 64-dimensional pairs with legal 14-Q-head/2-K-head gating and carried pair/position metadata. | Both dynamic harnesses require 32 cases for each query and key head across 512 authenticated cases; Icarus also rejects key head 2. |
 | `QKV-ROPE-NUMERICAL-001` | `/rope/equations`, `/rope/operation_rounding`, `/rope/nonfinite`, `/rope/finite_overflow` | Four binary16-rounded products followed by two binary16-rounded sums, with explicit invalid and saturation status. | Independent `qwen2_rope_oracle.py` expected bits are compared exactly by Icarus and Verilator; directed non-finite handling runs in Icarus. |
 | `QKV-ROPE-PROTOCOL-001` | `/rope/protocol`, `/rope/clear_reset` | One-entry ready-valid stage with handshake-gated replacement, stable output/metadata/status under stall, asynchronous reset, and synchronous clear. | Both harnesses force output stalls and compare retained bits; reset release and clear abort are checked, with four-state idle X/Z injection in Icarus. |
@@ -351,7 +374,7 @@ The authenticated QKV surfaces are:
 | Authenticated vector validator | `ace3/model/validate_qkv_rope_cache_vectors.py` (`ff3d451d3043101fc2808b4e54ce4ed204fc903b8143672d570cbf47a3b4fae6`) |
 | Icarus geometry and four-state protocol | `ace3/tb/ace3_qkv_projection_geometry_tb.sv`, `ace3/tb/ace3_qkv_rope_cache_tb.sv` |
 | Verilator two-state cross-check | `ace3/tb/ace3_qkv_rope_cache_verilator_top.sv`, `ace3/tb/ace3_qkv_rope_cache_main.cpp` |
-| Fresh aggregate regression | `make OFFICIAL_TENSOR_DIR=/path/to/official_tensors test` |
+| Fresh aggregate regression | `make test` |
 
 The official-derived QKV streams are deterministic selections from
 hash-authenticated layer-0 `q_proj` FP16 scale samples, not captured runtime
@@ -426,10 +449,10 @@ Decoder references are JSON Pointers into
 | Frozen contract | `ace3/contracts/decoder_layer0_token_engine.json` (`7026c694baf8c45ea3808cb10582bdd6884bb85de5c3e1c6e8b5553f1751cf99`) |
 | Serialized bindings | `ace3/contracts/decoder_layer0_vector_bindings.json` (`12c433d7d3999d2afdcf9f3424a1340c3ada1ccf1a7983e66f23b2d736769040`) |
 | Generated boundary manifest | `build/decoder_layer0_vectors/boundary_manifest.json` (`c0e77c256b5c4ae68de55a8102a949835508f46ab0515d9edd0d9c48739b4089`, regenerated and ignored) |
-| Independent oracle | `ace3/model/decoder_layer0_oracle.py` (`33ff7d93ecad077d4d6f88442f70ccc52450892dc65a976b17de882bce953128`) |
+| Independent oracle | `ace3/model/decoder_layer0_oracle.py` (`5c775a363d73b8dc551a7362519d70b293eb08cf600b21af08157b24a1992d13`) |
 | Official vector generator | `ace3/model/generate_decoder_layer0_vectors.py` (`2cbc91f71b56bbf2c1f819642cca02249df3f48d17ac4d05c384692cc0e0bda8`) |
 | Authenticated validator | `ace3/model/validate_decoder_layer0_vectors.py` (`851cccaf713029781e9703547d9d9224b81dc3248293574e0235f69eb888701e`) |
-| Integrated RTL | `ace3/rtl/ace3_decoder_layer0_token_engine.sv` (`34ba6fdf14079dba327cadab708f8102881551c202fbca1f9d1e233c2f43b986`) |
+| Integrated RTL | `ace3/rtl/ace3_decoder_layer0_token_engine.sv` (`d33868936bf97e76dc9a4420803f1c221127b83ddd94c43d9e844b2af152aed8`) |
 | Qzeros address RTL | `ace3/rtl/ace3_decoder_qzeros_address.sv` (`cf5f8e9d41cc82eb5082046566665cbd14be48e3c2e7ae60b4753ae9409ec344`) |
 | Icarus testbench | `ace3/tb/ace3_decoder_layer0_token_engine_tb.sv` (`5440f1084a54be331713721c57cd696587b4a1e3e6522a6c0169f11be608629c`) |
 | Verilator harness | `ace3/tb/ace3_decoder_layer0_token_engine_main.cpp` (`31f312030712b2e30e08baa426a835e74d70d14f577ae4a318cf869301652a22`) |
@@ -457,7 +480,7 @@ from the fixed official checkpoint. Layer 1 is compiled separately with
 | Official layer-1 descriptor | `model.layers.1.` (`c8a037c0043ededc764f02b14671781ceeb1fb5be3fa6b7f8e114d75a98ad8f4`) |
 | Layer-0 handoff | 1,792 rows, SHA256 `22768ac6b337f920faac7de59b4eb43a203e1db45cdf688820fcbb35cdfe3446` |
 | Layer-1 vector generator | `ace3/model/generate_decoder_layer1_vectors.py` (`879976cc1465537b98a6b37b40bbfcd74f88ec8450a922252e42cfd1c99f23d7`) |
-| Independent indexed oracle | `ace3/model/model24_execution_oracle.py` (`d452dfbd10a6694cd183750bfadd22511097f50a2aec7c6d9f79117394ade55b`) |
+| Independent indexed oracle | `ace3/model/model24_execution_oracle.py` (`777b91ed3a566a2dd66edd5feb87faff1d0b47e0d7b2c10d7f1f73181cccaf1f`) |
 | Post-layer-1 oracle | 1,792 rows, SHA256 `2324470c304f23a372378af6f9f65cc7a646fbaa614882c4ced44110b99dca85` |
 | Focused four-state check | `make decoder-layer1-iverilog-boundary` |
 | Complete numerical check | `make decoder-layer01-verilator-cascade` |
@@ -491,8 +514,8 @@ Layer 2 is compiled separately with `LAYER_INDEX=2`.
 | Official layer-2 descriptor | `model.layers.2.` (`07b907a2f7a800af011b630ce2a026593f05fbd9447e3f106e8970be7888d916`) |
 | Layer-1 handoff | 1,792 rows, SHA256 `2324470c304f23a372378af6f9f65cc7a646fbaa614882c4ced44110b99dca85` |
 | Layer-2 vector generator | `ace3/model/generate_decoder_layer2_vectors.py` (`86eb43c07fe6972c6544274fd5d88385043dd90a801d7ba0091a18d6444fc418`) |
-| Independent indexed Oracle | `ace3/model/model24_execution_oracle.py` (`d452dfbd10a6694cd183750bfadd22511097f50a2aec7c6d9f79117394ade55b`) |
-| Parameterized RTL | `ace3/rtl/ace3_decoder_layer0_token_engine.sv` (`34ba6fdf14079dba327cadab708f8102881551c202fbca1f9d1e233c2f43b986`) |
+| Independent indexed Oracle | `ace3/model/model24_execution_oracle.py` (`777b91ed3a566a2dd66edd5feb87faff1d0b47e0d7b2c10d7f1f73181cccaf1f`) |
+| Parameterized RTL | `ace3/rtl/ace3_decoder_layer0_token_engine.sv` (`d33868936bf97e76dc9a4420803f1c221127b83ddd94c43d9e844b2af152aed8`) |
 | Focused four-state testbench | `ace3/tb/ace3_decoder_layer0_token_engine_tb.sv` (`5440f1084a54be331713721c57cd696587b4a1e3e6522a6c0169f11be608629c`) |
 | Two-state harness | `ace3/tb/ace3_decoder_layer0_token_engine_main.cpp` (`31f312030712b2e30e08baa426a835e74d70d14f577ae4a318cf869301652a22`) |
 | Post-layer-2 Oracle | 1,792 rows, SHA256 `244c9d1d52923ecfff743c165da563468746f47557284865a4b22910a967c511` |
@@ -514,34 +537,83 @@ and 2. It excludes layers 3 through 23, the tied language-model head,
 full-model execution, readable dialogue, formal proof, synthesis, timing,
 area, power, FPGA deployment, latency, throughput, and other performance.
 
-## Model24 checkpointed controller and full-24 RTL cascade
+## Standalone streaming tied lm_head and deterministic Top-K
 
-The arithmetic-free controller accepts one start, launches layers 0 through 23
-in strict order, retains every checkpoint under backpressure, and permits a
-natural terminal only after the layer-23 checkpoint. The numerical harness
-authenticates that event stream before launching one separately compiled,
-layer-indexed Verilator decoder instance for each accepted layer.
+`ace3_streaming_tied_lm_head_topk` is first-party ACE-3 RTL authored for the
+official Qwen/Qwen2.5-0.5B-Instruct-AWQ tied-vocabulary projection. It is not
+copied from ACE-2 and does not use the ACE-2 W4A8 arithmetic profile. Source
+`ace3/rtl/ace3_streaming_tied_lm_head_topk.sv` has SHA256
+`15285a3c5f151f03ae75ac95598775418684dd0fd8ce16f3487aca84c5cb5b99`.
+Its frozen contract is
+`ace3/contracts/streaming_tied_lm_head_topk.json` at SHA256
+`c98f1541787a879a3ce9c28ad7cc2a5fe83a8b41421f44058469530a3493f2d4`.
 
-| Sealed surface | SHA256 |
-| --- | --- |
-| Official checkpoint | `c50d807b7bed7ff314308972e0f4bcf4e5a70bc60ad88fc7df53940831ed0c1b` |
-| Per-layer binding document | `95a46cfb25d8479a9d9921da9b78e581b1c3746c2645574880dac7ea6825ede0` |
-| Ordered controller event stream | `fcb4c9a6458fa141b143d9a4c7dfd10b2d15e703257067d935f635dc1bf9dbf1` |
-| Post-layer-23 hidden state | `97e729f6f905ecb62f498a6a144beecf6b695465d84fdbaf1de777ce9f5a39b6` |
-| Complete execution document | `9d4e048d1316252d67d7e288fd4de0a2a6360f53ff49854c1127b7462578a5c1` |
+Parameters are `HIDDEN_SIZE=896`, `VOCAB_SIZE=151936`, `TOP_K=10`,
+`TOKEN_INDEX_WIDTH=18`, `FEATURE_INDEX_WIDTH=10`, and `TOP_RANK_WIDTH=4`.
+The exact interface is:
 
-The run consumes all 624 decoder tensors. Layers 0 through 2 preserve the
-reviewed rational SiLU profile and layers 3 through 23 use the range-reduced
-degree-7 Q24 exponential profile. The post-layer-23 decision-token maximum
-absolute error is `0.08988498970425507`, below the fixed `0.125` bound.
+```systemverilog
+input  wire                           clk_i
+input  wire                           rst_ni
+input  wire                           clear_i
+input  wire                           start_valid_i
+output wire                           start_ready_o
+input  wire                           hidden_valid_i
+output wire                           hidden_ready_o
+input  wire [FEATURE_INDEX_WIDTH-1:0] hidden_index_i
+input  wire [15:0]                    hidden_f16_i
+input  wire                           hidden_last_i
+input  wire                           hidden_end_i
+input  wire                           weight_valid_i
+output wire                           weight_ready_o
+input  wire [TOKEN_INDEX_WIDTH-1:0]   weight_token_index_i
+input  wire [FEATURE_INDEX_WIDTH-1:0] weight_feature_index_i
+input  wire [15:0]                    weight_f16_i
+input  wire                           weight_last_feature_i
+input  wire                           weight_last_token_i
+input  wire                           weight_end_i
+output wire                           logit_valid_o
+input  wire                           logit_ready_i
+output wire [TOKEN_INDEX_WIDTH-1:0]   logit_token_index_o
+output wire [15:0]                    logit_f16_o
+output wire signed [95:0]             acc_q47_48_o
+output wire                           logit_saturation_o
+output wire                           top_valid_o
+input  wire                           top_ready_i
+output wire [TOP_RANK_WIDTH-1:0]      top_rank_o
+output wire [TOKEN_INDEX_WIDTH-1:0]   top_token_index_o
+output wire [15:0]                    top_logit_f16_o
+output wire                           done_valid_o
+input  wire                           done_ready_i
+output wire                           error_valid_o
+output wire [3:0]                     error_code_o
+output wire                           invalid_operand_o
+output wire                           saturation_o
+output wire                           busy_o
+```
 
-The layer-3 Token 0 diagnostic binds the same layer-2 handoff and discloses one
-material final outlier at down-projection dimension 62. It remains within one
-FP16 ULP and below 0.001 relative error after the final residual. Token 1 remains
-below 0.01 and preserves two-position K/V causality. The RTL remains bit-exact
-to its integer oracle at every retained row.
+The module depends on three instances of `ace3_fp16_to_q24` from
+`ace3/rtl/ace3_fp16_fixed.sv` at SHA256
+`e7f38a3434b60849896a0a5bab549bd6d4b6a4908280a2860a33fc8e839c86c8`
+and one `ace3_q47_48_to_f16_rne` instance configured with `ACC_WIDTH=96`
+from `ace3/rtl/ace3_q47_48_to_f16_rne.sv` at SHA256
+`c7a98c521b37971c0d0e11a00380f87fdc09ad65c7466198b36e8e0fa0fd7056`.
 
-This is a controller-driven, two-token, layer-indexed RTL simulation result. It
-does not execute the tokenizer or tied language-model head and does not
-establish a monolithic full-model RTL image, formal proof, synthesis, timing,
-area, power, PPA, FPGA execution, latency, throughput, or silicon behavior.
+| Requirement | Contract mapping | RTL behavior |
+| --- | --- | --- |
+| `LMHEAD-MODEL-BINDING-001` | `/model_binding`, `/geometry` | Streams the tied 151936-by-896 `model.embed_tokens.weight`/`lm_head.weight` values in token-major order. |
+| `LMHEAD-NUMERIC-001` | `/numeric_semantics` | Exact Q16.24 decode, signed 96-bit Q47.48 accumulation, and one FP16 RNE conversion per row. |
+| `LMHEAD-PROTOCOL-001` | `/protocol`, `/error_codes` | Ordered framing, retained backpressured outputs, sticky fail-closed error state, reset, and clear. |
+| `LMHEAD-TOPK-001` | `/top_k` | Descending rounded-FP16 ordering with ascending token ID on ties; rank zero selects the token. |
+| `LMHEAD-EVIDENCE-001` | `/model_binding`, `/geometry`, `/claim_boundary` | Natural completion of all weights/logits precedes independent exact-integer/FP16-policy comparison. |
+| `LMHEAD-PROVENANCE-001` | `/implementation`, `/numeric_semantics`, `/claim_boundary` | First-party RTL with only the two named first-party numerical dependencies. |
+
+The official-shape runner is
+`ace3/model/run_tied_lm_head_topk_from_final_rmsnorm.py`; its simulator has no
+Oracle input. The post-terminal Oracle is
+`ace3/model/streaming_lm_head_reference.py` at SHA256
+`4449d713882bd64aae02ff23a9cb4c9496bcee7a439229ae2ee1f6b62bb7c43d`.
+The claim remains limited to computer-local RTL simulation from an
+authenticated final-RMSNorm output. It excludes tokenizer/host integration,
+persistent multi-token K/V, readable dialogue, synthesis, PPA, bitstream,
+FPGA, silicon, latency, and throughput.

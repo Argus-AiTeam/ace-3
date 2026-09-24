@@ -1,0 +1,80 @@
+{
+  "schema_version": 1,
+  "contract_id": "ace3-selected-token-position4-full-traversal-v1",
+  "required_input": {
+    "path": "build/model24_selected_token_position4_preparation/package/launch_manifest.json",
+    "kind": "ace3_selected_token_position4_traversal_launch_package",
+    "status": "READY",
+    "fresh_preparation_validation_required": true,
+    "sole_launch_input": true,
+    "operation": "selected-token-position4-full-traversal",
+    "target_position": 4,
+    "embedding": {
+      "tensor": "model.embed_tokens.weight",
+      "dtype": "FP16",
+      "elements": 896
+    },
+    "token_history_binding_required": true,
+    "source_and_artifact_hashes_required": true,
+    "kv_parentage": {
+      "source_position": 3,
+      "target_position": 4,
+      "ordered_layers": 24,
+      "state_profile": "FP16 K/V"
+    }
+  },
+  "execution": {
+    "starts_only_after_all_package_and_parent_bindings_validate": true,
+    "implementation": "24 ordered current-worktree Verilator decoder-layer transactions",
+    "canonical_build_identity": {
+      "fresh_external_build_directory_per_validation": true,
+      "layer_parameter_must_match": true,
+      "accurate_silu_parameter": 1,
+      "stored_binary_must_hash_match_fresh_build": true,
+      "stored_compile_log_must_match_normalized_fresh_build_log": true
+    },
+    "vector_closure": {
+      "manifest_schema_version": 1,
+      "manifest_kind": "ace3_position4_live_transaction_vectors",
+      "per_layer_exact_checkpoint_tensor_count": 26,
+      "exact_names_metadata_and_serialized_hashes_required": true,
+      "position_input_and_rope_bindings_required": true,
+      "canonical_per_layer_paths_required": true
+    },
+    "validation_time_replay": {
+      "every_layer_required": true,
+      "authenticated_position3_fp16_kv_parent_required": true,
+      "fresh_output_directory_required": true,
+      "simulation_log_terminal_trace_state_and_output_must_match": true,
+      "fresh_integer_oracle_comparison_required": true
+    },
+    "numeric_profile": "native asymmetric packed INT4 AWQ W4A16 G128, no qzero plus-one adjustment, FP16 activations and FP16 K/V",
+    "independent_oracle": "exact integer W4A16 model with position-0 through position-3 K/V replay",
+    "natural_terminal_layers": 24
+  },
+  "output": {
+    "path": "build/model24_selected_token_position4/evidence.json",
+    "kind": "ace3_selected_token_position4_continuation_evidence",
+    "status": "COMPLETE",
+    "ordered_layer_records": 24,
+    "per_layer_position3_fp16_kv_parent_required": true,
+    "per_layer_source_and_artifact_hashes_required": true,
+    "post_layer23_binding_required": true
+  },
+  "fail_closed": {
+    "missing_or_non_ready_package_must_exit_nonzero": true,
+    "missing_or_incomplete_parent_must_exit_nonzero": true,
+    "invalid_embedding_history_source_artifact_or_kv_binding_must_exit_nonzero": true,
+    "not_ready_current_state_evidence_required": true,
+    "complete_traversal_evidence_forbidden_on_input_failure": true,
+    "recheck_condition": "recheck when build/model24_selected_token_position4_preparation/package/launch_manifest.json exists with status READY and passes fresh validation of its exact selected-token embedding, token history, source/artifact bindings, all 24 FP16 K/V parent states, and selected-token-position4-full-traversal operation"
+  },
+  "claim_boundary": {
+    "dialogue": "not claimed",
+    "synthesis": "not run",
+    "ppa": "not measured",
+    "fpga": "not run",
+    "latency": "not measured",
+    "throughput": "not measured"
+  }
+}

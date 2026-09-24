@@ -1,0 +1,25 @@
+{
+  "policy_id": "ace3-w4a16-layer-final-binary64-authority-v2",
+  "version": 2,
+  "opt_in": true,
+  "boundary": "decoder-layer-final-S18",
+  "precision": "W4A16",
+  "numerical_profile": "ace3-w4a16-layer-final-binary64-fp16-excess-v1",
+  "internal_S0_S17": "Mandatory unchanged finite AND (abs_error<=1/8 OR (relative_error<1/1000 AND ordered_FP16_ULP<=1)); denominator=max(abs(original independent FP16 reference),2^-14).",
+  "layer_final_S18": "Mandatory unchanged binary64-v1: valid finite FP16 actual and original independently propagated in-range binary64 reference; exact excess=abs(actual-reference)-min_finite_FP16(abs(h-reference))<=1/8. No negative-excess clamp.",
+  "legacy_FP16_S18": "Compute the original comparison truthfully, including failed errors; trajectory-conformance diagnostic, not an additional numerical veto. Shape, dtype and finite requirements remain mandatory.",
+  "missing_binary64_reference": "BLOCKED; no FP16 fallback.",
+  "legacy_default": "Omitting the policy preserves existing callers and their mandatory FP16 gates. Neither the original numerical profile nor historical artifacts are replaced.",
+  "preserved": [
+    "original independent FP16 and binary64 reference recurrences",
+    "source, shape, dtype, finite, state, KV, causal-lineage and manifest requirements",
+    "final RMSNorm, head, logits, tokens and whole-model checks",
+    "independent Host Reviewer; no software-as-RTL or state splicing"
+  ],
+  "public_interface": {
+    "python": "ace3.model.candidates.decoder_gate_policy.evaluate_decoder_stage(*, stage, actual, reference, policy=None, reference_binary64=None)",
+    "scope": "Only decoder stages numbered 0 through 18; no general-stage or tail policy override.",
+    "rtl": "No module, port, parameter, clock, reset or state ABI change."
+  },
+  "execution_scope": "The initial v2 admission is software-only. A supported software screen is not permission to launch RTL or a model/token admission."
+}

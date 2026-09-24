@@ -1,0 +1,28 @@
+{
+  "policy_id": "ace3-residual-exact-grid-q24-local-global-policy-v1",
+  "arithmetic_id": "ace3-residual-exact-grid-q24-v1",
+  "state_id": "ace3-residual-exact-grid-q24-state-v1",
+  "claim_label": "ace3-w4a16-operators-fp16-kv-q24-residual-proposal-v1",
+  "adoption": "isolated primitive contract only; no decoder/model reference-boundary adoption",
+  "precision": {
+    "weights": "native official asymmetric packed INT4 G128",
+    "gemm_nibble_order": [0, 4, 1, 5, 2, 6, 3, 7],
+    "qzero_plus_one": false,
+    "scales": "FP16",
+    "operator_activations": "FP16",
+    "kv": "FP16",
+    "residual": "signed 64-bit Q24 plus negative-zero tag; wider than strict W4A16",
+    "temporary_addition": "signed 65-bit exact integer",
+    "other_modes": "unsupported; no implicit conversion or promotion"
+  },
+  "unchanged_local_fp16_gate": "finite AND (abs_error <= 1/8 OR (relative_error < 1/1000 AND ordered_FP16_ULP <= 1)); denominator max(abs(independent local FP16 reference), 2^-14)",
+  "unchanged_global_binary64_v1_gate": "ORIGINAL-input independent reference r, finite abs(r)<=65504; exact abs(actual_fp16-r)-min_finite_fp16_h(abs(h-r)) <= 1/8; no negative-excess clamping",
+  "reference_boundary": "independent primitive oracle consumes explicit state and actual addend; no model global or legacy reference is created or reseeded",
+  "route_pass_means": "frozen literal public ABI and isolated oracle/codec compile/import/elaborate with recorded real tools",
+  "required_later_evidence": "independent arithmetic, codec, protocol, X/Z, reset, backpressure, overflow and rejection regressions plus normal independent Host review",
+  "not_evaluated": [
+    "primitive numerical correctness", "cycle/protocol correctness", "portable-state behavioral correctness",
+    "decoder", "controller", "model runtime", "KV persistence", "final RMSNorm",
+    "lm_head", "top-k", "tokenizer", "tokens", "dialogue", "hardware"
+  ]
+}

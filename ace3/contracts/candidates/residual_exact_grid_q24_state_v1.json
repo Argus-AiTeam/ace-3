@@ -1,0 +1,49 @@
+{
+  "state_id": "ace3-residual-exact-grid-q24-state-v1",
+  "json_encoding": "ace3-residual-exact-grid-q24-json-v1",
+  "scope": "isolated portable-state codec; no model checkpoint admission or accepted-state forwarding",
+  "arithmetic_id": "ace3-residual-exact-grid-q24-v1",
+  "policy_id": "ace3-residual-exact-grid-q24-local-global-policy-v1",
+  "public_abi": "ace3-residual-exact-grid-q24-public-abi-v1",
+  "width": 64,
+  "fraction_bits": 24,
+  "hidden_size": 896,
+  "payload": {
+    "records": 896,
+    "order": "increasing coordinate index",
+    "record": "8 little-endian signed two's-complement integer bytes followed by one tag byte",
+    "byte_length": 8064,
+    "json_field": "payload_hex",
+    "hex_length": 16128,
+    "hex_alphabet": "0123456789abcdef",
+    "tag": "0 or 1; must be 0 for every nonzero integer",
+    "finite_view": "abs(integer) < 65520 * 2^24",
+    "trailing_data": "rejected"
+  },
+  "json_fields": [
+    "state_id", "json_encoding", "arithmetic_id", "policy_id", "public_abi",
+    "width", "fraction_bits", "hidden_size", "completed", "idle",
+    "slot", "position", "next_layer", "model_id", "token_history_id",
+    "root_id", "producer_id", "kv_lineage_id", "payload_hex"
+  ],
+  "metadata": {
+    "completed": true,
+    "idle": true,
+    "slot": [0, 3],
+    "position": [0, 32767],
+    "next_layer": [0, 24],
+    "identity_fields": ["model_id", "token_history_id", "root_id", "producer_id", "kv_lineage_id"],
+    "identity_rule": "nonempty strings; exact equality to separately supplied trusted metadata is required on decode",
+    "identity_limit": "codec equality does not authenticate a real producer, model, history, or KV artifact",
+    "unknown_or_duplicate_fields": "rejected",
+    "nonfinite_json_constants": "rejected"
+  },
+  "lifecycle": {
+    "initialization": "explicit FP16 root lift only; no default state, reference-derived carry, or old hidden-state reconstruction",
+    "update": "explicit state-plus-actual-addend transition; never substitute the FP16 view",
+    "save_restore": "completed idle boundaries only; lossless payload; all metadata must match trusted context",
+    "reset": "caller discards live state and pending payload; serialized old checkpoints remain immutable",
+    "kv": "separate FP16 ownership; no KV bytes or opaque simulator saves are encoded here"
+  },
+  "codec_status": "IMPORT_ONLY_NOT_NUMERICALLY_EVALUATED"
+}

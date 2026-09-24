@@ -1,0 +1,99 @@
+{
+  "schema_version": 1,
+  "kind": "ace3_model24_r11_durable_launch_contract",
+  "validation_modes": [
+    "package",
+    "review",
+    "launch"
+  ],
+  "review": {
+    "canonical_filename": "review.json",
+    "exclusive_creation": true,
+    "required_verdicts": [
+      "ACCEPT",
+      "REJECT"
+    ],
+    "required_reviewer_level": "L2",
+    "required_producer_role": "reviewer",
+    "required_active_role": "reviewer",
+    "required_independent": true,
+    "required_preparation_participation": false,
+    "required_bound_hashes": [
+      "package_manifest_sha256",
+      "package_seal_sha256",
+      "review_request_sha256",
+      "launcher_sha256",
+      "validator_sha256",
+      "launch_contract_sha256"
+    ],
+    "required_positive_fixtures": [
+      "package",
+      "review",
+      "launch"
+    ],
+    "required_negative_cases": [
+      "reviewer-producer-role",
+      "reviewer-active-role",
+      "reviewer-level",
+      "reviewer-preparation-participation",
+      "reviewer-identity",
+      "reviewer-test-results",
+      "provenance-hash",
+      "authority-binding",
+      "retry",
+      "replay",
+      "resume",
+      "watcher",
+      "wrong-argv",
+      "launch-contract",
+      "wrong-receipt-path",
+      "wrong-stdout-path",
+      "wrong-stderr-path",
+      "receipt-replay",
+      "pre-existing-state",
+      "package-mutation",
+      "source-mutation"
+    ],
+    "required_ba953_ancestry_statement": "The embedded ba953 review is nonconforming rejected history only and is not a trust root, authorization, package acceptance, or execution authority; launch acceptance has no external parent-review dependency."
+  },
+  "provenance": {
+    "ba953_status": "NONCONFORMING_REJECTED_HISTORY_ONLY",
+    "ba953_authoritative": false,
+    "external_parent_review_dependency": false
+  },
+  "authority": {
+    "canonical_filename_suffix": ".json",
+    "exclusive_consumption_suffix": ".consumed",
+    "manager_exactly_once_directive": true,
+    "execution_cardinality": 1,
+    "package_acceptance_is_execution_authority": false,
+    "binds_review_and_all_reviewed_hashes": true,
+    "binds_launch_paths_and_command": true
+  },
+  "durable_runner": {
+    "mode": "direct",
+    "registry_directory": ".argus_subagents",
+    "task_receipt_suffix": ".json",
+    "task_log_directory_suffix": "_logs",
+    "stdout_filename": "stdout.log",
+    "stderr_filename": "stderr.log",
+    "accepted_child_receipt_states": [
+      "starting",
+      "running"
+    ],
+    "timeout_seconds": 18000
+  },
+  "launch": {
+    "required_payload_mode": "fresh",
+    "forbidden_semantics": [
+      "retry",
+      "replay",
+      "resume",
+      "watcher"
+    ],
+    "output_exclusive_creation": true,
+    "terminal_exclusive_creation": true,
+    "validate_before_authority_consumption": true,
+    "validate_before_output_creation": true
+  }
+}

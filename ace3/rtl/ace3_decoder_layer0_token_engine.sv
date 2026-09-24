@@ -214,7 +214,7 @@ module ace3_decoder_layer0_token_engine #(
     assign done_cycles_o = done_cycle_q;
     assign done_stall_cycles_o = done_stall_q;
 
-    /* The four engines share the external pull bus; exactly one is started. */
+    /* The engines share the external pull bus; exactly one is started. */
     wire b_start_ready_w, b_meta_ready_w, b_pair_ready_w, b_bias_ready_w;
     wire b_out_valid_w, o_start_ready_w, o_meta_ready_w, o_pair_ready_w;
     wire o_out_valid_w, f_start_ready_w, f_meta_ready_w, f_pair_ready_w;
@@ -348,18 +348,55 @@ module ace3_decoder_layer0_token_engine #(
         p_o_w ? o_pair_lane_w : p_f_w ? f_pair_lane_w : d_pair_lane_w;
     assign projection_bias_output_channel_o = b_bias_out_w;
 
-    ace3_awq_w4a16_projection_engine #(.IN_FEATURES(896),.OUT_FEATURES(896),.BIAS_ENABLE(1)) p_bias (
+    wire [1:0] bias_selected_w = {(psel_q==PK_Q)||(psel_q==PK_K),
+                                  psel_q==PK_V};
+    wire bias_mode_w = (psel_q==PK_Q)||(psel_q==PK_K);
+    wire [1:0] pb_start_ready_w,pb_meta_ready_w,pb_pair_ready_w,pb_bias_ready_w;
+    wire [1:0] pb_out_valid_w,pb_invalid_w,pb_saturation_w,pb_busy_w;
+    wire [12:0] pb_meta_out_w[0:1],pb_pair_in_w[0:1],pb_pair_out_w[0:1];
+    wire [12:0] pb_bias_out_w[0:1],pb_out_ch_w[0:1];
+    wire [5:0] pb_meta_grp_w[0:1],pb_pair_grp_w[0:1];
+    wire [9:0] pb_meta_word_w[0:1],pb_pair_word_w[0:1];
+    wire [2:0] pb_meta_lane_w[0:1],pb_pair_lane_w[0:1];
+    wire [15:0] pb_out_f16_w[0:1];
+    wire signed [101:0] pb_acc_w[0:1];
+    assign b_start_ready_w = pb_start_ready_w[bias_mode_w];
+    assign b_meta_ready_w = pb_meta_ready_w[bias_mode_w];
+    assign b_pair_ready_w = pb_pair_ready_w[bias_mode_w];
+    assign b_bias_ready_w = pb_bias_ready_w[bias_mode_w];
+    assign b_out_valid_w = pb_out_valid_w[bias_mode_w];
+    assign b_meta_out_w = pb_meta_out_w[bias_mode_w];
+    assign b_pair_in_w = pb_pair_in_w[bias_mode_w];
+    assign b_pair_out_w = pb_pair_out_w[bias_mode_w];
+    assign b_bias_out_w = pb_bias_out_w[bias_mode_w];
+    assign b_out_ch_w = pb_out_ch_w[bias_mode_w];
+    assign b_meta_grp_w = pb_meta_grp_w[bias_mode_w];
+    assign b_pair_grp_w = pb_pair_grp_w[bias_mode_w];
+    assign b_meta_word_w = pb_meta_word_w[bias_mode_w];
+    assign b_pair_word_w = pb_pair_word_w[bias_mode_w];
+    assign b_meta_lane_w = pb_meta_lane_w[bias_mode_w];
+    assign b_pair_lane_w = pb_pair_lane_w[bias_mode_w];
+    assign b_out_f16_w = pb_out_f16_w[bias_mode_w];
+    assign b_acc_w = pb_acc_w[bias_mode_w];
+    assign b_invalid_w = pb_invalid_w[bias_mode_w];
+    assign b_saturation_w = pb_saturation_w[bias_mode_w];
+    assign b_busy_w = pb_busy_w[bias_mode_w];
+    // Q/K add bias before their only FP16 rounding; V retains the legacy policy.
+    for (genvar bias_mode = 0; bias_mode < 2; bias_mode = bias_mode + 1) begin : bias_policy
+    ace3_awq_w4a16_projection_engine #(.IN_FEATURES(896),.OUT_FEATURES(896),
+      .BIAS_ENABLE(1),.SINGLE_ROUND_BIAS(bias_mode)) p_bias (
       .clk_i(clk_i),.rst_ni(rst_ni),.clear_i(clear_i),
-      .start_valid_i(p_start_w&&p_b_w&&controller_healthy_w),.start_ready_o(b_start_ready_w),
+      .start_valid_i(p_start_w&&bias_selected_w[bias_mode]&&controller_healthy_w),.start_ready_o(pb_start_ready_w[bias_mode]),
       .first_output_channel_i(13'd0),.output_count_i((psel_q==PK_Q)?13'd896:13'd128),
-      .meta_valid_i(projection_meta_valid_i&&p_b_w&&meta_payload_known_w&&controller_healthy_w),.meta_ready_o(b_meta_ready_w),
-      .meta_output_channel_o(b_meta_out_w),.meta_group_index_o(b_meta_grp_w),.meta_output_word_o(b_meta_word_w),.meta_logical_lane_o(b_meta_lane_w),
+      .meta_valid_i(projection_meta_valid_i&&bias_selected_w[bias_mode]&&meta_payload_known_w&&controller_healthy_w),.meta_ready_o(pb_meta_ready_w[bias_mode]),
+      .meta_output_channel_o(pb_meta_out_w[bias_mode]),.meta_group_index_o(pb_meta_grp_w[bias_mode]),.meta_output_word_o(pb_meta_word_w[bias_mode]),.meta_logical_lane_o(pb_meta_lane_w[bias_mode]),
       .qzeros_i(projection_qzeros_i),.scale_f16_i(projection_scale_f16_i),
-      .pair_valid_i(projection_pair_valid_i&&p_b_w&&pair_payload_known_w&&b_pair_address_valid_w&&controller_healthy_w),.pair_ready_o(b_pair_ready_w),
-      .pair_input_index_o(b_pair_in_w),.pair_output_channel_o(b_pair_out_w),.pair_group_index_o(b_pair_grp_w),.pair_output_word_o(b_pair_word_w),.pair_logical_lane_o(b_pair_lane_w),
+      .pair_valid_i(projection_pair_valid_i&&bias_selected_w[bias_mode]&&pair_payload_known_w&&b_pair_address_valid_w&&controller_healthy_w),.pair_ready_o(pb_pair_ready_w[bias_mode]),
+      .pair_input_index_o(pb_pair_in_w[bias_mode]),.pair_output_channel_o(pb_pair_out_w[bias_mode]),.pair_group_index_o(pb_pair_grp_w[bias_mode]),.pair_output_word_o(pb_pair_word_w[bias_mode]),.pair_logical_lane_o(pb_pair_lane_w[bias_mode]),
       .activation_f16_i(b_activation_w),.qweight_i(projection_qweight_i),
-      .bias_valid_i(projection_bias_valid_i&&p_b_w&&known16(projection_bias_f16_i)&&controller_healthy_w),.bias_ready_o(b_bias_ready_w),.bias_output_channel_o(b_bias_out_w),.bias_f16_i(projection_bias_f16_i),
-      .out_valid_o(b_out_valid_w),.out_ready_i(p_output_ready_w&&p_b_w),.out_channel_o(b_out_ch_w),.out_f16_o(b_out_f16_w),.acc_q53_48_o(b_acc_w),.invalid_operand_o(b_invalid_w),.saturation_o(b_saturation_w),.busy_o(b_busy_w));
+      .bias_valid_i(projection_bias_valid_i&&bias_selected_w[bias_mode]&&known16(projection_bias_f16_i)&&controller_healthy_w),.bias_ready_o(pb_bias_ready_w[bias_mode]),.bias_output_channel_o(pb_bias_out_w[bias_mode]),.bias_f16_i(projection_bias_f16_i),
+      .out_valid_o(pb_out_valid_w[bias_mode]),.out_ready_i(p_output_ready_w&&bias_selected_w[bias_mode]),.out_channel_o(pb_out_ch_w[bias_mode]),.out_f16_o(pb_out_f16_w[bias_mode]),.acc_q53_48_o(pb_acc_w[bias_mode]),.invalid_operand_o(pb_invalid_w[bias_mode]),.saturation_o(pb_saturation_w[bias_mode]),.busy_o(pb_busy_w[bias_mode]));
+    end
     ace3_awq_w4a16_projection_engine #(.IN_FEATURES(896),.OUT_FEATURES(896),.BIAS_ENABLE(0)) p_out (
       .clk_i(clk_i),.rst_ni(rst_ni),.clear_i(clear_i),.start_valid_i(p_start_w&&p_o_w&&controller_healthy_w),.start_ready_o(o_start_ready_w),.first_output_channel_i(13'd0),.output_count_i(13'd896),
       .meta_valid_i(projection_meta_valid_i&&p_o_w&&meta_payload_known_w&&controller_healthy_w),.meta_ready_o(o_meta_ready_w),.meta_output_channel_o(o_meta_out_w),.meta_group_index_o(o_meta_grp_w),.meta_output_word_o(o_meta_word_w),.meta_logical_lane_o(o_meta_lane_w),.qzeros_i(projection_qzeros_i),.scale_f16_i(projection_scale_f16_i),
@@ -590,7 +627,8 @@ module ace3_decoder_layer0_token_engine #(
        (o_bias_out_w < 13'd896) && (f_bias_out_w < 13'd4864) &&
        (d_bias_out_w < 13'd896);
     wire child_busy_fault_w =
-       (b_busy_w !== ((state_q==S_P_RUN)&&p_b_w)) ||
+       (pb_busy_w[0] !== ((state_q==S_P_RUN)&&bias_selected_w[0])) ||
+       (pb_busy_w[1] !== ((state_q==S_P_RUN)&&bias_selected_w[1])) ||
        (o_busy_w !== ((state_q==S_P_RUN)&&p_o_w)) ||
        (f_busy_w !== ((state_q==S_P_RUN)&&p_f_w)) ||
        (d_busy_w !== ((state_q==S_P_RUN)&&p_d_w)) ||

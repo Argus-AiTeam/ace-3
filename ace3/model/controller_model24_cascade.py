@@ -22,7 +22,6 @@ from model24_execution_oracle import (
     MODEL_REPOSITORY,
     MODEL_REVISION,
     TENSOR_MAP_SHA256,
-    indexed_layer_uses_accurate_silu,
     layer_bindings,
 )
 from model24_oracle import authenticate_checkpoint
@@ -407,7 +406,7 @@ def _run_accepted_decoder_layer(
             token,
             cache_k,
             cache_v,
-            accurate_silu=indexed_layer_uses_accurate_silu(layer_id),
+            accurate_silu=True,
         )
         final_rows.append(final)
         trace_records += len(trace)
@@ -492,11 +491,7 @@ def execute_cascade(
                     "consumed_tensors": consumed,
                     "decoder_trace_records": trace_records,
                     "numeric_profile": {
-                        "silu": (
-                            "exp range-reduced degree-7 Q24"
-                            if indexed_layer_uses_accurate_silu(layer_id)
-                            else "accepted rational Q24"
-                        ),
+                        "silu": "exp range-reduced degree-7 Q24",
                     },
                     "independent_reference": comparison,
                 }

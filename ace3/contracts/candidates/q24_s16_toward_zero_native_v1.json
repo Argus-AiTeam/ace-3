@@ -1,0 +1,31 @@
+{
+  "candidate_id": "ace3-q24-s16-toward-zero-native-v1",
+  "policy_id": "ace3-w4a16-local-operator-global-binary64-authority-v3",
+  "state_id": "ace3-q24-software-paired-state-v1",
+  "model": "Qwen/Qwen2.5-0.5B-Instruct-AWQ",
+  "scope": {"layers": [0, 1, 2], "position": 0, "history": [9707]},
+  "authority": "resume_argus_software_only; Argus Engineer with normal independent Host Reviewer required",
+  "public_contract": "CPU stages(tensors, layer, parent, arrays) yields S0-S18 in order; no RTL top, ports, parameters, compilation or execution",
+  "candidate_semantics": {
+    "baseline": "Independent native implementation of canonical mathematical local operators, not the historical fixed-Q24 non-residual approximation and not a production change.",
+    "weights": "Official G128 asymmetric packed INT4, GEMM lane nibble order [0,4,1,5,2,6,3,7], no qzero plus-one, FP16 scales.",
+    "compute": "CPU Torch binary64; FP16 activation boundaries and KV. S16 is the only directed FP16 rounding boundary.",
+    "rne_conversion": "Direct CPython struct binary64-to-binary16 RNE; never Torch double-to-half through an FP32 intermediate.",
+    "projection": "Binary64 dequantized matrix-vector product, add Q/K/V bias before one RNE16 boundary.",
+    "rmsnorm": "RNE16((x * rsqrt(mean(x*x)+1e-6)) * gamma), binary64 internal operations.",
+    "attention": "P0 identity RoPE; 14 query heads, 2 KV heads, dimension64; GQA head//7, dot/8, singleton causal softmax and AV; RNE16 boundaries.",
+    "s16": "RTZ16(torch.float64 SiLU(actual S14) * actual S15), uniformly for every coordinate and all three layers. No unrounded value reaches S17. Finite abs(value)<=65504 required; preserve signed zero and gradual underflow.",
+    "residual": "Candidate integer Q24 I/Z lifted only from official embedding9707. T=I+B(actual S11), S12=RNE16(T); I_next=T+B(actual S17), S18=RNE16(I_next). Keep exact signed int64 Q24 and canonical zero tags; never relift a rounded view.",
+    "state": "Persist own paired I/Z/H and own-layer FP16 K/V after each passing layer. Empty P0 prior caches; no retained candidate or diagnostic arrays enter execution."
+  },
+  "references": {
+    "local": "Independent existing NumPy canonical S0-S17 oracle on authenticated actual operands; S12 uses the existing independent rational Q24 transition.",
+    "local_gate": "finite AND (abs_error<=1/8 OR (relative_error<1/1000 AND ordered_FP16_ULP<=1)); denominator=max(abs(local FP16 reference),2^-14)",
+    "global": "Unchanged original-input independently propagated binary64-v1 S18, exact excess<=1/8, no clamp, quantization, re-anchoring or candidate reference injection.",
+    "trajectory": "Preserve all original independently propagated FP16 S0-S18 comparisons as separately labeled diagnostics.",
+    "identity": "Independently authenticate official weights/metadata, root token, stage operand edges, residual carry/view and own-layer P0 KV."
+  },
+  "execution": "Freeze sources, contract, tools, inputs and historical evidence before candidate compute; sequentially check each stage before its consumer; stop at first mandatory failure.",
+  "admission": "candidate_admitted denotes only all 54 local vectors plus all 2688 original-input global coordinates and state identities passing in this bounded CPU experiment; normal independent Host Reviewer remains REQUIRED.",
+  "non_goals": ["strict-FP16-state W4A16 admission", "production defaults or policy changes", "RTL", "L3-L23", "tokenizer", "head", "tokens", "full model", "hardware"]
+}

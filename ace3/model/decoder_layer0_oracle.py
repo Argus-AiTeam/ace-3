@@ -9,6 +9,7 @@ import struct
 from pathlib import Path
 from typing import Any
 
+from accepted_awq_projection import project_named_module
 from attention_oracle import attention_score, attention_softmax, attention_value
 from fp16_adaptation_oracle import residual_add, rmsnorm, silu_gate, silu_gate_exp
 from projection_oracle import complete_projection_output
@@ -63,7 +64,12 @@ def _projection(activations: list[int], qweight: list[int], qzeros: list[int],
 
 
 def _module(values: dict[str, list[int]], prefix: str, activations: list[int],
-            out_features: int, bias: list[int] | None = None) -> list[int]:
+            out_features: int, bias: list[int] | None = None,
+            accepted_q_projection: bool = True) -> list[int]:
+    if (prefix == "self_attn.q_proj" and accepted_q_projection) or prefix == "self_attn.k_proj":
+        return project_named_module(
+            values, prefix, activations, out_features, bias
+        ).tolist()
     return _projection(
         activations,
         values[f"model.layers.0.{prefix}.qweight:"],
@@ -95,12 +101,21 @@ def _expect_finite(outputs: list[tuple[int, bool, bool]], name: str) -> list[int
 
 def run_token(values: dict[str, list[int]], activation: list[int], position: int,
               cache_k: list[list[int]], cache_v: list[list[int]],
-              accurate_silu: bool = False) -> tuple[list[int], list[tuple[int, int, int, int]]]:
+              accurate_silu: bool = False,
+              accepted_q_projection: bool = True
+              ) -> tuple[list[int], list[tuple[int, int, int, int]]]:
     """Run one token and return final vector plus (stage,index,f16,position) trace."""
     trace: list[tuple[int, int, int, int]] = []
     n1 = _expect_finite(rmsnorm(activation, values["model.layers.0.input_layernorm.weight:"])[0], "norm1")
     trace.extend((0, i, item, position) for i, item in enumerate(n1))
-    q = _module(values, "self_attn.q_proj", n1, HIDDEN, values["model.layers.0.self_attn.q_proj.bias:"])
+    q = _module(
+        values,
+        "self_attn.q_proj",
+        n1,
+        HIDDEN,
+        values["model.layers.0.self_attn.q_proj.bias:"],
+        accepted_q_projection=accepted_q_projection,
+    )
     trace.extend((1, i, item, position) for i, item in enumerate(q))
     rq = _rope(q, HEADS, position)
     for head in range(HEADS):

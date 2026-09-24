@@ -50,7 +50,8 @@ module ace3_qkv_projection_cluster (
     ace3_awq_w4a16_projection_engine #(
         .IN_FEATURES(896),
         .OUT_FEATURES(896),
-        .BIAS_ENABLE(1)
+        .BIAS_ENABLE(1),
+        .SINGLE_ROUND_BIAS(1)
     ) q_projection (
         .clk_i(clk_i),
         .rst_ni(rst_ni),

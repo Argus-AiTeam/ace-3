@@ -1,0 +1,23 @@
+{
+  "diagnostic_id": "ace3-q24-s16-l13-original-intermediate-drift-v1",
+  "version": 1,
+  "scope": {"layer": 13, "position": 0, "stage": 18, "index": 62, "history": [9707]},
+  "input": "build/q24_software_l9_l23_4d1cfdfc15c0_attempt002",
+  "parent": "Authenticated retained L12 actual Q24 I/Z/H and own-layer FP16 KV; no accepted-prefix replay.",
+  "original_reference": "Execute the source-bound original binary64 L13 recurrence from its independently propagated original L12 input. Observe unchanged projection returns for S11/S17, retain residual and S18, and require bitwise equality with all 896 retained original global S18 coordinates.",
+  "control": "Execute the identical binary64 L13 recurrence on exact binary64 values of authenticated actual L12 Q24 I/2^24, preserving zero signs. Each control has its own empty P0 reference cache. This is not native FP16 arithmetic, an admitted Q24 parent, a precision policy change, or a replacement global reference.",
+  "decomposition": "For all 896 coordinates report exact signed incoming-parent, S11, S17, Q24 final projection and original binary64 addition-roundoff terms. Require exact closure to actual S18 minus original global S18. Also split that error into same-binary64-operator input effect and remaining actual-path effect.",
+  "global_gate": "Unchanged exact abs(actual-original_binary64_reference)-nearest_FP16_representation_floor <= 1/8.",
+  "local_gate": "Unchanged finite AND (abs_error<=1/8 OR (relative_error<1/1000 AND ordered_FP16_ULP<=1)); denominator=max(abs(reference),2^-14).",
+  "arithmetic": "Native G128 asymmetric packed INT4, GEMM nibble order, no qzero plus-one, FP16 scales/operator boundaries/KV, signed int64 Q24 residual and zero tags. S16 RTZ only. No changes.",
+  "authentication": "Reuse retained diagnostic source, operand, state, KV and local-gate checks; bind original generator/specification/packages and L9-L13 reference links. Keep retained historical failure and independently propagated original global reference unchanged.",
+  "classification": "A binary64 input control alone cannot prove a forced native-operator outcome or unique local rounding cause. Report conditional sufficiency and exact numerical contributions; retain inconclusive classification with the exact missing native-parent/control evidence.",
+  "execution": "From /home/argustest/ace3-argus use PYTHONPATH=/home/argustest/ace3-argus PYTHONDONTWRITEBYTECODE=1 /home/argustest/miniconda3/bin/python -B -m ace3.model.candidates.diagnose_q24_s16_l13_original_intermediate_drift_v1 --input build/q24_software_l9_l23_4d1cfdfc15c0_attempt002 --out build/q24_s16_l13_original_intermediate_drift_attempt001. Use a fresh exclusive output directory for independent reproduction. Compile touched Python, verify candidate and legacy test module origins, run focused tests once without executing the accepted legacy 19 tests.",
+  "outputs": ["result.json", "validation.json", "unittest.log", "command.log", "coordinate_decomposition.json", "reference_intermediates.npz", "retained_control.json"],
+  "candidate_admitted": false,
+  "rtl_invocations": 0,
+  "policy_adopted": false,
+  "successor_published": false,
+  "normal_host_review": "REQUIRED",
+  "claim_boundary": "Bounded CPU diagnostic only; Q24 state is wider than FP16. No strict-FP16-state W4A16, RTL, hardware, GPU, FPGA, simulation, synthesis, PPA, new-token or full-model PASS."
+}

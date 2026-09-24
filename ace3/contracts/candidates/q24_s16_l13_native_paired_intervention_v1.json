@@ -1,0 +1,36 @@
+{
+  "diagnostic_id": "ace3-q24-s16-l13-native-paired-intervention-v1",
+  "scope": "L13/P0 full-vector CPU diagnostic, original history [9707], 896 coordinates",
+  "candidate_admitted": false,
+  "policy_adopted": false,
+  "successor_published": false,
+  "rtl_invocations": 0,
+  "normal_host_review": "REQUIRED",
+  "modes": [
+    "native", "local_s11", "local_s17", "local_both",
+    "original_s11", "original_s17", "original_both",
+    "rational_residual", "rational_final"
+  ],
+  "parents": {
+    "actual": "Authenticated L12 output Q24 I/Z/H; exact retained L13 reproduction required.",
+    "original_Q24_RNE": "Diagnostic only, never an admitted lineage: round each independently propagated original binary64 L12 value to nearest exact Q24 using rational ties-to-even, preserve negative zero, derive RNE16 H. Maximum mapping error 2^-25. Never lift an FP16-only ancestor."
+  },
+  "interventions": {
+    "native": "Unmodified native L13 generator; S16 remains RTZ in every control.",
+    "local_s11": "Replace full S11 with independently computed same-input FP16 local reference, then execute native suffix.",
+    "local_s17": "Replace full S17 with independently computed same-input FP16 local reference, then execute native suffix.",
+    "local_both": "Joint S11/S17 same-input replacements, with S17 recomputed from the intervened native suffix.",
+    "original_s11": "Diagnostic cut: full original binary64 S11 rounded RNE16, then native suffix. Not a same-input local oracle.",
+    "original_s17": "Diagnostic cut: full original binary64 S17 rounded RNE16, then native final residual. Not a same-input local oracle.",
+    "original_both": "Joint original S11/S17 RNE16 cuts, never a global-reference substitution.",
+    "rational_residual": "Independent exact Q24 addition and RNE16 projection at S12; require complete I/Z/H agreement before replacement.",
+    "rational_final": "Independent exact Q24 addition and RNE16 projection at S18; require complete I/Z/H agreement before replacement."
+  },
+  "measurement": "All 896 coordinates in each of 18 controls; exact signed incoming/S11/S17/final-projection decomposition; input/scratch/final FP16 projection errors; parent-by-intervention and S11-by-S17 differences-in-differences. These conditional interactions are not unique producer attribution.",
+  "gates": "Reuse unchanged v3 local S0-S17 predicates and original-input binary64-v1 S18 exact excess budget 1/8. Reproduce all retained baseline outcomes and failure indices. Preserve all source/operand/state/KV/lineage checks. Counterfactual failures are evidence, not a diagnostic execution failure or admission.",
+  "source_policy": "All imported ace3 source and new tests must resolve to exact repo paths. Authenticate selected retained source/operand records and reviewed drift bindings before use; original S18 and L12 input bitwise match independently propagated retained reference.",
+  "command": "cd /home/argustest/ace3-argus && PYTHONPATH=/home/argustest/ace3-argus PYTHONDONTWRITEBYTECODE=1 /home/argustest/miniconda3/bin/python -B -m ace3.model.candidates.diagnose_q24_s16_l13_native_paired_intervention_v1 --input build/q24_software_l9_l23_4d1cfdfc15c0_attempt002 --reviewed build/q24_s16_l13_original_intermediate_drift_e6409c8e059a_attempt001 --out build/q24_s16_l13_native_paired_intervention_6a99e9155b0e_attempt001",
+  "reproduction": "Use the same command with a new exclusive output path under build/q24_s16_l13_native_paired_intervention_*. The command compiles both new Python files and collects/runs only the 12 focused tests once, then runs the diagnostic once. No accepted L0-L8 tests execute. No existing output is replaced.",
+  "artifacts": ["validation.json", "unittest.log", "command.log", "result.json", "coordinate_controls.json", "paired_effects.json", "gate_reports.json", "native_vectors.npz", "retained_authentication.json"],
+  "claim_boundary": "Versioned wide-residual Q24 CPU software only; unchanged native INT4 G128 asymmetric AWQ semantics and FP16 operator/KV boundaries. No RTL/hardware, precision/profile/threshold change, new token, scale expansion, strict-FP16-state W4A16 or full-model PASS."
+}

@@ -1,0 +1,22 @@
+{
+  "continuation_id": "ace3-q24-s16-toward-zero-l9-l23-v1",
+  "candidate_id": "ace3-q24-s16-toward-zero-native-v1",
+  "policy_id": "ace3-w4a16-local-operator-global-binary64-authority-v3",
+  "state_id": "ace3-q24-software-paired-state-v1",
+  "model": "Qwen/Qwen2.5-0.5B-Instruct-AWQ",
+  "scope": {"layers": [9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23], "position": 0, "history": [9707]},
+  "arithmetic_contract": "ace3/contracts/candidates/q24_s16_toward_zero_native_v1.json",
+  "arithmetic": "Reuse the byte-authenticated accepted native _stages implementation, with unchanged direct RNE16 boundaries, uniform RTZ16 at S16 and signed int64 Q24 I/Z residual carry. Only this entry point admits L9-L23 dispatch.",
+  "parent": "Only build/q24_software_l3_l8_dc98a86e7c02_attempt001/layer08/software_parent.json, its immutable arithmetic freeze, complete actual I/Z/H and KV lineage, and genuine round-0003 independent review. No accepted candidate prefix replay.",
+  "weights": "Official G128 asymmetric packed INT4, native GEMM nibble ordering, no qzero plus-one, FP16 scales, FP16 operator boundaries and FP16 KV.",
+  "state": "Each layer consumes its immediate passing predecessor's complete I/Z/H and starts with its own empty P0 KV. Authenticate prior-layer KV without restoring it.",
+  "local": "Independent canonical S0-S17 local references and rational Q24 identity; finite AND (abs_error<=1/8 OR (relative_error<1/1000 AND ordered_FP16_ULP<=1)), denominator=max(abs(reference),2^-14).",
+  "global": "Original-input independent binary64-v1 S18, exact excess<=1/8. Extend only original reference L8 trajectories using frozen original oracle functions. No candidate/local-reference injection, quantization, clamping or re-anchoring.",
+  "diagnostics": "Keep original independently propagated FP16 trajectory comparisons, all historical failures, aborted histories and accepted evidence unchanged.",
+  "execution": "Explicit repository-bound -I -B command context; assert candidate and test origins, compile repository Python, run focused tests once, freeze sources/contracts/tools/inputs, authenticate references, and evaluate each mandatory stage before its consumer. Native dispatch rejects every L0-L8 layer; preexecution, freeze and result records report native_L0_L8_invocations=0 and rtl_invocations=0. Stop on the first failure and publish no failed-layer or downstream successor parent.",
+  "admission": "Complete suffix PASS requires 285 stage reports, including 270 local vectors and 13440 global coordinates. A first mandatory FAIL or authentication BLOCKED is not admission. A layer23 software_parent is a bounded software receipt, not model or token admission.",
+  "normal_host_review": "REQUIRED",
+  "rtl_admissible": false,
+  "policy_adopted": false,
+  "non_goals": ["accepted L0-L8 candidate replay", "RTL", "hardware", "GPU", "FPGA", "simulation", "synthesis", "PPA", "head", "new tokens", "full-model PASS", "production defaults", "strict-FP16-state W4A16 claims"]
+}

@@ -1,0 +1,39 @@
+{
+  "diagnostic_id": "ace3-q24-s16-l13-l12-parent-coordinate-cut-v1",
+  "policy_id": "ace3-w4a16-local-operator-global-binary64-authority-v3",
+  "candidate_admitted": false,
+  "policy_adopted": false,
+  "successor_published": false,
+  "rtl_invocations": 0,
+  "normal_host_review": "REQUIRED",
+  "cwd": "/home/argustest/ace3-argus",
+  "command": "PYTHONPATH=/home/argustest/ace3-argus PYTHONDONTWRITEBYTECODE=1 /home/argustest/miniconda3/bin/python -B -m ace3.model.candidates.diagnose_q24_s16_l13_l12_parent_coordinate_cut_v1 --input build/q24_software_l9_l23_4d1cfdfc15c0_attempt002 --reviewed build/q24_s16_l13_upstream_parent_cut_a81669925e0b_attempt001 --out build/q24_s16_l13_l12_parent_coordinate_cut_4937ea22f941_attempt001",
+  "reproduction": "Use this exact cwd, absolute interpreter and command-local PYTHONPATH, choosing a fresh nonexistent build/q24_s16_l13_l12_parent_coordinate_cut_* output directory. The command compiles both touched Python files, collects and executes the 18 focused tests once, then runs the diagnostic once. Use the operator-required durable runner for this longer-than-two-minute command. Existing output is never replaced. No accepted L0-L8 tests or layer computations are replayed.",
+  "reviewed_result_sha256": "f9a98abf3c266ecf79ee1822223617436d91037851137b8d25f0fa33ee5eb732",
+  "width": 896,
+  "shard_size": 32,
+  "controls": 954,
+  "position": 0,
+  "history": [9707],
+  "suffix": [13],
+  "interventions": "Deterministic order: actual baseline, all-mapped control, singleton indices 0..895, then 28 contiguous ascending 32-coordinate shards each immediately followed by its 864-coordinate complement. Each control starts from the same authenticated actual L12 parent, copying all I/Z/H fields together at precisely the selected coordinates. Complement means all coordinates outside that shard are mapped; it is not a separately propagated or relifted parent.",
+  "mapping": "Reuse the reviewed exact rational nearest-Q24 ties-even mapping of the independently propagated original-input L12 binary64 vector; preserve negative zero and derive H by independent exact RNE16 projection. Assert bitwise equality to the reviewed mapped parent and a per-coordinate mapping error <= 2^-25. This counterfactual never replaces the original-input L13 global reference.",
+  "authentication": "Bind the pinned reviewed a816 result, every input/artifact/validation/source binding and the retained attempt002 freeze. Reuse the retained diagnostic's source, weight, operand, parent receipt, state, local-reference and own-empty-P0 KV authentication. Assert the full L9-L13 original-reference parent chain without executing L9-L12. Replay only actual and mapped native L13 endpoints against reviewed archives and unchanged gate reports. Recheck bound inputs and loaded repository module origins at completion.",
+  "thresholds": {
+    "S0_S17": "Unchanged finite AND (absolute_error <= 0.125 OR (relative_error < 0.001 AND ordered_FP16_ULP <= 1)); denominator max(abs(reference), 2^-14); independent same-actual-operand local references.",
+    "S18": "Unchanged binary64-fp16-excess-v1: exact actual error minus nearest-FP16 representation floor <= 1/8, against the original-input independently propagated global reference.",
+    "FP16_trajectory": "Unchanged diagnostic-only comparisons under the existing v3 policy."
+  },
+  "gates": "Every one of the 954 controls executes all 19 native L13 stages and all unchanged mandatory gates, with exact paired-state, actual-operand, native S16 RTZ and own-layer empty P0 KV checks. Numerical failures are retained, not bypassed; invalid lineage/source/state/operands or missing checks block. Scalar rescue and all-L13-gates-pass are reported separately; no counterfactual is admitted or published.",
+  "classification": "Any accepted singleton is conditional single-coordinate sufficiency; absent that, an accepted shard or complement is bounded shard sufficiency; absent both, the reproduced full-parent rescue leaves subset interactions unresolved. Record all accepted output words, including words other than 662f. Never infer a unique upstream producer or exhaustive interaction attribution from these controls.",
+  "evidence": [
+    "validation.json, compiled_0.pyc, compiled_1.pyc and unittest.log with fresh compilation, exact focused collection/execution counts and asserted repository origins",
+    "command.log with visible environment, live CPU resource observations, each control and measured native-plus-gates and total-control timing",
+    "result.json with authenticated inputs, source origins, complete control coverage, scalar/shard conclusions, unchanged gate outcomes and missing-evidence limits",
+    "parent_comparison.json with all 896 I/Z/H pairs, original binary64 hex values and exact rational errors",
+    "actual_L12_parent.npz and mapped_L12_parent.npz; every control's complete native operand/state/KV archive and all 19 gate reports",
+    "interventions.json with exact intervention indices, index62 outcomes, full-vector failure/changed sets and non-admission flags",
+    "full-vector exact scalar outcomes for both endpoints and every index62-rescuing singleton, shard or complement"
+  ],
+  "claim_boundary": "CPU-software coordinate diagnostic only. Q24 residual state is wider than FP16; native G128 asymmetric INT4 AWQ weights/nibble order/no qzero plus-one, FP16 scales/operators/KV and S16 RTZ are unchanged. Historical failures and bounded Reviewer acceptance remain intact. No strict-FP16-state W4A16, new-token, full-model, RTL, simulation, synthesis, GPU, FPGA, hardware, PPA, performance-bottleneck or unique-producer claim. No policy adoption, successor publication or follow-on task selection."
+}

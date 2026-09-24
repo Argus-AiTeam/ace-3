@@ -1,11 +1,5 @@
 # RTL
 
-`ace3_generation_feedback_chain.sv` connects the unchanged tied lm_head directly
-to the selected-token feedback stage; no Host-selected token port exists.
-
-`ace3_final_rmsnorm.sv` is the parameter-free 896-element final-layer wrapper
-around the accepted FP16 RMSNorm arithmetic core.
-
 Synthesizable ACE-3 modules live here. Generated netlists and simulator output
 belong under ignored build directories, not in this source tree.
 
@@ -28,14 +22,20 @@ adaptation, half-split RoPE, K/V cache, and attention cores for the fixed
 Qwen2.5 geometry. The bounded evidence includes a complete two-token Verilator
 comparison of 46,676 intermediate rows and 1,792 post-layer hidden rows plus
 focused Icarus width, reset, clear, fail-closed, preload, streaming, and qzeros
-address checks. A fault-free full Icarus trace exceeded the 5,400-second bound
-after 7,000,000 controller cycles and is not claimed.
-
-The arithmetic-free `ace3_model24_layer_controller` launches one reusable layer
-boundary in strict index order from 0 through 23, retaining every checkpoint
-until acceptance and allowing terminal completion only after layer 23. The
-controller-driven cascade uses separately compiled decoder instances; it is not
-a monolithic controller-plus-decoder RTL image. Layers 3 through 23 select the
-range-reduced exponential SiLU profile while layers 0 through 2 preserve their
-reviewed rational-profile hashes. The tied language-model head, dialogue,
+address checks. Its default SiLU profile preserves the accepted layer-indexed
+regressions; the controller-driven full-model run explicitly selects the
+range-reduced exponential profile for every layer. A fault-free full Icarus
+trace exceeded the 5,400-second bound
+after 7,000,000 controller cycles and is not claimed. The completed
+controller-driven Verilator harness executes separately compiled decoder RTL
+for layers 0 through 23 and compares the post-layer-23 hidden state to the
+independent official oracle. The tied language-model head, dialogue,
 synthesis, PPA, and FPGA behavior remain outside this claim.
+
+The Model24 layer controller is a separate arithmetic-free scheduler. It launches
+one reusable layer boundary in strict index order from 0 through 23 and exposes a
+retained checkpoint after every accepted completion. The next layer cannot launch
+until that checkpoint is accepted, and terminal completion follows only the
+layer-23 checkpoint. The numerical harness authenticates this launch transcript
+before dispatching the separately indexed decoder instances; it is not a
+monolithic controller-plus-decoder RTL image.

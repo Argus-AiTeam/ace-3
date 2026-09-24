@@ -1,0 +1,16 @@
+{
+  "analyzer": "ace3.model.candidates.analyze_q24_s16_l9_coordinate62_producer_cone_v1",
+  "reviewed_root": "build/q24_s16_l9_coordinate62_producer_cone_a38731cbbd8f_attempt001",
+  "reviewed_result_sha256": "c36ed0cb236b06b2fd72e2f73502f38f022e55c7fb67bf0f0b2fc705915539d4",
+  "required_prefix": "q24_s16_l9_coordinate62_producer_cone_",
+  "command_context": "cd /home/argustest/ace3-argus; PYTHONPATH=/home/argustest/ace3-argus PYTHONDONTWRITEBYTECODE=1 /home/argustest/miniconda3/bin/python -B",
+  "focused_tests": "-m unittest -v tests.test_q24_s16_l9_coordinate62_producer_cone_analyzer_v1",
+  "analyzer_arguments": "-m ace3.model.candidates.analyze_q24_s16_l9_coordinate62_producer_cone_v1",
+  "output": "JSON on stdout only. Capture with exclusive creation in a fresh q24_s16_l9_coordinate62_producer_cone_* build directory; never replace saved evidence.",
+  "authentication": "Pin the reviewed result, authenticate all its repository input/artifact/source/validation bindings, resolve saved modules without importing them, require unchanged saved contract and policy/reference/state/KV/lineage records. Historical L8 external review remains metadata in the pinned result; this analyzer does not open external files or rerun review.",
+  "gate_scope": "Exactly 46 saved gate files and 874 stage records: actual and inherited_native L9, all eleven controls L10-L13. No native execution at any layer. L8 is frozen input metadata only.",
+  "materiality": "First saved coordinate-62 failure of the existing FP16-trajectory diagnostic predicate, ordered by layer and stage within L9-L13. Report the first mandatory coordinate-62 gate failure separately. This does not identify the first historical origin of inherited drift or introduce a numerical threshold.",
+  "ranking": "Exact-rational descending absolute signed L9 branch error: inherited Q24, S11 O, S17 down. Preserve signs, saved local gate statuses, singleton rescue and all-suffix-gates outcomes; lexical producer name breaks ties. Report projection and original-addition-roundoff terms separately. Ranking is not unique causal attribution, necessity, or a performance diagnosis.",
+  "boundaries": "Read-only isolated native-S16-RTZ Q24 CPU-software evidence analysis, not a new numerical PASS. Q24 residual state is wider than FP16; INT4 weights, FP16 operator boundaries/KV, original-input independently propagated reference, thresholds, lineage, failures and accepted evidence remain unchanged. No native L0-L8 or L9+ execution, RTL, hardware, GPU, new-token, full-model or strict-FP16-state W4A16 claim, policy adoption, successor publication or follow-on scheduling.",
+  "independent_review": "REQUIRED via normal Host Reviewer path"
+}

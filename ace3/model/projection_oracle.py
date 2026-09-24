@@ -3,7 +3,7 @@
 
 from __future__ import annotations
 
-from awq_bit_oracle import GROUP_SIZE, dot_group, q47_48_to_f16
+from awq_bit_oracle import GROUP_SIZE, dot_group, f16_finite_parts, q47_48_to_f16
 from fp16_adaptation_oracle import residual_add
 
 GROUP_ACC_BITS = 96
@@ -18,6 +18,8 @@ def complete_projection_output(
     scales_f16: list[int],
     logical_lane: int,
     bias_f16: int | None = None,
+    *,
+    single_round_bias: bool = False,
 ) -> tuple[int, int, bool, bool, list[int]]:
     if len(activations_f16) != len(qweights_i32):
         raise ValueError("activation and qweight lengths differ")
@@ -52,6 +54,20 @@ def complete_projection_output(
         raise OverflowError("complete projection sum exceeded signed Q53.48")
     if invalid:
         return accumulator, 0x0000, True, False, group_accumulators
+    if single_round_bias:
+        biased_accumulator = accumulator
+        if bias_f16 is not None:
+            finite, sign, significand, exponent = f16_finite_parts(bias_f16)
+            if not finite:
+                return accumulator, 0x0000, True, False, group_accumulators
+            biased_accumulator += sign * (significand << (exponent + 48))
+        result, overflow = q47_48_to_f16(biased_accumulator)
+        # Native FP16 preserves underflow sign and overflows to infinity.
+        if overflow:
+            result = (result & 0x8000) | 0x7C00
+        elif result == 0 and biased_accumulator < 0:
+            result = 0x8000
+        return accumulator, result, False, overflow, group_accumulators
     result, saturated = q47_48_to_f16(accumulator)
     if bias_f16 is not None:
         result, bias_invalid, bias_saturated = residual_add(result, bias_f16)

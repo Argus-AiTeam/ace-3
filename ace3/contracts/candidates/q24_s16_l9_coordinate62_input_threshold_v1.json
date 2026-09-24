@@ -1,0 +1,54 @@
+{
+  "diagnostic_id": "ace3-q24-s16-l9-coordinate62-input-threshold-v1",
+  "policy_id": "ace3-w4a16-local-operator-global-binary64-authority-v3",
+  "cwd": "/home/argustest/ace3-argus",
+  "command": "PYTHONPATH=/home/argustest/ace3-argus PYTHONDONTWRITEBYTECODE=1 /home/argustest/miniconda3/bin/python -B -m ace3.model.candidates.diagnose_q24_s16_l9_coordinate62_input_threshold_v1 --check",
+  "validation": "Compile the actual candidate and focused test sources in memory, record every loaded repository module origin including tests.test_q24_s16_toward_zero_l3_l8_v1, and execute only this diagnostic's focused tests once. Authenticate the selected frozen L9 record and its recorded bindings read-only, reject the historical L9 pin and source mismatch, and check both output prefixes and exclusive creation. Upstream entry authentication is mocked in these focused tests; this is not full sweep-readiness authentication. The unchanged L10 evidence must still pass all source checks before any future sweep. No legacy test suite or native layer executes. stdout is the validation record. Independent Reviewer must reproduce this disclosed command from cwd.",
+  "output_prefixes": [
+    "q24_s16_l9_coordinate62_input_threshold_",
+    "q24_s16_l9_coordinate62_wire_selected_parent_"
+  ],
+  "output": "Both prefixes are accepted only for direct children of the isolated repository build directory after path resolution. Existing output directories are never replaced. --check creates no sweep output and does not execute controls.",
+  "normal_host_review": "REQUIRED",
+  "candidate_admitted": false,
+  "policy_adopted": false,
+  "successor_published": false,
+  "scientific_result_claim": false,
+  "accepted_L0_L8_execution": false,
+  "native_layers": [9, 10, 11, 12, 13],
+  "position": 0,
+  "coordinate": 62,
+  "max_native_layer_evaluations": 65,
+  "controls": [
+    {"label": "input_0_of_8", "step": 0, "offset_q24": 0},
+    {"label": "input_1_of_8", "step": 1, "offset_q24": 0},
+    {"label": "input_2_of_8", "step": 2, "offset_q24": 0},
+    {"label": "input_3_of_8", "step": 3, "offset_q24": 0},
+    {"label": "input_4_of_8", "step": 4, "offset_q24": 0},
+    {"label": "input_5_of_8", "step": 5, "offset_q24": 0},
+    {"label": "input_6_of_8", "step": 6, "offset_q24": 0},
+    {"label": "input_7_of_8", "step": 7, "offset_q24": 0},
+    {"label": "input_8_of_8", "step": 8, "offset_q24": 0},
+    {"label": "input_0_of_8_minus_unit", "step": 0, "offset_q24": -1},
+    {"label": "input_0_of_8_plus_unit", "step": 0, "offset_q24": 1},
+    {"label": "input_8_of_8_minus_unit", "step": 8, "offset_q24": -1},
+    {"label": "input_8_of_8_plus_unit", "step": 8, "offset_q24": 1}
+  ],
+  "sweep": "Only incoming L9 coordinate 62 changes. Interpolate exact rational Q24 integers between accepted actual L8 and nearest-Q24 ties-even original-input L8 binary64 coordinate at k/8, k=0..8; round integer units ties-even. Also inspect each endpoint +/- one Q24 unit. Retain duplicate samples and all failures. Preserve endpoint zero tags; interior zero tags follow the exact interpolant sign, with negative exact zero only when both endpoint tags are negative. Regenerate H using the unchanged independent RNE16 projector; never relift H into I. Other 895 I/Z/H coordinates remain bitwise actual.",
+  "threshold_plan": "Report every adjacent sampled acceptance transition separately at L9-L13 S18 coordinate 62, including pass-to-fail transitions. Do not assume monotonicity, bisect, adapt the sample count, infer a unique threshold or claim a root cause. A bracket is sampled sensitivity, not an exact boundary. All 19 stage reports are retained for every native layer and control, even on failure.",
+  "inputs": {
+    "accepted_L8": "Reuse entry.authenticate: dc98a86e7c02 round-3 accepted parent, receipt, I/Z/H, own P0 KV, reports and lineage; read-only, no replay.",
+    "reviewed_L9": "q24_s16_l9_coordinate62_producer_cone_a38731cbbd8f_attempt001/result.json; sha256 c36ed0cb236b06b2fd72e2f73502f38f022e55c7fb67bf0f0b2fc705915539d4",
+    "historical_L9": "d0755047099e remains preserved historical evidence, not the selected parent. Its result pin and incompatible source origins must be rejected, not rewritten or bypassed.",
+    "reviewed_L10": "q24_s16_l10_coordinate62_producer_cone_3e4cf1c3fcd2_attempt001/result.json; sha256 8830027d6e37ec77ad6d0a9b9815cedef0925d962b747fd38f84071e32f415cd",
+    "reviewed_L12_L13": "Reuse entry.authenticate's pinned eaee0c6ac5e4, 4937ea22f941, a81669925e0b evidence and original attempt002 reference/source/tensor/state/KV bindings.",
+    "authentication": "Authenticate all recorded input, artifact, validation and source bindings; preserve failures and prior acceptance. Reauthenticate bound bytes and exact external L8 review metadata after any future sweep. Review metadata is not execution authorization or a reference."
+  },
+  "dispatch": "Only execute_layer dispatches native work; both it and the reused upstream executor reject layers outside L9-L13 before accessing inputs or dispatching stages. Position is exactly integer zero. Each control starts at accepted L8-derived I/Z/H, executes L9-L13 in order, and threads only its immediate native predecessor; each layer owns empty P0 prior KV. Baseline must reproduce retained arrays, locals and mandatory reports bitwise. No L0-L8 execution under any diagnostic/control/test label.",
+  "thresholds": {
+    "S0_S17": "Unchanged finite AND (abs_error <= 0.125 OR (relative_error < 0.001 AND ordered_FP16_ULP <= 1)); denominator max(abs(reference), 2^-14); independent same-actual-operand local reference.",
+    "S18": "Unchanged original-input binary64-fp16-excess-v1 exact excess <= 1/8.",
+    "trajectory": "Retain all original FP16 trajectory diagnostics. Counterfactual outputs never seed or replace the independently propagated original-input global reference."
+  },
+  "claim_boundary": "Software implementation and focused regression only this round. No scientific result claim. Future explicit callable controls are non-admitting diagnostics and never publish successor receipts. Wide Q24 residuals are not strict-FP16-state W4A16. Native asymmetric G128 INT4 qweight/qzeros, GEMM nibble order, no qzero plus-one, FP16 scales/operator boundaries/KV, S16 RTZ, source/operand/state/KV/lineage and numerical gates remain unchanged. No L14+, new-token, full-model PASS, RTL/hardware/GPU/FPGA/simulation/synthesis/PPA, precision/reference/model/profile/budget/framework/Host-global/ACE2 changes or policy adoption."
+}

@@ -1,0 +1,72 @@
+{
+  "diagnostic_id": "ace3-q24-s16-l13-l12-parent-coordinate-cut-v3",
+  "policy_id": "ace3-w4a16-local-operator-global-binary64-authority-v3",
+  "candidate_admitted": false,
+  "policy_adopted": false,
+  "successor_published": false,
+  "rtl_invocations": 0,
+  "normal_host_review": "REQUIRED",
+  "cwd": "/home/argustest/ace3-argus",
+  "command": "PYTHONPATH=/home/argustest/ace3-argus PYTHONDONTWRITEBYTECODE=1 /home/argustest/miniconda3/bin/python -B -m ace3.model.candidates.diagnose_q24_s16_l13_l12_parent_coordinate_cut_v3 --check",
+  "execution_command": "PYTHONPATH=/home/argustest/ace3-argus PYTHONDONTWRITEBYTECODE=1 /home/argustest/miniconda3/bin/python -B -m ace3.model.candidates.diagnose_q24_s16_l13_l12_parent_coordinate_cut_v3 --execute --out build/q24_s16_l13_l12_parent_coordinate_cut_v3_fresh",
+  "interface": ["--check", "--execute --out FRESH_DIRECTORY"],
+  "inherits": "ace3/contracts/candidates/q24_s16_l13_l12_parent_coordinate_cut_v2.json",
+  "history_sha256": {
+    "ace3/model/candidates/diagnose_q24_s16_l13_l12_parent_coordinate_cut_v1.py": "d736d5a2ff7324ed0a103c27a2a9a8fdb0b78c6f057d7c35c19804b171200d6e",
+    "ace3/model/candidates/diagnose_q24_s16_l13_l12_parent_coordinate_cut_v2.py": "8ceccf15cea6f571b28cc81d9ce8db9df2ae7a21d40c4ddaf663d675fe72ea67",
+    "ace3/contracts/candidates/q24_s16_l13_l12_parent_coordinate_cut_v1.json": "c9ac0e723ee5b482712f9307130e40c106eff6ae7ec3b6ce45f78f4588d38dfa",
+    "ace3/contracts/candidates/q24_s16_l13_l12_parent_coordinate_cut_v2.json": "ef52ebd67cc3f836c6be1704457afe0883ea85d5250e34a008b0b1884dabdbc6",
+    "tests/test_q24_s16_l13_l12_parent_coordinate_cut_v1.py": "cda6da51416647e5281eef11417e7cdf35cfa0c9a2d16f0402b46aceeab90229",
+    "tests/test_q24_s16_l13_l12_parent_coordinate_cut_v2.py": "15b1b503b4a7c8c6319289165540d12331e65fb01a4d9ed9ad71cfa5cbb54f59"
+  },
+  "source_updates": {
+    "ace3/contracts/candidates/q24_s16_toward_zero_l9_l23_v1.json": {
+      "snapshot": "002_q24_s16_toward_zero_l9_l23_v1.json",
+      "retained_bytes": 2865,
+      "retained_sha256": "f9c2234c5d0c40cddacb94c20abc36abb79ebbf851098b0fdb0ab0da3ea4d6bf",
+      "current_bytes": 3005,
+      "current_sha256": "ae5985b558d365a4967949535658a243f63b754062d18af2f83f9a3a4100b2b3"
+    },
+    "ace3/model/candidates/run_q24_s16_toward_zero_l9_l23_v1.py": {
+      "snapshot": "019_run_q24_s16_toward_zero_l9_l23_v1.py",
+      "retained_bytes": 25964,
+      "retained_sha256": "2019d1ad0472eb2090ec7881e44644efcf9203c0dd428fdedc5b20395ab5098a",
+      "current_bytes": 26065,
+      "current_sha256": "08e19ca69e8db6b3875478188d6febada9c18f231b13ba089af023ac7fcddaa6"
+    },
+    "tests/test_q24_s16_toward_zero_l9_l23_v1.py": {
+      "snapshot": "024_test_q24_s16_toward_zero_l9_l23_v1.py",
+      "retained_bytes": 12878,
+      "retained_sha256": "9727cf0ca7137e4175960449a30e0573b580e99b0f839c7548fd9d1c480cc2af",
+      "current_bytes": 12883,
+      "current_sha256": "4a5aacbeda7455b6333d737cbd97b9bb3a8ee84e01f8f988ca18f18605d98e61"
+    }
+  },
+  "retained_freeze_sha256": "a87f01cdb117e4eefa4f9f2c9d27eb9c01c124b61053f3f3d85738308ebe7395",
+  "historical_blocked_result": "/home/argustest/ace3-argus/build/q24_s16_l13_l12_parent_coordinate_cut_7e4a72f81a3e_attempt001/result.json",
+  "historical_blocked_sha256": "9c035e6c8d0a22659bc27f9c9a53f24086fc0badc11c3551e702febba67eac29",
+  "native_L0_L8_invocations": 0,
+  "native_layers_per_control": [13],
+  "maximum_native_layer_invocations": 954,
+  "scientific_result_claim": false,
+  "reviewed_result_sha256": "f9a98abf3c266ecf79ee1822223617436d91037851137b8d25f0fa33ee5eb732",
+  "width": 896,
+  "shard_size": 32,
+  "controls": 954,
+  "position": 0,
+  "history": [9707],
+  "suffix": [13],
+  "interventions": "Deterministic order: actual baseline, all-mapped control, singleton indices 0..895, then 28 contiguous ascending 32-coordinate shards each immediately followed by its 864-coordinate complement. Each control starts from the same authenticated actual L12 parent, copying all I/Z/H fields together at precisely the selected coordinates. Complement means all coordinates outside that shard are mapped; it is not a separately propagated or relifted parent.",
+  "mapping": "Reuse the reviewed exact rational nearest-Q24 ties-even mapping of the independently propagated original-input L12 binary64 vector; preserve negative zero and derive H by independent exact RNE16 projection. Assert bitwise equality to the reviewed mapped parent and a per-coordinate mapping error <= 2^-25. This counterfactual never replaces the original-input L13 global reference.",
+  "thresholds": {
+    "S0_S17": "Unchanged finite AND (absolute_error <= 0.125 OR (relative_error < 0.001 AND ordered_FP16_ULP <= 1)); denominator max(abs(reference), 2^-14); independent same-actual-operand local references.",
+    "S18": "Unchanged binary64-fp16-excess-v1: exact actual error minus nearest-FP16 representation floor <= 1/8, against the original-input independently propagated global reference.",
+    "FP16_trajectory": "Unchanged diagnostic-only comparisons under the existing v3 policy."
+  },
+  "gates": "Every one of the 954 controls executes all 19 native L13 stages and all unchanged mandatory gates, with exact paired-state, actual-operand, native S16 RTZ and own-layer empty P0 KV checks. Numerical failures are retained, not bypassed; invalid lineage/source/state/operands or missing checks block. Scalar rescue and all-L13-gates-pass are reported separately; no counterfactual is admitted or published.",
+  "classification": "Any accepted singleton is conditional single-coordinate sufficiency; absent that, an accepted shard or complement is bounded shard sufficiency; absent both, the reproduced full-parent rescue leaves subset interactions unresolved. Record all accepted output words, including words other than 662f. Never infer a unique upstream producer or exhaustive interaction attribution from these controls.",
+  "claim_boundary": "CPU-software coordinate diagnostic only. Q24 residual state is wider than FP16; native G128 asymmetric INT4 AWQ weights/nibble order/no qzero plus-one, FP16 scales/operators/KV and S16 RTZ are unchanged. Historical failures and bounded Reviewer acceptance remain intact. No strict-FP16-state W4A16, new-token, full-model, RTL, simulation, synthesis, GPU, FPGA, hardware, PPA, performance-bottleneck or unique-producer claim. No policy adoption, successor publication or follow-on task selection.",
+  "execution_boundary": "--check compiles the repository sources and runs only the v3 and v2 focused suites, then authenticates retained/current bindings without native dispatch. --execute additionally runs exactly the 954 isolated L13/P0 controls into a fresh v3 build directory; never replay the accepted prefix or admission run. This delivery task does not execute those controls. Future execution and its non-admission evidence require a separate bounded task and normal Host review.",
+  "reproduction": "Run command once from cwd with the explicit absolute interpreter and command-local PYTHONPATH. No files are written by --check. The execution command is a template: replace only the fresh output basename, never reuse an existing path, and use the operator-required durable runner for the long execution. Independent Reviewer must reproduce the check with zero failures/errors/skips. No historical bare-Python command is certified.",
+  "authentication": "Inherit the hash-pinned v2 check contract and its exact retained/current source-update closure. Bind all reviewed artifacts and original snapshots without relabeling current sources as historical execution. Consume the authenticated retained operand/state/KV evidence read-only; recheck the L12 receipt, paired state, own-layer KV, RTZ operands and original-input reference chain before dispatch. Every control uses the unchanged native L13 stage/gate implementation. Reproduce both reviewed endpoints and recheck all bindings and origins at completion."
+}

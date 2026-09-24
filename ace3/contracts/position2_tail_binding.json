@@ -1,0 +1,58 @@
+{
+  "schema": "ace3_position2_tail_binding_v2",
+  "model": {
+    "repository": "Qwen/Qwen2.5-0.5B-Instruct-AWQ",
+    "revision": "db09cd27ead7fee40cdee309693cf83601b9c899",
+    "checkpoint_sha256": "c50d807b7bed7ff314308972e0f4bcf4e5a70bc60ad88fc7df53940831ed0c1b",
+    "profile": "native G128 asymmetric AWQ W4A16; native GEMM nibble order; no qzero plus-one; FP16 scales, activations and KV"
+  },
+  "parent": {
+    "attempt_id": "layer23_runtime_launch_attempt002",
+    "launch_result_sha256": "cde04689f85c8c3a56bc8265befa1f0ec2922a12b22ccbcf756a2bb0db89bb6e",
+    "seal_sha256": "5bbd2543d895ecb5f41cec5d39a59f700a52ee2a1199ec49b9ae95104cd477ca",
+    "layer_result_sha256": "ef029830663cff707009b02b31608aeaeb683832eddf544b403847f40b55b8aa",
+    "terminal_file_sha256": "ef9ee0a8a5e999717e2917ee2253974c505ce41c0dc72ccfa735b3850c38e915",
+    "terminal_semantic_sha256": "b5dbacf30e64df9019e79a1089df7e54a3a26b0d5142e3ec4e15a1ff5d5b7542",
+    "review_mission": "0ffba022ad92",
+    "review_round": 6,
+    "layer": 23,
+    "position": 2,
+    "hidden_size": 896
+  },
+  "final_rmsnorm": {
+    "top": "ace3_fp16_rmsnorm_core",
+    "parameters": {"HIDDEN_SIZE": 896, "EPSILON_Q48": 281474977},
+    "expectation": "Q24 integer policy independently recomputed with Decimal arithmetic and binary16 RNE; active FP16-interstage trajectory gate; legacy float64 RMSNorm is diagnostic only",
+    "required_integer_mismatches": 0,
+    "comparison": {
+      "reference": "qwen2_fp16_interstage_final_rmsnorm",
+      "recurrence": "FP32 mean-square/rsqrt; FP16 normalized activation; FP16 weight product",
+      "acceptance": "finite AND (absolute <= 0.125 OR (relative < 0.001 AND ordered_FP16_ULP <= 1))",
+      "relative_denominator": "max(abs(reference), 2^-14)"
+    },
+    "legacy_mathematical_diagnostic": {
+      "reference": "float64 RMSNorm with one final FP16 rounding",
+      "material_failure": "absolute error exceeds 0.125 AND relative error exceeds 0.001 AND ULP distance exceeds 1",
+      "relative_denominator": "max(abs(reference), 1e-30)",
+      "admission_gate": false
+    },
+    "required_material_mismatches": 0
+  },
+  "tied_head": {
+    "top": "ace3_streaming_tied_lm_head_topk",
+    "parameters": {"HIDDEN_SIZE": 896, "VOCAB_SIZE": 151936, "TOP_K": 10, "TOKEN_INDEX_WIDTH": 18, "FEATURE_INDEX_WIDTH": 10, "TOP_RANK_WIDTH": 4},
+    "contract": "ace3/contracts/streaming_tied_lm_head_topk.json",
+    "selection": "rank zero; descending rounded finite FP16 logit; equal logits use ascending token ID",
+    "expectation_only": true
+  },
+  "admission": {
+    "review_required": true,
+    "execution_authority": false,
+    "runtime_tail_invocations": 0,
+    "historical_authority_state": "consumed; not reset or transferred",
+    "unchanged_tail_replay_authorized": false,
+    "reject": ["stale_source", "consumed_attempt", "foreign_parent", "mismatched_tail_input"],
+    "runtime_namespaces_must_be_absent": ["runtime", "consumed.json", "authority.json"]
+  },
+  "claim_boundary": "Current-source comparison mapping only; not fresh execution authority. Previously reviewed tail outputs and consumed authority remain immutable. No new tail execution, token, dialogue, synthesis, PPA, FPGA or hardware evidence."
+}

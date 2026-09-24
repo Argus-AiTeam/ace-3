@@ -1,0 +1,224 @@
+{
+  "schema_version": 2,
+  "kind": "ace3_position3_canonical_evidence_status",
+  "status": "R5_MATERIAL_FINDINGS_ACCEPTED_ENGINEER_ADJUDICATION_AWAITING_INDEPENDENT_REVIEW",
+  "parent_position2": {
+    "runtime_identity": "ace3-position2-fresh-v10-20260831t110456z",
+    "candidate_status": "RUNTIME_PASS_ACCEPTED_INDEPENDENT_REVIEW",
+    "canonical_acceptance": true,
+    "independent_acceptance_receipt": {
+      "path": "build/model24_selected_token_position3_continuations/v10-accepted-review-gated-r5/v10_acceptance_receipt.json",
+      "bytes": 28929,
+      "sha256": "ec3c8dda49eb4cbc79d33d2c851800a9f0cbb8765f3558a40a4e9ed54d7e8b4a"
+    },
+    "independent_review": {
+      "path": "/home/argustest/.argus-skill-ace3/projects/s-62150b05/handoffs/985556b6edf3/round-0001.json",
+      "bytes": 1746,
+      "sha256": "6a9b4355fc0a7ff1d72b0b59883d3a2b650f36f196eccfde7275b765ca0e1212",
+      "outer_status": "continue",
+      "scoped_v10_runtime_verdict": "PASS"
+    }
+  },
+  "repair_parent": {
+    "package_revision": "r4",
+    "candidate_revision": "review-correction-01",
+    "material_finding": "R4-RESUME-TEMPORARY-RECOVERY",
+    "independent_review_verdict": "FAIL",
+    "package_manifest": {
+      "path": "build/model24_selected_token_position3_continuations/v10-accepted-review-gated-r4/review-correction-01/package_manifest.json",
+      "bytes": 98637,
+      "sha256": "7015b761ad12785465b4a514e7db5615bdd35a7a02bfa2222273c1c4c911d577"
+    },
+    "independent_review": {
+      "path": "build/model24_selected_token_position3_continuations/v10-accepted-review-gated-r4/review-correction-01/review/independent-no-execution-review-receipt.json",
+      "bytes": 7956,
+      "sha256": "ff2603d506e70e836dc3b18f227202cf70f40d1474dbd3c7696e3a274332b6a2"
+    },
+    "preserved_byte_for_byte": true,
+    "prior_repair": {
+      "package_revision": "r3",
+      "material_finding": "R3-ATOMIC-RECEIPT-PUBLICATION",
+      "independent_review_verdict": "FAIL",
+      "package_manifest": {
+        "path": "build/model24_selected_token_position3_continuations/v10-accepted-review-gated-r3/package_manifest.json",
+        "bytes": 93997,
+        "sha256": "a9b2a13779d9fa60bb5dec5f421351fd73cedafc1af0e5b93b500596b9fc16c5"
+      },
+      "independent_review": {
+        "path": "build/model24_selected_token_position3_continuations/v10-accepted-review-gated-r3/review/independent-no-execution-review-receipt.json",
+        "bytes": 7202,
+        "sha256": "ab66e9f2581897b40d0210d04aad174458e5e78823e8dd599f003c9212848179"
+      },
+      "preserved_byte_for_byte": true
+    }
+  },
+  "continuation_package": {
+    "package_revision": "r5",
+    "candidate_revision": "fresh-disjoint-r5",
+    "package_manifest": {
+      "path": "build/model24_selected_token_position3_continuations/v10-accepted-review-gated-r5/package_manifest.json",
+      "bytes": 103651,
+      "sha256": "0b6a281436e20393d412b749f41f44d50524b12e45852ebfbbf98d6f3a85ccc8"
+    },
+    "resume_manifest": {
+      "path": "build/model24_selected_token_position3_continuations/v10-accepted-review-gated-r5/resume_manifest.json",
+      "bytes": 48940,
+      "sha256": "f8d7f791ecd81602d5f50a90c79e781a1d834bbd6a5193f17993c8498973193a"
+    },
+    "acceptance_dependency": {
+      "path": "build/model24_selected_token_position3_continuations/v10-accepted-review-gated-r5/acceptance_dependency.json",
+      "bytes": 2653,
+      "sha256": "09ad7588c7f3479a597027fa73008c1dc24a7298a5e2708a50f3f0a90236ba0a"
+    },
+    "no_execution_validation": {
+      "path": "build/model24_selected_token_position3_continuations/v10-accepted-review-gated-r5/no_execution_validation.json",
+      "bytes": 4018,
+      "sha256": "fa233108cbe6b31ee99c838411e55e7db25507d54fd7948886a2c866dd24d7e1"
+    },
+    "control": {
+      "path": "build/model24_selected_token_position3_continuations/v10-accepted-review-gated-r5/continuation_control.py",
+      "bytes": 86298,
+      "sha256": "3b96bd128029e49f2013b13348bf007fd1a83c147cafe4533145561c50927765"
+    },
+    "transaction_count": 26,
+    "first_incomplete_transaction": 0,
+    "first_position3_layer_transaction": 1,
+    "completed_transaction_count": 0,
+    "execution_performed": false,
+    "authorization_created": false,
+    "submission_activity": 0,
+    "model_activity": 0,
+    "rtl_activity": 0,
+    "checkpoint_activity": 0,
+    "runtime_activity": 0
+  },
+  "atomic_publication_semantics": {
+    "checkpoint_namespace_durability": "create the checkpoints directory and fsync the package directory before publishing any receipt; recovery fsyncs the package directory when the checkpoints directory already exists",
+    "receipt_temporary": "unique same-directory temporary file",
+    "receipt_write_order": "write complete bytes, flush, fsync temporary file",
+    "receipt_install": "os.link temporary to final path for atomic no-replace installation",
+    "receipt_durability": "unlink temporary name, then fsync containing directory",
+    "partial_final_path_exposure": false,
+    "resume_temporary": "exclusive unique same-directory temporary file",
+    "resume_write_order": "completely write bytes and fsync the temporary before publication",
+    "resume_replacement": "os.replace authoritative resume manifest, then fsync containing directory",
+    "resume_restart": "abandoned temporary files are ignored, never adopted, never authoritative, and never block a new unique publication"
+  },
+  "authenticated_resume_semantics": {
+    "position2_lm_head": "transaction 0 binds v10 layer-23 hidden, the official tied FP16 embedding/lm_head weight, selected token, and selected FP16 logit",
+    "selected_token_feedback": "transaction 1 is resolved only from transaction 0's authenticated receipt, checkpoint-bound selected-token embedding, token id, and FP16 logit",
+    "layer_outputs": "each completed layer receipt must authenticate natural terminal, exact integer-oracle match, 896-element FP16 hidden output, and same-layer position-4 K/V state",
+    "downstream_binding": "hidden and preserved state records are inserted into the next transaction binding before the atomic resume cursor advances",
+    "interrupted_advance_recovery": "when a valid durable completion receipt already exists for the first PENDING transaction, restart authenticates and adopts that exact checkpoint before atomically advancing to the next incomplete transaction without recomputation",
+    "resume_rule": "validate the complete prefix, preserve authenticated receipts, and resume the first incomplete transaction without recomputing authenticated units"
+  },
+  "adversarial_no_execution_regressions": {
+    "status": "PASS",
+    "check_count": 34,
+    "covered": [
+      "recursive rejection of __pycache__ and *.pyc package members",
+      "interruption after unique resume temporary creation",
+      "interruption during partial resume temporary write",
+      "interruption after resume temporary fsync and before replace",
+      "interruption after replace and before directory fsync",
+      "concurrent resume writers with disjoint unique temporaries",
+      "stale and corrupt abandoned resume temporaries ignored without cleanup",
+      "interruption after checkpoints mkdir and before package-directory fsync",
+      "interruption before temporary-file fsync",
+      "interruption after temporary-file fsync and before install",
+      "atomic no-replace install race",
+      "durable receipt before resume update",
+      "restart adoption and automatic resume persistence without recomputation or manual cleanup",
+      "conflicting duplicate receipt",
+      "corrupt temporary receipt",
+      "corrupt final receipt",
+      "stale package",
+      "missing dependency"
+    ]
+  },
+  "engineer_pre_review": {
+    "status": "MATERIAL_FINDINGS_AWAITING_INDEPENDENT_REVIEW",
+    "authorization_recommendation": "FAIL",
+    "exact_candidate": {
+      "package_manifest": {
+        "path": "build/model24_selected_token_position3_continuations/v10-accepted-review-gated-r5/package_manifest.json",
+        "bytes": 103651,
+        "sha256": "0b6a281436e20393d412b749f41f44d50524b12e45852ebfbbf98d6f3a85ccc8"
+      },
+      "continuation_control": {
+        "path": "build/model24_selected_token_position3_continuations/v10-accepted-review-gated-r5/continuation_control.py",
+        "bytes": 86298,
+        "sha256": "3b96bd128029e49f2013b13348bf007fd1a83c147cafe4533145561c50927765"
+      }
+    },
+    "evidence": {
+      "adversarial_gate_probe": {
+        "path": "build/model24_selected_token_position3_continuations/v10-accepted-review-gated-r5/review/engineer-audit-03-adversarial-gates.txt",
+        "bytes": 1147,
+        "sha256": "311f3f165d2c7fb51d43e583e3738f2356be7fd6b6fdee27ce89bc758f86fbd3"
+      },
+      "exact_binding_audit": {
+        "path": "build/model24_selected_token_position3_continuations/v10-accepted-review-gated-r5/review/engineer-audit-04-exact-bindings.txt",
+        "bytes": 3419,
+        "sha256": "848ad9f8c0ea7e8d34daa90d15f1dc0aa479c000b5d29d864de872007091525b"
+      }
+    },
+    "material_findings": [
+      {
+        "id": "R5-INDEPENDENT-AUTHORIZATION-BINDING",
+        "control_lines": "879-891",
+        "finding": "validate_authorization accepts a locally authored producer_role=reviewer and verdict=PASS document without binding an independently produced review artifact"
+      },
+      {
+        "id": "R5-COMPLETION-RECEIPT-SOURCE-TOCTOU",
+        "control_lines": "277-306, 1009-1034",
+        "finding": "stage_or_adopt_completion validates the supplied path, then publish_completion_receipt rereads that mutable path; a controlled swap installed a corrupt final receipt while the call returned success"
+      }
+    ],
+    "review_activity": {
+      "authorization_created": false,
+      "submission_activity": 0,
+      "model_activity": 0,
+      "rtl_activity": 0,
+      "checkpoint_activity": 0,
+      "runtime_activity": 0
+    }
+  },
+  "engineer_adjudication": {
+    "status": "MATERIAL_FINDINGS_ACCEPTED_PENDING_INDEPENDENT_REVIEW",
+    "path": "build/model24_selected_token_position3_continuations/v10-accepted-review-gated-r5/review/r5-engineer-no-execution-adjudication.json",
+    "producer_role": "engineer",
+    "independent_reviewer_closure": "REQUIRED_PENDING",
+    "findings_accepted": [
+      "R5-INDEPENDENT-AUTHORIZATION-BINDING",
+      "R5-COMPLETION-RECEIPT-SOURCE-TOCTOU"
+    ],
+    "position3_execution_authorized": false,
+    "zero_activity": {
+      "authorization_created": false,
+      "submission_activity": 0,
+      "model_activity": 0,
+      "rtl_activity": 0,
+      "checkpoint_activity": 0,
+      "runtime_activity": 0
+    }
+  },
+  "authorization_boundary": {
+    "v10_acceptance": "SATISFIED_INDEPENDENT_SCOPED_PASS",
+    "r5_repair": "ENGINEER_ADJUDICATION_FAIL_AWAITING_INDEPENDENT_REVIEW",
+    "required_package_review": "independent Reviewer adjudication bound to the exact r5 package manifest, control, resume, no-execution validation, and audit evidence; position-3 remains unauthorized unless both r5 findings are rejected with exact counter-evidence",
+    "only_review_pass_can_authorize_later_bounded_execution": true,
+    "current_execution_authority": false,
+    "independent_review_required": true
+  },
+  "claim_boundary": {
+    "position2_runtime": "independently accepted v10 bounded runtime evidence",
+    "position2_lm_head": "not run against v10",
+    "position3_traversal": "not run",
+    "position3_lm_head": "not run",
+    "dialogue": "not claimed",
+    "synthesis": "not run",
+    "ppa": "not measured",
+    "fpga": "not run"
+  }
+}

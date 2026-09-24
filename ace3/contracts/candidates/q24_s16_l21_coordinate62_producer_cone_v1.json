@@ -1,0 +1,59 @@
+{
+  "diagnostic_id": "ace3-q24-s16-l21-coordinate62-producer-cone-v1",
+  "version": 1,
+  "input": "build/q24_s16_l21_s18_margin_sensitivity_v1_attempt001/array_equality",
+  "upstream_sha256": {
+    "result.json": "334b47246ce4f8d66257f1cdbe6265fe462da6eb58923e020b5c8ac4d2bcd5bd",
+    "validation.json": "127757c73cf6784b1fa62f120c43479f42c70d9e9b6c6b2663810861f723cbdc",
+    "command.json": "6bf2ebb19047236cf9976e46543c9d146d552f9cb487bc7cc9ba502ebe64aafc"
+  },
+  "suffix_sha256": {
+    "result.json": "6d827ad412e70d59ba7bfcb28b9da056fdfc66c75299852c2645eeeab684290b",
+    "validation.json": "7555a88af5ec76546eb18288df2a9a2adbf12a8a2ceea2de5654093804c9e0ae",
+    "command.json": "0bac35d13e1aeadb5989319cf0150abf32ac48fb8dd1bbb60b35eeed71d5cebc",
+    "layer21/actual_stages.npz": "784c5af93e09f97fced8fae1fed66bcccc0ddb5f181f76bebeb9d7543ce66e49",
+    "layer21/reports.json": "b713d6a112768889915172eaa74cf8fb49faf184a4ae4a903f59f2d2f467f30c"
+  },
+  "node": [21, 0, 18],
+  "index": 62,
+  "policy_id": "ace3-w4a16-local-operator-global-binary64-authority-v3",
+  "local_gate": {
+    "absolute_budget": "1/8",
+    "relative_strict_bound": "1/1000",
+    "ordered_FP16_ULP": 1,
+    "relative_denominator_floor": "1/16384"
+  },
+  "excess_budget": "1/8",
+  "reference_policy": "unchanged independently propagated original-input global reference",
+  "arithmetic": "Unchanged native S16 RTZ; signed int64 Q24 I/Z residuals and RNE16 views. Official G128 asymmetric packed INT4, native GEMM nibble order, no qzero plus-one, FP16 scales/operator boundaries/KV. Q24 state is wider than FP16, not strict-FP16-state W4A16.",
+  "authentication": "Reuse the accepted L21 margin checker and its read-only reconstruction of the L15 cut, L16-L20 accepted frozen states and first L21/P0/S18 failure. Authenticate pinned result/command/validation, repository source origins, complete original-input global-reference recurrence, local references, retained S16 operands, paired I/Z/H, exact S12/S18 transitions and layer-owned empty-P0/FP16 KV. Preserve the L21 coordinate-62 excess of 3/4 against the unchanged 1/8 budget. Recheck bound bytes before returning.",
+  "local_predicate": "finite AND (absolute_error <= 1/8 OR (relative_error < 1/1000 AND ordered_FP16_ULP <= 1)); denominator=max(abs(reference),2^-14)",
+  "global_predicate": "abs(actual-original_binary64_reference)-nearest_FP16_representation_floor <= 1/8",
+  "interface": ["--check", "--execute"],
+  "execution": "cd /home/argustest/ace3-argus && PYTHONPATH=/home/argustest/ace3-argus /home/argustest/miniconda3/bin/python -B -m ace3.model.candidates.diagnose_q24_s16_l21_coordinate62_producer_cone_v1 --execute",
+  "reproduction": "The command compiles the actual repository diagnostic and test sources in memory, parses and checks this JSON contract, collects and runs exactly 24 focused tests once with zero failures/errors/skips, then authenticates frozen evidence once. --check stops at this preflight with zero native dispatch. --execute then reproduces retained L21 bitwise and runs the fixed nested canonical controls, checking each mandatory gate before its consumer. It records origins, digests, full gate reports, operand cuts, coordinate-62 exact residual contributions and phase timings in stdout JSON. It creates no files. Every imported candidate and tests.test_q24_s16_toward_zero_l3_l8_v1 must resolve inside this repository. The legacy module is imported only for origin binding; its accepted 19 tests and all upstream suites are never run. Host owns independent Reviewer reproduction.",
+  "focused_tests": 24,
+  "executor": {
+    "version": 1,
+    "native_layers": [21],
+    "maximum_native_layer_invocations": 11,
+    "canonical_cone_order": [17, 16, 15, 14, 13, 11, 10, 7, 3, 0],
+    "parent": "authenticated frozen L20 output I/Z/H; never the adjusted L21 output",
+    "S16": "independent same-operand binary64 SiLU/product with unchanged FP16 RTZ",
+    "stop": "first new mandatory gate failure or full-vector S18 pass; otherwise INCONCLUSIVE",
+    "output": "stdout only; no state archive, successor or admission"
+  },
+  "control_semantics": "Ordered nested whole-vector same-input canonical suffixes, starting at S17 and widening through S16, up, gate, post-attention norm, O, AV, V-cache, V projection and input norm. S12/S18 retain exact native Q24 additions verified independently; neither residual state nor original global reference is substituted. P0 Q/K remain native, gated and KV-authenticated; unit probability makes them irrelevant to the current value cone. S16 canonical controls independently compute binary64 SiLU/product but preserve FP16 RTZ, not the local reference's RNE. The unchanged local RNE oracle remains the gate. Baseline S18 coordinate-62 failure is the control target, not a stopping reason for the entire sweep. A new local failure, any other global failing coordinate or full-vector S18 pass stops the sweep immediately. Exhaustion yields explicit INCONCLUSIVE, never scientific PASS or unique producer attribution.",
+  "reviewer_rejection_criteria": "Reject any candidate/test source-origin mismatch, test count other than 24, skipped or failed test, retained baseline byte/report mismatch, unauthenticated L20 parent/source/operand/KV/reference, changed numerical gate/reference/S16 precision, unregistered cut, continued execution after a decisive control, native layer other than L21, more than 11 native invocations, nonzero native L0-L8 or RTL invocation, state publication or admission claim.",
+  "native_layers": [],
+  "native_invocations": 0,
+  "native_L0_L8_invocations": 0,
+  "native_layer_invocations": 0,
+  "rtl_invocations": 0,
+  "candidate_admitted": false,
+  "policy_adopted": false,
+  "successor_published": false,
+  "scientific_result_claim": false,
+  "normal_host_review": "REQUIRED",
+  "claim_boundary": "The top-level zero native counters describe --check only. --execute reports measured L21 dispatch counts separately and permits no other native layer. Frozen inputs remain read-only and no --out, state archive or successor is exposed. A controlled pass boundary is non-admitting evidence, not root-cause, strict-FP16-state W4A16, new-token, full-model, hardware or campaign-final PASS. All historical failures and bounded independent acceptances remain unchanged."
+}

@@ -1,0 +1,59 @@
+{
+  "schema_version": 1,
+  "contract_id": "ace3-position3-live-tied-lm-head-v1",
+  "required_parent": {
+    "path": "build/model24_selected_token_position3/evidence.json",
+    "kind": "ace3_selected_token_position3_continuation_evidence",
+    "status": "COMPLETE",
+    "fresh_validation_required": true,
+    "operation": "selected-token-position3-full-traversal",
+    "position": 3,
+    "ordered_current_worktree_verilator_layers": 24,
+    "layer23_terminal_hidden_elements": 896,
+    "natural_terminal_required": true,
+    "independent_integer_oracle_match_required": true
+  },
+  "model_binding": {
+    "repository": "Qwen/Qwen2.5-0.5B-Instruct-AWQ",
+    "revision": "db09cd27ead7fee40cdee309693cf83601b9c899",
+    "checkpoint_sha256": "c50d807b7bed7ff314308972e0f4bcf4e5a70bc60ad88fc7df53940831ed0c1b",
+    "tokenizer_sha256": "c0382117ea329cdf097041132f6d735924b697924d6f6fc3945713e96ce87539",
+    "tokenizer_config_sha256": "5b5d4f65d0acd3b2d56a35b56d374a36cbc1c8fa5cf3b3febbbfabf22f359583",
+    "tied_weight_tensor": "model.embed_tokens.weight",
+    "tied_peer": "lm_head.weight",
+    "tied_weight_sha256": "d74257dc547b48be5ae7b93f1c9af072c0c42dbbb85503078e25c59cd09e68d0"
+  },
+  "execution": {
+    "final_norm": "ACE-3 exact Q24/Q48 RMSNorm with binary16 RNE output",
+    "lm_head": "current-worktree official-shape streaming tied lm_head RTL",
+    "hidden_size": 896,
+    "vocab_size": 151936,
+    "top_k": 10,
+    "full_vocabulary_exact_integer_oracle_required": true,
+    "full_vocabulary_pytorch_fp16_agreement_required": true,
+    "rtl_top_k_agreement_required": true,
+    "source_and_artifact_hash_closure_required": true
+  },
+  "output": {
+    "kind": "ace3_position3_live_final_rmsnorm_streaming_lm_head_evidence",
+    "status": "COMPLETE",
+    "selected_next_token_required": true
+  },
+  "fail_closed": {
+    "missing_incomplete_stale_or_substituted_parent_rejected": true,
+    "missing_or_substituted_layer23_terminal_rejected": true,
+    "checkpoint_or_tokenizer_hash_mismatch_rejected": true,
+    "incomplete_source_or_artifact_closure_rejected": true,
+    "no_output_before_parent_authentication": true,
+    "recheck_condition": "recheck when build/model24_selected_token_position3/evidence.json exists with status COMPLETE and passes fresh validation of its exact position-3 selected token, 24 ordered current-worktree Verilator layers, layer-23 terminal hidden row, official checkpoint/tokenizer hashes, and source/artifact closure"
+  },
+  "claim_boundary": {
+    "position4_traversal": "not run",
+    "dialogue": "not claimed",
+    "synthesis": "not run",
+    "ppa": "not measured",
+    "fpga": "not run",
+    "latency": "not measured",
+    "throughput": "not measured"
+  }
+}

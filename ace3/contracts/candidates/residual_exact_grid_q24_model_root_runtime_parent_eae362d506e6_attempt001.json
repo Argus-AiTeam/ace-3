@@ -1,0 +1,94 @@
+{
+  "schema_version": 1,
+  "attempt_id": "q24_model_root_runtime_parent_eae362d506e6_attempt001",
+  "mission_id": "eae362d506e6",
+  "kind": "delegated_parent_decoder_model_root_runtime_binding",
+  "specification": "ace3/contracts/candidates/residual_exact_grid_q24_model_root_runtime_parent_eae362d506e6_attempt001.md",
+  "baseline": "ace3/contracts/candidates/residual_exact_grid_q24_decoder_adoption_c39ca7b7722a_attempt001.json",
+  "inherited_sections": ["identities", "precision", "state", "references", "public_interface", "bindings"],
+  "authority": {
+    "basis": "later_manager_wait_resolution_and_current_operator_objective",
+    "manager_wait_resolved_at": 1788937474.7925315,
+    "older_directive_set_at": 1788933417.9750104,
+    "objective_fingerprint": "a575af38a55f9f0cdac7db22bfeeba28cbb33d6a38a55ea2d07a635843bad80d",
+    "operator_instruction": "Create a fresh project-local delegated-parent disposition that explicitly authorizes decoder/model-root Q24 implementation and runtime under the current Manager wait resolution and operator W4A16 RTL objective, while preserving the isolated scope of Q24 attempt003 and the prior no-execution adoption packet as historical evidence. Freeze source, policy, ABI, state-provenance, zero-sign/tag, rounded-FP16-view, N02/N08/N09, and L0-L8 evidence-cone identities; fail closed on FP16-only or invented parent state.",
+    "follow_on_decoder_model_root_implementation_authorized": true,
+    "follow_on_decoder_model_root_runtime_authorized": true,
+    "execution_in_this_mission": false,
+    "production_policy_adopted": false,
+    "stage_advance_authorized": false,
+    "new_manager_or_human_decision": false,
+    "independent_review": "PENDING_NORMAL_HOST_REVIEWER"
+  },
+  "selected_contract": {
+    "arithmetic_id": "ace3-residual-exact-grid-q24-v1",
+    "decoder_policy_id": "ace3-decoder-residual-exact-grid-q24-local-global-policy-v1",
+    "decoder_state_id": "ace3-decoder-residual-exact-grid-q24-state-v1",
+    "decoder_public_abi": "ace3-decoder-q24-public-abi-v1",
+    "decoder_runtime_schema": "ace3-q24-actual-runtime-v1",
+    "base_reference_policy": "ace3-w4a16-local-operator-global-binary64-authority-v3",
+    "local_reference_id": "canonical-awq-q24-residual-operator-fp16-boundary-p0-v1",
+    "global_profile": "ace3-w4a16-layer-final-binary64-fp16-excess-v1",
+    "original_independent_freeze_sha256": "03ab838054fe8318d369e8f260801c1e0193ad1c43720133afb96fbb5b90f785",
+    "claim_label": "ace3-w4a16-operators-fp16-kv-q24-residual-proposal-v1",
+    "model_id": "Qwen/Qwen2.5-0.5B-Instruct-AWQ"
+  },
+  "scope": {
+    "follow_on_layers": [0, 1, 2, 3, 4, 5, 6, 7, 8],
+    "positions": [0],
+    "token_history": [9707],
+    "hidden_size": 896,
+    "terminal_next_layer": 9,
+    "primary_surfaces": {
+      "N02": "ace3/rtl/candidates/residual_exact_grid_q24_v1/ace3_decoder_token_engine_q24_v1.sv",
+      "N08": "ace3/model/candidates/residual_exact_grid_q24_runtime_v1.py",
+      "N09": "ace3/model/candidates/run_residual_exact_grid_q24_v1.py"
+    },
+    "supporting_surfaces": ["N03", "N04", "N05", "N06", "N07", "N10", "N11"],
+    "current_execution_cone": [],
+    "excluded": ["L9-L23 execution", "later positions", "tail", "token generation", "dialogue", "hardware", "production or legacy mutation"]
+  },
+  "state_production": {
+    "origin": "authenticated_model_root_embedding_only",
+    "root_artifact": null,
+    "admitted_q24_parent": null,
+    "root_and_L0_L8_production_authorized": true,
+    "current_production": "NO_EXECUTION",
+    "nonroot_parent": "immediate_admitted_actual_paired_I_Z_H_producer",
+    "terminal_pair": "I9_Z9_H9_from_completed_admitted_L8",
+    "kv": "separate_own_layer_FP16_empty_prior_at_P0",
+    "fp16_only_nonroot_seed": false,
+    "invented_carry": false,
+    "reference_derived_carry": false,
+    "primitive_fixture_as_model_parent": false,
+    "failed_state_forwarding": false,
+    "cross_lineage_splicing": false
+  },
+  "prerequisites": [
+    "normal_Host_Reviewer_acceptance_of_this_binding",
+    "freeze_and_compile_complete_exact_candidate_public_contract_without_aliases",
+    "source_tool_binary_policy_ABI_and_original_reference_authentication",
+    "independent_software_state_admission_and_required_review_before_decoder_RTL",
+    "actual_paired_output_fed_order_with_all_mandatory_checks_before_forwarding",
+    "separate_own_layer_KV_provenance_and_lossless_completed_idle_restore",
+    "independent_oracle_and_normal_Reviewer_validation_before_advancing_capability"
+  ],
+  "preservation": {
+    "prior_adoption_runtime_authorized": false,
+    "prior_adoption_execution_cone": [],
+    "primitive_attempt": "q24_primitive_a8b9021c084b_attempt003",
+    "primitive_scope_extended": false,
+    "immutable_prior_evidence": true,
+    "unchanged_replay_authorized": false,
+    "legacy_and_production_changes": false
+  },
+  "prior_adoption_review": "/home/argustest/.argus-skill-ace3/projects/s-62150b05/handoffs/c39ca7b7722a/round-0001.json",
+  "status": {
+    "static_check": "SEE_RETAINED_VALIDATION_LOG",
+    "decoder_RTL": "NO_EXECUTION",
+    "model_state_production": "NO_EXECUTION",
+    "numerical_correctness": "NOT_EVALUATED",
+    "runtime_launch_readiness": "NOT_ESTABLISHED",
+    "independent_review": "PENDING_NORMAL_HOST_REVIEWER"
+  }
+}

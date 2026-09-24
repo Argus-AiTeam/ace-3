@@ -1,0 +1,42 @@
+{
+  "diagnostic_id": "ace3-q24-s16-l21-coordinate62-adjusted-l22-l23-suffix-v1",
+  "version": 1,
+  "input": "build/q24_s16_l21_s18_margin_sensitivity_v1_attempt001/array_equality",
+  "margin_sha256": {
+    "result.json": "334b47246ce4f8d66257f1cdbe6265fe462da6eb58923e020b5c8ac4d2bcd5bd",
+    "validation.json": "127757c73cf6784b1fa62f120c43479f42c70d9e9b6c6b2663810861f723cbdc",
+    "command.json": "6bf2ebb19047236cf9976e46543c9d146d552f9cb487bc7cc9ba502ebe64aafc"
+  },
+  "suffix_sha256": {
+    "result.json": "6d827ad412e70d59ba7bfcb28b9da056fdfc66c75299852c2645eeeab684290b",
+    "validation.json": "7555a88af5ec76546eb18288df2a9a2adbf12a8a2ceea2de5654093804c9e0ae",
+    "command.json": "0bac35d13e1aeadb5989319cf0150abf32ac48fb8dd1bbb60b35eeed71d5cebc",
+    "layer21/actual_stages.npz": "784c5af93e09f97fced8fae1fed66bcccc0ddb5f181f76bebeb9d7543ce66e49",
+    "layer21/reports.json": "b713d6a112768889915172eaa74cf8fb49faf184a4ae4a903f59f2d2f467f30c"
+  },
+  "parent_node": [21, 0, 18],
+  "index": 62,
+  "delta_Q24_units": 10103041,
+  "layers": [22, 23],
+  "focused_tests": 24,
+  "policy_id": "ace3-w4a16-local-operator-global-binary64-authority-v3",
+  "excess_budget": "1/8",
+  "reference_policy": "unchanged independently propagated original-input global reference",
+  "authentication": "Pin the corrected accepted L21 margin result, validation and command, and the accepted L15-cut/L16 suffix result and L21 arrays/reports. Bind their entire source/input closure and repository origins. Reconstruct the accepted L15 cut and frozen L16-L21 paired I/Z/H, native S16 RTZ operands, own P0/FP16 KV, all retained local/global gates and first L21/P0/S18 coordinate-62 failure read-only. Never invoke an ancestor native stage, upstream CLI/test suite or a reference generator.",
+  "counterfactual": "Only L21 final-output coordinate 62 changes: I=1592645376 -> 1602748417, exactly +10103041/2^24, H=55ef -> 55f9. All other I/H coordinates and all Z tags remain identical. Authenticate the accepted exhaustive scalar passing interval and full-vector probe: +10103040 reaches 55f8 and still fails with excess 3/16; the minimum reaches 55f9 and passes at excess 1/8. This is a labeled intervention, not a repair of frozen native L21 or its exact S18 recurrence.",
+  "arithmetic": "Unchanged native-S16-RTZ signed int64 Q24 residuals and RNE16 views. Official G128 asymmetric packed INT4, native GEMM nibble ordering, no qzero plus-one, FP16 scales/operator boundaries/KV. Q24 residual state is wider than FP16.",
+  "local_gate": "Unchanged finite AND (abs_error<=1/8 OR (relative_error<1/1000 AND ordered_FP16_ULP<=1)); denominator=max(abs(reference),2^-14). Source/operand checks and exact S12/S18 paired I/Z/H transitions are mandatory.",
+  "global_gate": "Unchanged exact abs(actual-original_binary64_reference)-nearest_FP16_representation_floor <= 1/8. Authenticate the existing L21 -> L22 -> L23 original-input reference recurrence; never reanchor it to counterfactual actual state or KV.",
+  "execution_boundary": "Sequential native CPU layers L22 then L23 only, P0 history [9707], each with its own empty prior KV. Check every stage before its consumer. Stop at the first unchanged mandatory failure and publish no failed-layer successor. Intermediate passing counterfactual state is diagnostic evidence only, never an admission or Host successor receipt. Guard alternate native entry points and external process execution.",
+  "execution": "cd /home/argustest/ace3-argus && PYTHONPATH=/home/argustest/ace3-argus /home/argustest/miniconda3/bin/python -B -m ace3.model.candidates.diagnose_q24_s16_l21_coordinate62_adjusted_l22_l23_suffix_v1 --out build/q24_s16_l21_coordinate62_adjusted_l22_l23_suffix_v1_attempt001",
+  "reproduction": "Use the identical cwd, absolute interpreter, explicit command-local PYTHONPATH and -B with --out build/q24_s16_l21_coordinate62_adjusted_l22_l23_suffix_v1_attempt001/reviewer001 or another absent immediate child. Reject existing outputs rather than replacing evidence. Each invocation parses the repository JSON contract, compiles the actual diagnostic/test Python files into the ignored output, collects and executes exactly 24 focused tests once, then authenticates and executes the bounded diagnostic once. Every candidate module and tests.test_q24_s16_toward_zero_l3_l8_v1 must resolve inside this repository. The legacy module is imported only for origin authentication; none of its 19 tests or any upstream suite executes.",
+  "artifacts": ["command.json", "compiled_0.pyc", "compiled_1.pyc", "unittest.log", "validation.json", "counterfactual_L21_state.npz", "layer22/", "layer23/ if reached", "result.json"],
+  "native_L0_L8_invocations": 0,
+  "rtl_invocations": 0,
+  "candidate_admitted": false,
+  "policy_adopted": false,
+  "successor_published": false,
+  "normal_host_review": "REQUIRED",
+  "review": "The normal independent Host Reviewer must reproduce the disclosed repo-bound plan and reject any module-origin mismatch, test count other than 24, failure/error/skip, threshold/gate/reference alteration, or forbidden native/RTL execution. Engineer verification does not constitute independent acceptance.",
+  "claim_boundary": "Non-admitting bounded CPU counterfactual evidence only. No root-cause proof, policy adoption, strict-FP16-state W4A16, new-token, full-model, RTL, simulation, synthesis, PPA, GPU, FPGA or hardware PASS. Historical failures and all bounded independent acceptances remain unchanged."
+}

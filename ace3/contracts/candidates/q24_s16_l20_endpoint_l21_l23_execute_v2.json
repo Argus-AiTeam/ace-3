@@ -1,0 +1,53 @@
+{
+  "diagnostic_id": "ace3-q24-s16-l20-endpoint-l21-l23-execute-v2",
+  "version": 2,
+  "interface": ["--check", "--execute"],
+  "focused_tests": 25,
+  "input": "build/q24_s16_l20_endpoint_l21_l23_executor_v1_attempt001",
+  "input_sha256": {
+    "diagnostic.stdout.json": "37a1c9134fcb6bf50481eaa6b84bfa4fded79e747241e0aa4c11b92e8f8800ca",
+    "result.json": "f31b3ac481cf20d4e6051128f53f90b5024fda77bb27ce1d448660578b84f12e"
+  },
+  "executor": {
+    "version": 2,
+    "candidate_order": ["minimum", "maximum"],
+    "candidate_endpoint_count": 2,
+    "coordinate": 62,
+    "position": 0,
+    "history": [9707],
+    "native_layers": [21, 22, 23],
+    "maximum_native_layer_invocations": 6,
+    "baseline": "unchanged frozen control; not executed",
+    "stop": "first mandatory failure per endpoint; BLOCKED or failed L20 precondition aborts batch",
+    "state": "copy I/Z/H; change only I[62]; preserve Z; recompute H[62] by RNE16",
+    "output": "stdout evidence only; no state archive, successor, publication or admission"
+  },
+  "policy_id": "ace3-w4a16-local-operator-global-binary64-authority-v3",
+  "local_gate": {
+    "absolute_budget": "1/8",
+    "relative_strict_bound": "1/1000",
+    "ordered_FP16_ULP": 1,
+    "relative_denominator_floor": "1/16384"
+  },
+  "excess_budget": "1/8",
+  "reference_policy": "unchanged independently propagated original-input global reference",
+  "reproduction": "cd /home/argustest/ace3-argus && PYTHONPATH=/home/argustest/ace3-argus /home/argustest/miniconda3/bin/python -B -m ace3.model.candidates.diagnose_q24_s16_l20_endpoint_l21_l23_execute_v2 --check",
+  "execution": "cd /home/argustest/ace3-argus && PYTHONPATH=/home/argustest/ace3-argus /home/argustest/miniconda3/bin/python -B -m ace3.model.candidates.diagnose_q24_s16_l20_endpoint_l21_l23_execute_v2 --execute",
+  "validation": "Compile actual repository candidate/test source closure in memory. Authenticate cwd, absolute interpreter, explicit command-local PYTHONPATH, and every imported candidate/test origin, including tests.test_q24_s16_toward_zero_l3_l8_v1. Import but never execute upstream suites. Collect and execute exactly 25 new focused tests once with zero failures/errors/skips, including frozen v1 output-record schema and tampering regression. Tests use synthetic stage producers; --check cannot execute native layers. Reconstruct authenticated v1 endpoints and original reference bindings read-only after the focused suite. Do not run the accepted 19-test suite.",
+  "authentication": "Pin both v1 artifacts before parsing; reconstruct the unchanged preparation via its read-only authentication. Bind v1 source closure, contracts, original checkpoint/canonical tensors, frozen I/Z/H, P0 KV lineage, original independently propagated reference extension and all historical evidence. Only the frozen v1 outputs use the exact path/sha256/size schema: validate the nonnegative integer size and translate it to the existing binder's bytes field in memory, preserving path, digest and size checks without changing v1 artifacts. All other bindings retain the existing bytes schema. Reject current source mismatches. Rebind every source/input before execution and at termination. No alternative reference or checkpoint.",
+  "execution_semantics": "Only --execute runs native CPU software. Evaluate minimum then maximum even if H is identical, each from a separate copy of the frozen L20 parent. No baseline or neighbor execution. Require the unchanged full-vector L20 S18 gate before dispatch. Reuse the existing native RTZ driver and independent local/global evaluators: S0-S17 local, S18 original-input binary64-v1, exact residual and own empty P0 FP16 KV checks. Each candidate stops at its first failing stage and cannot enter the next layer. A numerical suffix failure leaves the other endpoint independently testable; authentication, state, dispatch, runtime errors or a failed L20 precondition abort the batch. Preserve partial reports and attempted invocation counts on error. Maximum six native layer invocations; only L21-L23. No state files are published.",
+  "historical_boundary": "The original v1 wrapper remains BLOCKED/ACCEPTED_EXECUTOR_HAS_NO_NATIVE_EXECUTION_INTERFACE and its diagnostic remains ENDPOINT_EXECUTOR_PREFLIGHT_VALIDATED. The earlier preparation BLOCKED record and INCONCLUSIVE/L20_GLOBAL_GATE_BOUNDARY with 43 historical L21 invocations and 44 samples are unchanged. None of those are v2 invocations.",
+  "result_boundary": "EXECUTOR_READY means interface, compilation, focused tests and frozen authentication only, with zero native invocations. BOUNDED_ENDPOINTS_PASS requires both endpoints to pass all three layers, but is not admission. ENDPOINT_GATE_FAIL reports a numerical boundary and exits nonzero; BLOCKED reports an explicit error and exits nonzero. No exhaustive search, minimality proof, scientific acceptance, policy adoption or successor publication follows from focused tests. Independent normal Host Reviewer reproduction is required; the Host, not this executor, owns review.",
+  "output": "JSON on stdout and diagnostics on stderr only. Each delivery check is captured exclusively in a fresh versioned capture under build/q24_s16_l20_endpoint_l21_l23_execute_v2_attempt001. Never overwrite an existing capture. A later numerical execution must be separately selected and captured by Planner within its authorized versioned output scope.",
+  "native_invocations": 0,
+  "native_layer_invocations": 0,
+  "native_L0_L8_invocations": 0,
+  "native_L9_plus_invocations": 0,
+  "rtl_invocations": 0,
+  "candidate_admitted": false,
+  "policy_adopted": false,
+  "successor_published": false,
+  "scientific_result_claim": false,
+  "normal_host_review": "REQUIRED",
+  "claim_boundary": "Only isolated native-S16-RTZ Q24/P0 CPU software; signed int64 Q24 residual state is wider than FP16. Native G128 asymmetric INT4, native GEMM nibble order, no qzero plus-one, FP16 scales, operator boundaries and KV remain unchanged. No accepted L0-L8 replay, RTL, GPU, FPGA, hardware, simulation, synthesis, PPA, strict-FP16-state W4A16, new-token or full-model PASS. No framework, Host/global configuration, model, profile, budget, threshold, precision, reference, review-policy or ACE2 changes."
+}

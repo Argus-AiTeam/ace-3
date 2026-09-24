@@ -1,12 +1,5 @@
 # Testbenches
 
-Generation-feedback benches cover reduced tie/backpressure/fault protocol cases
-and the official 151936-by-896 Verilator traversal.
-
-`ace3_final_rmsnorm_tb.sv` captures four-state Icarus output evidence without
-opening oracle files. `ace3_final_rmsnorm_main.cpp` provides the corresponding
-Verilator capture harness.
-
 RTL testbenches, deterministic vectors, and harness source live here. Each
 testbench must identify the independent oracle and arithmetic contract it uses.
 
@@ -54,8 +47,8 @@ compares every layer-1 trace and final row after a second natural completion.
 it covers layer-1 elaboration, official vector loading, reset, and abnormal
 terminal closure without claiming a full Icarus numerical run.
 
-`make model24-layer-controller` regenerates and authenticates the fixed 24-layer
-checkpoint sequence, then runs the controller protocol under both Icarus and
-Verilator. The tests cover strict ordering, retained backpressure, layer-23-only
-completion, malformed or mismatched transactions, latched fault suppression,
-and clear recovery.
+`make model24-layer-controller` regenerates the independent 24-entry checkpoint
+sequence from the source contract, authenticates it, compiles the controller, and
+runs the Icarus protocol test. The test covers all 24 launches and checkpoints,
+retained backpressure, layer-23-only completion, malformed starts, unsolicited
+and mismatched completions, latched fault suppression, and clear recovery.

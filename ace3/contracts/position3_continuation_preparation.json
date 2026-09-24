@@ -1,0 +1,78 @@
+{
+  "schema_version": 1,
+  "contract_id": "ace3-selected-token-position3-continuation-preparation-v1",
+  "model_binding": {
+    "repository": "Qwen/Qwen2.5-0.5B-Instruct-AWQ",
+    "revision": "db09cd27ead7fee40cdee309693cf83601b9c899",
+    "checkpoint_sha256": "c50d807b7bed7ff314308972e0f4bcf4e5a70bc60ad88fc7df53940831ed0c1b",
+    "numeric_profile": "native asymmetric packed INT4 AWQ W4A16 G128, no qzero plus-one adjustment, FP16 activations and FP16 K/V"
+  },
+  "required_parents": {
+    "position2_traversal": {
+      "kind": "ace3_selected_token_position2_continuation_evidence",
+      "status": "COMPLETE",
+      "position": 2,
+      "selected_token_id": 271,
+      "natural_terminal_layers": 24
+    },
+    "position2_lm_head": {
+      "kind": "ace3_position2_live_final_rmsnorm_streaming_lm_head_evidence",
+      "status": "COMPLETE",
+      "fresh_validation_required": true,
+      "exact_parent_evidence_binding_required": true,
+      "full_vocabulary_rounded_fp16_mismatches": 0,
+      "rtl_natural_terminal_required": true
+    }
+  },
+  "position3_package": {
+    "kind": "ace3_selected_token_position3_traversal_launch_package",
+    "status": "READY",
+    "target_position": 3,
+    "prompt_token_history": [
+      151644,
+      2114,
+      271
+    ],
+    "selected_token_source": "fresh authenticated position-2 lm_head rank zero",
+    "embedding": {
+      "tensor": "model.embed_tokens.weight",
+      "dtype": "FP16",
+      "elements": 896
+    },
+    "kv_parentage": {
+      "source_position": 2,
+      "target_position": 3,
+      "layers": 24,
+      "state_profile": "FP16 K/V"
+    },
+    "required_bindings": [
+      "selected token and selected FP16 logit",
+      "prompt and traversal token histories",
+      "position-2 traversal evidence",
+      "position-2 lm_head evidence",
+      "all 24 position-2 output K/V states",
+      "all consumed source records",
+      "all consumed artifact records",
+      "materialized position-3 FP16 embedding"
+    ]
+  },
+  "fail_closed": {
+    "create_output_only_after_authentication": true,
+    "incomplete_parent_must_exit_nonzero": true,
+    "incomplete_parent_must_not_emit_ready_manifest": true,
+    "recheck_condition_required": true
+  },
+  "authority": {
+    "preparation_is_execution_authority": false,
+    "position3_execution_performed": false
+  },
+  "claim_boundary": {
+    "position3_traversal": "not executed",
+    "dialogue": "not claimed",
+    "synthesis": "not run",
+    "ppa": "not measured",
+    "fpga": "not run",
+    "latency": "not measured",
+    "throughput": "not measured"
+  }
+}

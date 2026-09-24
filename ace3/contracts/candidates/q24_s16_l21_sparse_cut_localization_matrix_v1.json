@@ -1,0 +1,67 @@
+{
+  "diagnostic_id": "ace3-q24-s16-l21-sparse-cut-localization-matrix-v1",
+  "version": 1,
+  "schema_version": 1,
+  "cwd": "/home/argustest/ace3-argus",
+  "evidence": {
+    "census_source": {
+      "path": "/home/argustest/ace3-argus/ace3/model/candidates/diagnose_q24_s16_l21_from_l20_s18_failure_census_v1.py",
+      "sha256": "a8faef5d1deb15803357bc952b0bc4c177b23e044a6a30299d5f29d79599c2f7"
+    },
+    "census_review": {
+      "path": "/home/argustest/.argus-skill-ace3/projects/s-62150b05/handoffs/ecf478e49bef/round-0001.json",
+      "sha256": "4ccd955f1460ad654f3ce190ec4e9ac28605923f8591e6dfa01ec2ad7dd7defc"
+    },
+    "closure_review": {
+      "path": "/home/argustest/.argus-skill-ace3/projects/s-62150b05/handoffs/beb6029db7e6/round-0001.json",
+      "sha256": "54a9c456f9d5974d3f068107d0db5a1c713e4ece86155c1f837a41d9bfc69862"
+    },
+    "closure_execution_review": {
+      "path": "/home/argustest/.argus-skill-ace3/projects/s-62150b05/handoffs/7ea8d7751111/round-0002.json",
+      "sha256": "7cca77afcdf5152def3af188d714a25398e16cef611810070acca406fb1fb183"
+    },
+    "closure_result": {
+      "path": "/home/argustest/ace3-argus/build/q24_s16_l13_l15_l21_sparse_cut_suffix_closure_v1_attempt002/result.json",
+      "sha256": "60c8fde2c388d1ce696b92b8741287098791a5bf0376cf81624b8c73b82f1f14"
+    },
+    "closure_read_only_result": {
+      "path": "/home/argustest/ace3-argus/build/q24_s16_l13_l15_l21_sparse_cut_suffix_closure_v1_review002/result.json",
+      "sha256": "9aa36bd44774071263c0ef9eb9fc4098b148ba3c3d7de0ac23b14e293d0b5246"
+    }
+  },
+  "controls": ["frozen_inherited", "frozen_inherited_o", "frozen_inherited_down", "frozen_inherited_o_down", "scratch", "scratch_down", "mapped62", "mapped_all", "inherited_native"],
+  "node": [21, 0, 18],
+  "coordinate": 62,
+  "coordinates_per_control": 896,
+  "policy_id": "ace3-w4a16-local-operator-global-binary64-authority-v3",
+  "profile_id": "ace3-w4a16-layer-final-binary64-fp16-excess-v1",
+  "reference_policy": "legacy-binary64-AWQ-fully-independent-propagation",
+  "excess_budget": "1/8",
+  "local_threshold": "finite AND (absolute_error <= 0.125 OR (relative_error < 0.001 AND ordered_FP16_ULP <= 1)); denominator max(abs(reference), 2^-14)",
+  "closure_revision": 2,
+  "closure_attempt": "attempt002",
+  "interface": ["--check"],
+  "output": "stdout JSON only; no file writes",
+  "command_sidecar": "PYTHONPATH=/home/argustest/ace3-argus PYTHONDONTWRITEBYTECODE=1 /home/argustest/miniconda3/bin/python -B -m ace3.model.candidates.diagnose_q24_s16_l21_sparse_cut_localization_matrix_v1 --check",
+  "expected_tests": 22,
+  "flags": {
+    "native_layer_invocations": 0,
+    "native_L0_L21_invocations": 0,
+    "native_L0_L20_invocations": 0,
+    "native_L0_L23_invocations": 0,
+    "rtl_invocations": 0,
+    "hardware_invocations": 0,
+    "simulation_invocations": 0,
+    "reference_recomputation": false,
+    "reference_reanchoring": false,
+    "accepted_prefix_replay": false,
+    "original_prefix_replay": false,
+    "candidate_admitted": false,
+    "policy_adopted": false,
+    "successor_published": false
+  },
+  "normal_host_review": "REQUIRED",
+  "comparison_scope": "Shared separately executed sparse-cut suffix comparator, not a paired intervention on any census control. Margin differences are arithmetic contrasts, not causal effects or per-control closure certifications.",
+  "authentication_scope": "Hash-bound certified census source and independent reviews; reuse only the census read-only authenticator, not its tests. Authenticate revision2 attempt002 and review002 results, validation, source/contract origins, all recorded input files, raw reports/state/local-reference/KV artifacts and separate adjusted states. Source/operand/state/KV/RTZ gate PASS facts are authenticated retained evidence, not newly executed scientific gates.",
+  "claim_boundary": "Bounded CPU-software non-admission evidence only. Q24 residual state is wider than FP16; native G128 asymmetric packed INT4 weights, GEMM nibble ordering, no qzero plus-one, FP16 scales/operator boundaries/KV and S16 RTZ are unchanged. No prefix replay, native dispatch, RTL, hardware, simulation, reference recomputation/re-anchoring or successor publication. No unique cause, repair, strict-FP16-state W4A16, new-token or full-model admission is established. Independent Host Reviewer acceptance is required. Shared separately executed sparse-cut suffix comparator, not a paired intervention on any census control. Margin differences are arithmetic contrasts, not causal effects or per-control closure certifications."
+}

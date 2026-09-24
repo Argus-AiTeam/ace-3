@@ -4,6 +4,7 @@
 from __future__ import annotations
 
 import argparse
+import gzip
 import hashlib
 import json
 import math
@@ -26,6 +27,7 @@ from model24_execution_oracle import (
     FIXED_CHAT_MESSAGES,
     FIXED_CHAT_SERIALIZATION,
     FIXED_CHAT_TOKEN_IDS,
+    OFFICIAL_TOP_K,
     TOKENIZER_CONFIG_SHA256,
     TOKENIZER_SHA256,
     Model24TokenDecisionHost,
@@ -82,6 +84,14 @@ MODEL24_BINDING_RELATIVE_PATH = (
 MODEL24_BINDING_SHA256 = (
     "79389eda61e1bf2b59cf93f834bb6705d38cede797aa07479fc029109c150df1"
 )
+REPAIR8_RESULT_SHA256 = (
+    "da2c696b9701e86944ddfb22a28bb51f99f64a55bbe6e325aa58da7bc7d420c9"
+)
+REPAIR8_SOURCE_TOKEN_ID = 2114
+POSITION2_TARGET_TOKEN_ID = 271
+REPAIR8_KV_AXES = ("batch", "sequence", "kv_head", "head_dim")
+REPAIR8_KV_SHAPE = (1, 2, KEY_VALUE_HEADS, HEAD_DIM)
+REPAIR8_KV_STAGES = (6, 7)
 
 
 @dataclass
@@ -105,6 +115,16 @@ class LayerState:
     reference_v: torch.Tensor
 
 
+@dataclass(frozen=True)
+class Repair8Position2Kv:
+    layer_id: int
+    k_bits: np.ndarray
+    v_bits: np.ndarray
+    reference_k: torch.Tensor
+    reference_v: torch.Tensor
+    contract: dict[str, Any]
+
+
 class DialogueExecutionError(RuntimeError):
     """Raised when dialogue execution or evidence validation fails."""
 
@@ -112,6 +132,411 @@ class DialogueExecutionError(RuntimeError):
 def _dialogue_require(condition: bool, message: str) -> None:
     if not condition:
         raise DialogueExecutionError(message)
+
+
+def _dialogue_file_record(path: Path) -> dict[str, Any]:
+    resolved = path.resolve(strict=True)
+    payload = resolved.read_bytes()
+    return {
+        "path": str(resolved),
+        "bytes": len(payload),
+        "sha256": _sha256_bytes(payload),
+    }
+
+
+def _verify_record(path: Path, record: Mapping[str, Any], label: str) -> dict[str, Any]:
+    actual = _dialogue_file_record(path)
+    _dialogue_require(
+        record.get("bytes") == actual["bytes"]
+        and record.get("sha256") == actual["sha256"],
+        f"{label} hash binding mismatch",
+    )
+    return actual
+
+
+def _parse_repair8_semantic_kv(
+    payload: bytes,
+    layer_id: int,
+) -> tuple[dict[int, list[int]], dict[int, str]]:
+    rows = {stage: [] for stage in REPAIR8_KV_STAGES}
+    values = {stage: [] for stage in REPAIR8_KV_STAGES}
+    lines = payload.splitlines()
+    _dialogue_require(
+        len(lines) == 2 * KEY_VALUE_HEADS * HEAD_DIM,
+        f"layer {layer_id} semantic K/V record count mismatch",
+    )
+    for ordinal, raw in enumerate(lines):
+        _dialogue_require(
+            len(raw) == 18,
+            f"layer {layer_id} semantic K/V row malformed",
+        )
+        try:
+            owner = int(raw[0:2], 16)
+            slot = int(raw[2:4], 16)
+            position = int(raw[4:8], 16)
+            stage = int(raw[8:10], 16)
+            index = int(raw[10:14], 16)
+            value = int(raw[14:18], 16)
+        except ValueError as error:
+            raise DialogueExecutionError(
+                f"layer {layer_id} semantic K/V row is not hexadecimal"
+            ) from error
+        expected_stage = REPAIR8_KV_STAGES[ordinal % 2]
+        _dialogue_require(
+            owner == layer_id and slot == 0,
+            f"layer {layer_id} semantic K/V owner mismatch",
+        )
+        _dialogue_require(
+            position == 0,
+            f"layer {layer_id} semantic K/V position mismatch",
+        )
+        _dialogue_require(
+            stage == expected_stage and index == ordinal // 2,
+            f"layer {layer_id} semantic K/V transposition or ordering mismatch",
+        )
+        rows[stage].append(
+            f"00{position:04x}{stage:02x}{index:04x}{value:04x}\n".encode(
+                "ascii"
+            )
+        )
+        values[stage].append(value)
+    return values, {
+        stage: _sha256_bytes(b"".join(rows[stage]))
+        for stage in REPAIR8_KV_STAGES
+    }
+
+
+def _parse_repair8_trace_kv(
+    path: Path,
+    layer_id: int,
+) -> tuple[dict[int, list[int]], dict[int, str], str]:
+    rows = {stage: [] for stage in REPAIR8_KV_STAGES}
+    values = {stage: [] for stage in REPAIR8_KV_STAGES}
+    with gzip.open(path, "rb") as stream:
+        payload = stream.read()
+    kv_ordinal = 0
+    for raw in payload.splitlines():
+        _dialogue_require(
+            len(raw) == 16,
+            f"layer {layer_id} trace row malformed",
+        )
+        try:
+            position = int(raw[2:6], 16)
+            stage = int(raw[6:8], 16)
+            index = int(raw[8:12], 16)
+            value = int(raw[12:16], 16)
+        except ValueError as error:
+            raise DialogueExecutionError(
+                f"layer {layer_id} trace row is not hexadecimal"
+            ) from error
+        if stage not in REPAIR8_KV_STAGES:
+            continue
+        expected_stage = REPAIR8_KV_STAGES[kv_ordinal % 2]
+        _dialogue_require(
+            position == 1,
+            f"layer {layer_id} trace K/V position mismatch",
+        )
+        _dialogue_require(
+            stage == expected_stage and index == kv_ordinal // 2,
+            f"layer {layer_id} trace K/V transposition or ordering mismatch",
+        )
+        rows[stage].append(raw + b"\n")
+        values[stage].append(value)
+        kv_ordinal += 1
+    expected_elements = KEY_VALUE_HEADS * HEAD_DIM
+    _dialogue_require(
+        all(len(values[stage]) == expected_elements for stage in REPAIR8_KV_STAGES),
+        f"layer {layer_id} trace K/V head cardinality mismatch",
+    )
+    return (
+        values,
+        {
+            stage: _sha256_bytes(b"".join(rows[stage]))
+            for stage in REPAIR8_KV_STAGES
+        },
+        _sha256_bytes(payload),
+    )
+
+
+def validate_repair8_position2_kv(imported: Repair8Position2Kv) -> None:
+    contract = imported.contract
+    _dialogue_require(
+        tuple(contract.get("axes", ())) == REPAIR8_KV_AXES,
+        "repair8 K/V axis contract mismatch",
+    )
+    _dialogue_require(
+        tuple(contract.get("shape", ())) == REPAIR8_KV_SHAPE,
+        "repair8 K/V GQA shape mismatch",
+    )
+    _dialogue_require(
+        contract.get("batch_size") == 1
+        and contract.get("sequence_length") == 2
+        and contract.get("kv_heads") == KEY_VALUE_HEADS
+        and contract.get("head_dim") == HEAD_DIM,
+        "repair8 K/V geometry contract mismatch",
+    )
+    for label, tensor in (("K", imported.k_bits), ("V", imported.v_bits)):
+        _dialogue_require(
+            tensor.dtype == np.dtype("<u2") and tensor.shape == REPAIR8_KV_SHAPE,
+            f"repair8 {label} cache tensor shape mismatch",
+        )
+    for label, tensor in (
+        ("reference K", imported.reference_k),
+        ("reference V", imported.reference_v),
+    ):
+        _dialogue_require(
+            tensor.dtype == torch.float64
+            and tuple(tensor.shape) == REPAIR8_KV_SHAPE,
+            f"repair8 {label} cache tensor shape mismatch",
+        )
+    _dialogue_require(
+        contract.get("flattening")
+        == "batch-major, sequence-major, kv-head-major, head-dim-minor",
+        "repair8 K/V flattening contract mismatch",
+    )
+    _dialogue_require(
+        contract.get("target_token_id") == POSITION2_TARGET_TOKEN_ID
+        and contract.get("source_positions") == [0, 1]
+        and contract.get("target_position") == 2,
+        "repair8 K/V token/position contract mismatch",
+    )
+    _dialogue_require(
+        contract.get("k_tensor_sha256")
+        == _sha256_bytes(_canonical_bytes(imported.k_bits))
+        and contract.get("v_tensor_sha256")
+        == _sha256_bytes(_canonical_bytes(imported.v_bits)),
+        "repair8 K/V tensor hash mismatch",
+    )
+
+
+def load_repair8_position2_kv(
+    repair8_root: Path,
+    layer_id: int,
+    target_token_id: int,
+    *,
+    expected_result_sha256: str = REPAIR8_RESULT_SHA256,
+) -> Repair8Position2Kv:
+    _dialogue_require(
+        0 <= layer_id < LAYER_COUNT,
+        "repair8 K/V layer index mismatch",
+    )
+    _dialogue_require(
+        target_token_id == POSITION2_TARGET_TOKEN_ID,
+        "repair8 K/V target token mismatch",
+    )
+    root = repair8_root.resolve(strict=True)
+    result_path = root / "result.json"
+    result_payload = result_path.read_bytes()
+    _dialogue_require(
+        _sha256_bytes(result_payload) == expected_result_sha256,
+        "repair8 result SHA256 mismatch",
+    )
+    result = _json_without_duplicates(result_payload, result_path.name)
+    _dialogue_require(
+        result.get("schema") == "ace3-position1-model24-causal-traversal-v2"
+        and result.get("checkpoint_sha256") == CHECKPOINT_SHA256
+        and result.get("selected_token") == REPAIR8_SOURCE_TOKEN_ID
+        and result.get("position") == 1
+        and result.get("natural_terminal_layers") == LAYER_COUNT,
+        "repair8 result identity mismatch",
+    )
+    layers = result.get("layers")
+    _dialogue_require(
+        isinstance(layers, list)
+        and [layer.get("layer_index") for layer in layers]
+        == list(range(LAYER_COUNT)),
+        "repair8 result layer ordering mismatch",
+    )
+    layer = layers[layer_id]
+
+    semantic_dir = root / "semantic_kv"
+    manifest_path = semantic_dir / f"layer{layer_id:02d}.json"
+    payload_path = semantic_dir / f"layer{layer_id:02d}.hex"
+    readback_path = semantic_dir / f"layer{layer_id:02d}.readback.hex"
+    trace_path = (
+        root
+        / f"execution/transactions/position001/layer{layer_id:02d}/raw/trace.hex.gz"
+    )
+    state_dir = root / f"execution/states/layer{layer_id:02d}/position002"
+    state_path = state_dir / "state"
+    envelope_path = state_dir / "envelope.json"
+
+    manifest_record = _verify_record(
+        manifest_path, layer["semantic_kv_manifest"], f"layer {layer_id} K/V manifest"
+    )
+    payload_record = _verify_record(
+        payload_path, layer["semantic_kv_payload"], f"layer {layer_id} K/V payload"
+    )
+    readback_record = _verify_record(
+        readback_path,
+        layer["semantic_kv_readback"],
+        f"layer {layer_id} K/V readback",
+    )
+    _dialogue_require(
+        payload_path.read_bytes() == readback_path.read_bytes(),
+        f"layer {layer_id} semantic K/V readback mismatch",
+    )
+    manifest_payload = manifest_path.read_bytes()
+    manifest = _json_without_duplicates(manifest_payload, manifest_path.name)
+    _dialogue_require(
+        manifest.get("schema") == "ace3-semantic-kv-preload-v1"
+        and manifest.get("layer_index") == layer_id
+        and manifest.get("cache_slot") == 0
+        and manifest.get("source_position") == 0
+        and manifest.get("execution_position") == 1
+        and manifest.get("execution_token") == REPAIR8_SOURCE_TOKEN_ID,
+        f"layer {layer_id} semantic K/V manifest identity mismatch",
+    )
+    _dialogue_require(
+        manifest.get("model_binding", {}).get("checkpoint_sha256")
+        == CHECKPOINT_SHA256,
+        f"layer {layer_id} semantic K/V model mismatch",
+    )
+    _dialogue_require(
+        manifest.get("tensor_binding")
+        == {
+            "key": "trace-stage-6-rotated-key-fp16",
+            "ordering": "kv-head-major-dimension-minor",
+            "value": "trace-stage-7-value-fp16",
+        },
+        f"layer {layer_id} semantic K/V transposition contract mismatch",
+    )
+    _dialogue_require(
+        manifest.get("payload")
+        == {
+            "path": payload_path.name,
+            "bytes": payload_record["bytes"],
+            "sha256": payload_record["sha256"],
+        },
+        f"layer {layer_id} semantic K/V payload manifest mismatch",
+    )
+
+    transaction = layer.get("transaction", {})
+    trace_record = _verify_record(
+        trace_path,
+        transaction.get("trace", {}).get("storage", {}),
+        f"layer {layer_id} position-1 trace",
+    )
+    state_record = _verify_record(
+        state_path,
+        {
+            "bytes": transaction.get("state_bytes"),
+            "sha256": transaction.get("state_sha256"),
+        },
+        f"layer {layer_id} position-2 state",
+    )
+    envelope_record = _dialogue_file_record(envelope_path)
+    envelope_payload = envelope_path.read_bytes()
+    envelope = _json_without_duplicates(envelope_payload, envelope_path.name)
+    _dialogue_require(
+        envelope.get("layer_index") == layer_id
+        and envelope.get("next_position") == 2
+        and envelope.get("model_binding", {}).get("checkpoint_sha256")
+        == CHECKPOINT_SHA256
+        and envelope.get("state", {}).get("bytes") == state_record["bytes"]
+        and envelope.get("state", {}).get("sha256") == state_record["sha256"],
+        f"layer {layer_id} position-2 state envelope mismatch",
+    )
+
+    position0_values, position0_hashes = _parse_repair8_semantic_kv(
+        readback_path.read_bytes(), layer_id
+    )
+    parent_kv = {
+        "elements_each": KEY_VALUE_HEADS * HEAD_DIM,
+        "format": "FP16",
+        "k_sha256": position0_hashes[6],
+        "v_sha256": position0_hashes[7],
+    }
+    _dialogue_require(
+        manifest.get("parent_kv") == parent_kv
+        and layer.get("semantic_parent_kv") == parent_kv
+        and layer.get("independent_reference", {}).get("inherited_parent_kv")
+        == parent_kv,
+        f"layer {layer_id} position-0 K/V hash binding mismatch",
+    )
+    position1_values, position1_hashes, trace_payload_sha256 = (
+        _parse_repair8_trace_kv(trace_path, layer_id)
+    )
+    _dialogue_require(
+        transaction.get("trace", {}).get("sha256") == trace_payload_sha256,
+        f"layer {layer_id} position-1 trace payload hash mismatch",
+    )
+
+    k_bits = np.asarray(
+        position0_values[6] + position1_values[6], dtype="<u2"
+    ).reshape(REPAIR8_KV_SHAPE)
+    v_bits = np.asarray(
+        position0_values[7] + position1_values[7], dtype="<u2"
+    ).reshape(REPAIR8_KV_SHAPE)
+    reference_k = torch.from_numpy(k_bits.view("<f2").astype(np.float64))
+    reference_v = torch.from_numpy(v_bits.view("<f2").astype(np.float64))
+    contract = {
+        "schema_version": 1,
+        "kind": "ace3_repair8_position2_kv_import",
+        "layer_id": layer_id,
+        "axes": list(REPAIR8_KV_AXES),
+        "shape": list(REPAIR8_KV_SHAPE),
+        "flattening": (
+            "batch-major, sequence-major, kv-head-major, head-dim-minor"
+        ),
+        "batch_size": 1,
+        "sequence_length": 2,
+        "kv_heads": KEY_VALUE_HEADS,
+        "head_dim": HEAD_DIM,
+        "source_positions": [0, 1],
+        "target_position": 2,
+        "target_token_id": target_token_id,
+        "checkpoint_sha256": CHECKPOINT_SHA256,
+        "repair8_result_sha256": expected_result_sha256,
+        "k_tensor_sha256": _sha256_bytes(_canonical_bytes(k_bits)),
+        "v_tensor_sha256": _sha256_bytes(_canonical_bytes(v_bits)),
+        "positions": [
+            {
+                "position": 0,
+                "k_rows_sha256": position0_hashes[6],
+                "v_rows_sha256": position0_hashes[7],
+            },
+            {
+                "position": 1,
+                "k_rows_sha256": position1_hashes[6],
+                "v_rows_sha256": position1_hashes[7],
+            },
+        ],
+        "sources": {
+            "result": _dialogue_file_record(result_path),
+            "semantic_manifest": manifest_record,
+            "semantic_payload": payload_record,
+            "semantic_readback": readback_record,
+            "position1_trace": trace_record,
+            "position2_state": state_record,
+            "position2_envelope": envelope_record,
+        },
+    }
+    imported = Repair8Position2Kv(
+        layer_id=layer_id,
+        k_bits=k_bits,
+        v_bits=v_bits,
+        reference_k=reference_k,
+        reference_v=reference_v,
+        contract=contract,
+    )
+    validate_repair8_position2_kv(imported)
+    return imported
+
+
+def install_repair8_position2_kv(
+    state: LayerState,
+    imported: Repair8Position2Kv,
+) -> None:
+    validate_repair8_position2_kv(imported)
+    _dialogue_require(
+        state.layer_id == imported.layer_id,
+        "repair8 K/V import layer mismatch",
+    )
+    state.primary_k = imported.k_bits[0].copy()
+    state.primary_v = imported.v_bits[0].copy()
+    state.reference_k = imported.reference_k[0].clone()
+    state.reference_v = imported.reference_v[0].clone()
 
 
 def _binding_path() -> Path:
@@ -146,6 +571,18 @@ def _authenticate_model24_binding(path: Path) -> dict[str, Any]:
         "checkpoint_sha256": inputs["checkpoint_sha256"],
         "tokenizer_sha256": inputs["tokenizer_sha256"],
         "tokenizer_config_sha256": inputs["tokenizer_config_sha256"],
+    }
+
+
+def official_tokenizer_binding() -> dict[str, Any]:
+    return {
+        "repository": MODEL_REPOSITORY,
+        "revision": MODEL_REVISION,
+        "tokenizer_artifact": "tokenizer.json",
+        "tokenizer_sha256": TOKENIZER_SHA256,
+        "config_artifact": "tokenizer_config.json",
+        "tokenizer_config_sha256": TOKENIZER_CONFIG_SHA256,
+        "eos_token_id": EOS_TOKEN_ID,
     }
 
 
@@ -865,7 +1302,7 @@ def execute_dialogue(
         prompt_ids,
         max_new_tokens=max_new_tokens,
     )
-    return {
+    document = {
         "schema_version": 1,
         "kind": EVIDENCE_KIND,
         "model_binding": {
@@ -883,11 +1320,7 @@ def execute_dialogue(
             ),
             "tied_lm_head": "model.embed_tokens.weight",
         },
-        "tokenizer_binding": {
-            "tokenizer_sha256": TOKENIZER_SHA256,
-            "tokenizer_config_sha256": TOKENIZER_CONFIG_SHA256,
-            "eos_token_id": EOS_TOKEN_ID,
-        },
+        "tokenizer_binding": official_tokenizer_binding(),
         "prompt": {
             "messages": messages,
             "serialization": prompt,
@@ -924,6 +1357,8 @@ def execute_dialogue(
             "throughput": "not measured",
         },
     }
+    document["binding_lineage"] = create_binding_lineage(document)
+    return document
 
 
 def _is_sha256(value: Any) -> bool:
@@ -932,6 +1367,67 @@ def _is_sha256(value: Any) -> bool:
         and len(value) == 64
         and all(character in "0123456789abcdef" for character in value)
     )
+
+
+def create_binding_lineage(document: Mapping[str, Any]) -> dict[str, Any]:
+    model = document["model_binding"]
+    tokenizer = document["tokenizer_binding"]
+    prompt = document["prompt"]
+    generation = document["generation"]
+    return {
+        "schema_version": 1,
+        "model_repository": model["repository"],
+        "model_revision": model["revision"],
+        "checkpoint_sha256": model["checkpoint"]["sha256"],
+        "accepted_model24_execution_binding_sha256": model[
+            "accepted_model24_execution_binding"
+        ]["sha256"],
+        "tokenizer_sha256": tokenizer["tokenizer_sha256"],
+        "tokenizer_config_sha256": tokenizer["tokenizer_config_sha256"],
+        "model_binding_sha256": _sha256_bytes(_canonical_json(model)),
+        "tokenizer_binding_sha256": _sha256_bytes(_canonical_json(tokenizer)),
+        "prompt_record_sha256": _sha256_bytes(_canonical_json(prompt)),
+        "generated_token_ids_sha256": _sha256_bytes(
+            _canonical_json(generation["generated_token_ids"])
+        ),
+        "generation_record_sha256": _sha256_bytes(_canonical_json(generation)),
+    }
+
+
+def validate_binding_lineage(document: Mapping[str, Any]) -> dict[str, Any]:
+    model = document.get("model_binding", {})
+    checkpoint = model.get("checkpoint", {})
+    _dialogue_require(
+        model.get("repository") == MODEL_REPOSITORY
+        and model.get("revision") == MODEL_REVISION
+        and checkpoint.get("filename") == "model.safetensors"
+        and checkpoint.get("sha256") == CHECKPOINT_SHA256
+        and checkpoint.get("bytes") == CHECKPOINT_SIZE,
+        "official checkpoint lineage binding mismatch",
+    )
+    expected_execution_binding = {
+        "path": MODEL24_BINDING_RELATIVE_PATH,
+        "sha256": MODEL24_BINDING_SHA256,
+        "kind": "ace3_model24_execution_vector_bindings",
+        "checkpoint_sha256": CHECKPOINT_SHA256,
+        "tokenizer_sha256": TOKENIZER_SHA256,
+        "tokenizer_config_sha256": TOKENIZER_CONFIG_SHA256,
+    }
+    _dialogue_require(
+        model.get("accepted_model24_execution_binding")
+        == expected_execution_binding,
+        "accepted Model24 execution lineage binding mismatch",
+    )
+    _dialogue_require(
+        document.get("tokenizer_binding") == official_tokenizer_binding(),
+        "official tokenizer lineage binding mismatch",
+    )
+    expected_lineage = create_binding_lineage(document)
+    _dialogue_require(
+        document.get("binding_lineage") == expected_lineage,
+        "host/dialogue record lineage hash mismatch",
+    )
+    return expected_lineage
 
 
 def validate_document(
@@ -945,6 +1441,8 @@ def validate_document(
 ) -> dict[str, Any]:
     _dialogue_require(document.get("schema_version") == 1, "schema version mismatch")
     _dialogue_require(document.get("kind") == expected_kind, "evidence kind mismatch")
+    if document.get("kind") == EVIDENCE_KIND:
+        validate_binding_lineage(document)
     model = document["model_binding"]
     checkpoint = model["checkpoint"]
     _dialogue_require(
@@ -975,6 +1473,15 @@ def validate_document(
         _dialogue_require(
             prompt["token_ids"] == list(expected_prompt_token_ids),
             "fixed prompt token IDs mismatch",
+        )
+    if document.get("kind") == EVIDENCE_KIND:
+        _dialogue_require(
+            prompt["messages"]
+            == [
+                {"role": role, "content": content}
+                for role, content in FIXED_CHAT_MESSAGES
+            ],
+            "fixed prompt message lineage mismatch",
         )
     if tokenizer is not None:
         _dialogue_require(
@@ -1117,6 +1624,30 @@ def validate_document(
             f"step {ordinal} logits comparison failed",
         )
         token = step["token"]
+        top_k = token["top_k"]
+        _dialogue_require(
+            token["vocab_size"] == OFFICIAL_CONFIG["vocab_size"]
+            and len(top_k) == OFFICIAL_TOP_K
+            and [entry["rank"] for entry in top_k] == list(range(OFFICIAL_TOP_K))
+            and len({entry["token_id"] for entry in top_k}) == OFFICIAL_TOP_K
+            and all(
+                type(entry["token_id"]) is int
+                and 0 <= entry["token_id"] < OFFICIAL_CONFIG["vocab_size"]
+                and type(entry["logit_f16_bits"]) is int
+                and 0 <= entry["logit_f16_bits"] <= 0xFFFF
+                and type(entry["logit_q24"]) is int
+                for entry in top_k
+            )
+            and top_k
+            == sorted(
+                top_k,
+                key=lambda entry: (-entry["logit_q24"], entry["token_id"]),
+            )
+            and token["argmax_token_id"] == top_k[0]["token_id"]
+            and token["argmax_decoded_token"] == top_k[0]["decoded_token"]
+            and token["tie_break"] == "lowest token_id",
+            f"step {ordinal} top-k evidence mismatch",
+        )
         _dialogue_require(
             token["argmax_matches_independent_reference"]
             and token["argmax_token_id"]
@@ -1172,6 +1703,17 @@ def validate_document(
                 for token_id in generated_ids[: step["ordinal"] + 1]
                 if token_id != EOS_TOKEN_ID
             ]
+            _dialogue_require(
+                all(
+                    entry["decoded_token"]
+                    == tokenizer.decode(
+                        [entry["token_id"]],
+                        skip_special_tokens=False,
+                    )
+                    for entry in step["token"]["top_k"]
+                ),
+                f"step {step['ordinal']} top-k decode mismatch",
+            )
             _dialogue_require(
                 step["token"]["decoded_text_after_step"]
                 == tokenizer.decode(prefix, skip_special_tokens=False),

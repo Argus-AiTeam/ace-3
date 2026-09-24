@@ -4,7 +4,8 @@
 module ace3_awq_w4a16_projection_engine #(
     parameter integer IN_FEATURES = 896,
     parameter integer OUT_FEATURES = 896,
-    parameter integer BIAS_ENABLE = 0
+    parameter integer BIAS_ENABLE = 0,
+    parameter integer SINGLE_ROUND_BIAS = 0
 ) (
     input  wire                 clk_i,
     input  wire                 rst_ni,
@@ -96,6 +97,13 @@ module ace3_awq_w4a16_projection_engine #(
     wire [15:0] biased_f16_w;
     wire bias_invalid_w;
     wire bias_saturation_w;
+    wire signed [40:0] bias_q24_w;
+    wire bias_finite_w;
+    wire bias_sign_unused_w;
+    wire signed [101:0] exact_biased_accumulator_w;
+    wire [15:0] exact_biased_f16_w;
+    wire exact_bias_overflow_w;
+    wire selected_bias_invalid_w;
     wire [13:0] requested_output_limit_w;
     wire start_config_valid_w;
 
@@ -142,6 +150,11 @@ module ace3_awq_w4a16_projection_engine #(
     assign cross_sum_w =
         cross_accumulator_q + lane_accumulator_extended_w;
     assign final_invalid_w = cross_invalid_q || lane_invalid_w;
+    // Keep the dot exact through bias addition; acc_q53_48_o remains pre-bias.
+    assign exact_biased_accumulator_w = cross_accumulator_q +
+        $signed({{37{bias_q24_w[40]}}, bias_q24_w, 24'd0});
+    assign selected_bias_invalid_w = (SINGLE_ROUND_BIAS != 0)
+        ? !bias_finite_w : bias_invalid_w;
 
     assign out_valid_o = out_valid_q;
     assign out_channel_o = out_channel_q;
@@ -179,7 +192,8 @@ module ace3_awq_w4a16_projection_engine #(
     );
 
     ace3_q47_48_to_f16_rne #(
-        .ACC_WIDTH(102)
+        .ACC_WIDTH(102),
+        .IEEE_F16(SINGLE_ROUND_BIAS)
     ) final_rounder (
         .fixed_i(cross_sum_w),
         .f16_o(final_f16_w),
@@ -192,6 +206,22 @@ module ace3_awq_w4a16_projection_engine #(
         .sum_f16_o(biased_f16_w),
         .invalid_operand_o(bias_invalid_w),
         .saturation_o(bias_saturation_w)
+    );
+
+    ace3_fp16_to_q24 decode_exact_bias (
+        .f16_i(bias_f16_i),
+        .q24_o(bias_q24_w),
+        .finite_o(bias_finite_w),
+        .sign_o(bias_sign_unused_w)
+    );
+
+    ace3_q47_48_to_f16_rne #(
+        .ACC_WIDTH(102),
+        .IEEE_F16(1)
+    ) exact_bias_rounder (
+        .fixed_i(exact_biased_accumulator_w),
+        .f16_o(exact_biased_f16_w),
+        .saturation_o(exact_bias_overflow_w)
     );
 
     always @(posedge clk_i or negedge rst_ni) begin
@@ -288,10 +318,13 @@ module ace3_awq_w4a16_projection_engine #(
                     if (bias_valid_i && bias_ready_o) begin
                         state_q <= ST_OUTPUT;
                         out_valid_q <= 1'b1;
-                        out_invalid_q <= out_invalid_q || bias_invalid_w;
-                        if (out_invalid_q || bias_invalid_w) begin
+                        out_invalid_q <= out_invalid_q || selected_bias_invalid_w;
+                        if (out_invalid_q || selected_bias_invalid_w) begin
                             out_f16_q <= 16'h0000;
                             out_saturation_q <= 1'b0;
+                        end else if (SINGLE_ROUND_BIAS != 0) begin
+                            out_f16_q <= exact_biased_f16_w;
+                            out_saturation_q <= exact_bias_overflow_w;
                         end else begin
                             out_f16_q <= biased_f16_w;
                             out_saturation_q <=

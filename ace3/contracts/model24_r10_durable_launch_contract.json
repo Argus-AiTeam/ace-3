@@ -1,0 +1,85 @@
+{
+  "schema_version": 1,
+  "contract_id": "ace3-model24-r10-durable-launch-contract-v1",
+  "validation_modes": {
+    "package": {
+      "receipt_namespace": "absent",
+      "review_namespace": "absent",
+      "authority_namespace": "absent",
+      "output_namespace": "absent"
+    },
+    "review": {
+      "receipt_namespace": "absent",
+      "review_namespace": "absent or exactly review.json bound to the sealed package",
+      "authority_namespace": "absent",
+      "output_namespace": "absent"
+    },
+    "launch": {
+      "receipt_namespace": "exact active task receipt and task-local stdout/stderr log directory",
+      "review_namespace": "exactly one accepted review.json",
+      "authority_namespace": "exact execution authority bound to the accepted review and package",
+      "output_namespace": "exclusive-created empty directory"
+    }
+  },
+  "canonical_durable_runner_order": [
+    "write starting task receipt",
+    "fork durable worker",
+    "create task log directory and stdout.log/stderr.log",
+    "start child launcher",
+    "write running task receipt"
+  ],
+  "accepted_review": {
+    "filename": "review.json",
+    "required_verdict": "ACCEPT",
+    "required_bound_hashes": [
+      "package_manifest_sha256",
+      "package_seal_sha256",
+      "review_request_sha256",
+      "launcher_sha256",
+      "validator_sha256",
+      "launch_contract_sha256"
+    ],
+    "package_acceptance_is_execution_authority": false
+  },
+  "execution_authority_schema": {
+    "additional_properties": false,
+    "required_fields": [
+      "schema_version",
+      "kind",
+      "nonce",
+      "task_id",
+      "package_acceptance_path",
+      "package_acceptance_sha256",
+      "package_manifest_sha256",
+      "package_seal_sha256",
+      "launcher_argv",
+      "cardinality",
+      "manager_exactly_once_directive"
+    ],
+    "hash_bindings": {
+      "package_acceptance_sha256": "SHA-256 of accepted review.json",
+      "package_manifest_sha256": "SHA-256 of package.json",
+      "package_seal_sha256": "SHA-256 of seal.json"
+    }
+  },
+  "terminal_accountability": {
+    "create": "exclusive",
+    "fsync_file": true,
+    "fsync_directory": true,
+    "required_bindings": [
+      "run_id",
+      "first_failure_phase",
+      "package_manifest",
+      "package_seal",
+      "package_acceptance",
+      "execution_authority",
+      "durable_receipt",
+      "durable_stdout",
+      "durable_stderr",
+      "controller_terminal",
+      "controller_stdout",
+      "controller_stderr",
+      "output_files_before_terminal"
+    ]
+  }
+}
