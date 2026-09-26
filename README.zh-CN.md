@@ -4,8 +4,9 @@
 
 > **继续工作或恢复现场：** 请先阅读 [AGENTS.md](AGENTS.md) 和
 > [中文接续说明](docs/continuation/HANDOFF.zh-CN.md)。带日期的
-> [进度快照](docs/continuation/progress-2026-09-24.json) 同时保留已验收与
-> 被拒绝/受阻的历史，不宣称科学链路已经恢复。
+> [9 月 26 日进度快照](docs/continuation/progress-2026-09-26.json) 记录了
+> CPU 实算恢复及两次独立审核通过的 **REJECTED** 实验；这不是方法成功或硬件成果。
+> 详见[结果与发布边界](docs/results/STAGE11_REJECTED_20260926.md)。
 
 ACE-3 MP 是一个面向 Transformer 推理、以证据为先的混合精度加速器项目。
 首个实现配置针对官方 Qwen2.5-0.5B-Instruct AWQ 检查点，采用 W4A16 执行。

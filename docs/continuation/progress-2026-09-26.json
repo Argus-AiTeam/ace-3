@@ -1,0 +1,48 @@
+{
+  "schema": "ace-public-progress/v2",
+  "project": "ACE3",
+  "observed_utc": "2026-09-26T13:11:25.984013+00:00",
+  "live_state_may_advance": true,
+  "public_summary_is_authoritative_receipt": false,
+  "reviewed_release": {
+    "mission_id": "287d994f2fe4",
+    "normal_review_status": "done",
+    "review": {
+      "relative_host_path": "handoffs/287d994f2fe4/round-0005.json",
+      "bytes": 690,
+      "sha256": "cb7e9729c91deb5e95b8227cd79270702ab61ca7b457ae4d7de4d24c2540ed1a",
+      "raw_published": false
+    },
+    "native_completed_utc": "2026-09-26T06:10:30.516844+00:00"
+  },
+  "scientific_execution_restored": true,
+  "scientific_method_supported": false,
+  "campaign_complete": false,
+  "scientific_results": "../results/STAGE11_REJECTED_20260926.json",
+  "source_snapshot_manifest": "source-manifest-2026-09-26.json",
+  "later_control_regression": "Completed temporary release-repair steering caused repeated unnecessary preparation. Withdrawn; real Planner selected retained-evidence analysis at 2026-09-26T13:00:12Z.",
+  "active_at_snapshot": [
+    {
+      "id": "b85dfd1cf827",
+      "status": "running",
+      "title": "Implementing retained-only Stage11 finite-response contribution ledger"
+    }
+  ],
+  "continuation_rule": "Discover current live state; do not rerun completed recovery, consumed experiments, or old one-use publishers.",
+  "equal_mirrors": [
+    "https://github.com/aHappend/ace-3",
+    "https://github.com/Argus-AiTeam/ace-3"
+  ],
+  "checkpoint_ref": "refs/tags/checkpoint-2026-09-26-source",
+  "completed_evidence_analysis": {
+    "mission_id": "49cf9563ea12",
+    "normal_review_status": "done",
+    "review": {
+      "relative_host_path": "handoffs/49cf9563ea12/round-0001.json",
+      "bytes": 690,
+      "sha256": "a7b8d3d9129ed6718645b51f723fb2516afef0daac9f26957a3287e011f23cb9",
+      "raw_published": false
+    },
+    "native_completed_utc": "2026-09-26T13:08:48.531891+00:00"
+  }
+}

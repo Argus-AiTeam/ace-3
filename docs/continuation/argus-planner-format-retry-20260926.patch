@@ -1,0 +1,165 @@
+--- a/argus_skill/planner/planner.py
++++ b/argus_skill/planner/planner.py
+@@ -2,7 +2,8 @@
+ 
+ The Planner works in the project directory read-only, chooses the next work, and
+ records a process decision event. The legacy key-value parser remains for in-flight
+-sessions; Engineer owns implementation.
++sessions; Engineer owns implementation. Malformed completion output gets one
++repair turn before an explicit planning error, never an inferred task or success.
+ """
+ 
+ from __future__ import annotations
+@@ -32,6 +33,7 @@
+ TASK_SCOPE_BOUNDED = "bounded"
+ TASK_SCOPE_FINAL_SUBMISSION = "final_submission"
+ NO_CONCRETE_TASKS_ERROR = "planner said not done but produced no concrete tasks"
++MISSING_COMPLETION_MARKER_ERROR = "planner missing key-value completion marker"
+ FORBIDDEN_BARE_VERDICT_ERROR = "planner used a forbidden bare launch verdict"
+ INVALID_DEPENDENCY_IDENTIFIER_ERROR = "invalid planner task dependency identifier"
+ PROSE_ONLY_FINAL_SUBMISSION_SCOPE_ERROR = (
+@@ -453,6 +455,7 @@
+         parser_validation_error = str(rejection or "").startswith(
+             ("invalid planner task metadata:", "planner task ")
+         ) or rejection == INVALID_DEPENDENCY_IDENTIFIER_ERROR
++        malformed_completion = rejection == MISSING_COMPLETION_MARKER_ERROR
+         repairable_metadata_error = parser_validation_error or str(
+             rejection or ""
+         ).startswith(MISSING_STAGE_DECISION_ERROR)
+@@ -460,10 +463,11 @@
+             rejection == NO_CONCRETE_TASKS_ERROR
+             or rejection == FORBIDDEN_BARE_VERDICT_ERROR
+             or repairable_metadata_error
++            or malformed_completion
+             or open_ended_done
+         ):
+             rejected_thread_id = str(getattr(result, "thread_id", "") or "")
+-            if not parser_validation_error and not rejected_thread_id:
++            if not (parser_validation_error or malformed_completion) and not rejected_thread_id:
+                 return verdict
+             return self._repair_no_task_verdict(
+                 previous_raw_text=text,
+@@ -471,7 +475,7 @@
+                 options=planner_options,
+                 planning_cycle=planning_cycle,
+                 resume_thread_id=(
+-                    None if parser_validation_error else rejected_thread_id
++                    None if parser_validation_error or malformed_completion else rejected_thread_id
+                 ),
+                 open_ended=bool(cfg.open_ended),
+                 required_stage=(
+@@ -925,7 +929,7 @@
+             project_done=False,
+             reason=(reason or "planner omitted the PROJECT_DONE key-value completion marker"),
+             raw_text=text,
+-            error="planner missing key-value completion marker",
++            error=MISSING_COMPLETION_MARKER_ERROR,
+         )
+     waiting = _key_value_bool(values.get("WAITING", ""))
+     waiting_contract = None
+--- a/tests/planner/test_planner.py
++++ b/tests/planner/test_planner.py
+@@ -1,9 +1,13 @@
+ from __future__ import annotations
+ 
++import pytest
++
+ from argus_skill.core.models import RunnerResult
++from argus_skill.core.role_decision import latest_role_decision
+ from argus_skill.planner.planner import (
+     FORBIDDEN_BARE_VERDICT_ERROR,
+     INVALID_DEPENDENCY_IDENTIFIER_ERROR,
++    MISSING_COMPLETION_MARKER_ERROR,
+     MISSING_STAGE_DECISION_ERROR,
+     NO_CONCRETE_TASKS_ERROR,
+     OPEN_ENDED_PROJECT_DONE_ERROR,
+@@ -636,6 +640,89 @@
+     assert INVALID_DEPENDENCY_IDENTIFIER_ERROR in runner.calls[1]["prompt"]
+ 
+ 
++@pytest.mark.parametrize("thread_id", ["planner-thread", None])
++def test_plan_next_repairs_malformed_role_decision(monkeypatch, thread_id) -> None:
++    malformed = (
++        'ARGUS_ROLE_DECISION={"role":"planner","payload":'
++        '{"project_done":false,"tasks":[]}}}'
++    )
++    assert latest_role_decision(
++        RunnerResult(exit_code=0, agent_messages=[malformed]), "planner"
++    ) is None
++    rejected = parse_planner_text(malformed)
++    assert rejected.error == MISSING_COMPLETION_MARKER_ERROR
++    assert not rejected.project_done
++    assert rejected.new_tasks == []
++
++    class Runner:
++        def __init__(self):
++            self.calls = []
++
++        def run_exec(self, **kwargs):
++            self.calls.append(kwargs)
++            text = (
++                malformed
++                if len(self.calls) == 1 else
++                'ARGUS_ROLE_DECISION={"role":"planner","payload":'
++                '{"project_done":false,"advance_to_stage":"delivery","tasks":['
++                '{"key":"repair","title":"Repair selection timing",'
++                '"objective":"Compare the native completion event timestamp.",'
++                '"scope":"bounded"}]}}'
++            )
++            return RunnerResult(exit_code=0, thread_id=thread_id, agent_messages=[text])
++
++    runner = Runner()
++    monkeypatch.setattr(
++        Planner, "_build_planner_prompt",
++        staticmethod(lambda **kwargs: "original planner prompt"),
++    )
++    verdict = Planner(runner).plan_next(
++        continuous_objective="repair the release consumer",
++        config=PlannerConfig(
++            working_dir="/tmp/project", current_stage="delivery", require_stage_decision=True,
++        ),
++    )
++    assert verdict.error == ""
++    assert [task.key for task in verdict.new_tasks] == ["repair"]
++    assert len(runner.calls) == 2
++    assert runner.calls[1]["resume_thread_id"] is None
++    assert MISSING_COMPLETION_MARKER_ERROR in runner.calls[1]["prompt"]
++    assert malformed in runner.calls[1]["prompt"]
++    assert "Do not use tools or inspect the project again" in runner.calls[1]["prompt"]
++    options = runner.calls[1]["options"]
++    assert options is runner.calls[0]["options"]
++    assert options.sandbox_mode == "read-only"
++    assert options.dangerous_yolo is False
++    assert options.full_auto is False
++
++
++def test_plan_next_reports_malformed_completion_after_bounded_repair(monkeypatch) -> None:
++    monkeypatch.setattr(
++        Planner, "_build_planner_prompt",
++        staticmethod(lambda **kwargs: "original planner prompt"),
++    )
++    malformed = (
++        'ARGUS_ROLE_DECISION={"role":"planner","payload":'
++        '{"project_done":false,"tasks":[]}}}'
++    )
++    for messages in (
++        ["not a decision", "still not a decision"],
++        [malformed, malformed],
++    ):
++        runner = _SequenceRunner(messages)
++        verdict = Planner(runner).plan_next(
++            continuous_objective="repair the release consumer",
++            config=PlannerConfig(working_dir="/tmp/project"),
++        )
++        assert len(runner.calls) == 2
++        assert runner.calls[1]["resume_thread_id"] is None
++        assert "repair exhausted after 1 attempt" in verdict.error
++        assert MISSING_COMPLETION_MARKER_ERROR in verdict.error
++        assert not verdict.project_done
++        assert verdict.new_tasks == []
++        assert verdict.raw_text == "\n\n--- planner repair attempt ---\n\n".join(messages)
++
++
+ def test_plan_next_repairs_missing_staged_advance(monkeypatch) -> None:
+     runner = _SequenceRunner([
+         "\n".join(

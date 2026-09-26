@@ -517,6 +517,15 @@ def _load_runtime():
     return diagnose_q24_s16_final_head_final_rmsnorm_unselected_direct_hidden_mlp_stage17_stage13_rmsnorm_full_vector_suffix_intervention_v1
 
 
+@contextmanager
+def _guarded_runtime_sources(runtime, audit):
+    sources = {**runtime.parent.source_context(),
+               "stage13_suffix": capture.binding(runtime.SOURCE),
+               "stage13_tests": capture.binding(runtime.TEST)}
+    with runtime.guards.no_writes(audit), runtime.parent.no_dispatch(audit):
+        yield sources
+
+
 class LaunchClaimError(ValueError, RuntimeError):
     """Claim rejection compatible with both candidate and captured-launch callers."""
 
@@ -627,6 +636,17 @@ def validate_launch_claim(preflight):
         raise LaunchClaimError(f"{type(error).__name__}: {error}") from error
 
 
+def verify_captured_command(out, preflight, launch):
+    """Verify the shared capture's framed command and complete launch identity."""
+    capture.verify_command(
+        capture.decode_command_file(out.with_name("check.command.txt").read_bytes()),
+        json.loads(out.with_name("check.argv.json").read_bytes()),
+        preflight["environment"],
+        launch["argv"],
+        launch["environment"],
+    )
+
+
 def execution_authorization():
     """Consume, never emit, external authority and the shared retained capture."""
     _require(Path.cwd() == ROOT and sys.dont_write_bytecode and not sys.flags.optimize,
@@ -637,12 +657,9 @@ def execution_authorization():
              "byte-exact shared capture required")
     _require(os.readlink("/proc/self/fd/2") == str(out.with_name("check.stderr")), "stderr capture")
     preflight = json.loads(out.with_name("check.environment.json").read_bytes())
-    validate_launch_claim(preflight)
-    declaration = validate_execution_authorization(preflight)
+    declaration = prepare_execution(preflight)
     launch = declaration["launch"]
-    capture.verify_command(out.with_name("check.command.txt").read_text(),
-                           json.loads(out.with_name("check.argv.json").read_bytes()),
-                           preflight["environment"], launch["argv"], launch["environment"])
+    verify_captured_command(out, preflight, launch)
     return declaration, preflight
 
 
@@ -676,6 +693,12 @@ def validate_execution_authorization(preflight):
     """Read-only evidence gates; captured launch additionally requires runtime context."""
     envelope = preflight["execution_authorization"]
     declaration = _execution_declaration(envelope)
+    sealed = release.document(declaration["current_release_contract"])
+    sources, members = release.validate_preparation_contract(sealed)
+    _require(release.same(declaration.get("runtime_sources"), sources),
+             "execution runtime_sources missing or spliced")
+    _require(release.same(declaration.get("reference_members"), members),
+             "execution reference_members missing or spliced")
     contract = declaration["contract"]
     _contract(contract)
     # The reviewed scientific identity keeps its historical source pins. The
@@ -726,6 +749,12 @@ def validate_execution_authorization(preflight):
     _require(origin_review["mission_id"] not in (launch["mission_id"], review["mission_id"]),
              "independent Manager-origin evidence review required")
     return declaration
+
+
+def prepare_execution(preflight):
+    """The real launch's data-only boundary, before capture or scientific dispatch."""
+    validate_launch_claim(preflight)
+    return validate_execution_authorization(preflight)
 
 
 def _identity_for_contract(contract):
@@ -781,9 +810,7 @@ def check(audit=None):
     _require(str(runtime.native.torch.tensor(0).device) == "cpu", "CPU-only execution")
     _require(contract["controls"] == list(runtime.CONTROLS), "retained controls changed")
     oracle = runtime.shared.load_module(runtime.TEST, NAME + "_reviewed_final_oracle")
-    with runtime.guards.no_writes(audit), runtime.parent.no_dispatch(audit):
-        sources = {**runtime.parent.source_context(), "stage13_suffix": capture.binding(runtime.SOURCE),
-                   "stage13_tests": capture.binding(runtime.TEST)}
+    with _guarded_runtime_sources(runtime, audit) as sources:
         _require(sources == declaration["runtime_sources"], "reviewed runtime source bytes changed")
         original = runtime.direct.authenticate()
         result, baseline, references, files = runtime.retained.authenticate()

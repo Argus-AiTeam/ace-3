@@ -137,6 +137,17 @@ def verify_command(command, argv, environment, expected_argv, expected_environme
     return environment_command(dict(sorted(environment.items())), argv)
 
 
+def decode_command_file(data):
+    """Remove exactly the one LF used to frame a retained command member."""
+    if (not isinstance(data, bytes) or not data.endswith(b"\n")
+            or data.endswith((b"\n\n", b"\r\n"))):
+        raise RuntimeError("capture command file requires one terminal LF")
+    try:
+        return data[:-1].decode("utf-8")
+    except UnicodeDecodeError as error:
+        raise RuntimeError("capture command file is not UTF-8") from error
+
+
 def verify_launch_identity(actual, expected):
     """Preserve every launch field; only environment-key order is immaterial."""
     if not isinstance(actual, dict) or not isinstance(expected, dict):
@@ -400,9 +411,16 @@ def _execute(argv, cwd, environment, out, err, timeout):
 
 
 def run_command(directory, label, argv, preflight, results, timeout=90):
-    """Append a sealed result before raising on command/stderr/launch/timeout failure."""
+    """Require explicit cwd; seal command/stderr/launch/timeout failures before raising.
+
+    Malformed cwd records fail before file creation; filesystem cwd failures
+    retain the normal launch-error result and byte framing.
+    """
     if not label or any(c not in "abcdefghijklmnopqrstuvwxyz0123456789-" for c in label):
         raise ValueError("invalid capture label")
+    cwd = preflight.get("cwd")
+    if not isinstance(cwd, str) or not cwd or "\0" in cwd:
+        raise ValueError("capture preflight requires a nonempty cwd string without NUL")
     directory = Path(directory)
     command = environment_command(preflight["environment"], argv)
     command_bytes, env_bytes = (command + "\n").encode(), encoded(preflight)
@@ -413,7 +431,7 @@ def run_command(directory, label, argv, preflight, results, timeout=90):
         for stream, data in zip(streams[:3], (command_bytes, encoded(argv), env_bytes), strict=True):
             _write(stream, data)
         status, timed_out, launch_error = _execute(
-            argv, preflight["cwd"], preflight["environment"], streams[3], streams[4], timeout)
+            argv, cwd, preflight["environment"], streams[3], streams[4], timeout)
         output, error = paths[3].read_bytes(), paths[4].read_bytes()
         _write(streams[5], b"COMMAND\n" + command_bytes + b"ENVIRONMENT\n" + env_bytes
                + b"\nSTDOUT\n" + output + b"\nSTDERR\n" + error

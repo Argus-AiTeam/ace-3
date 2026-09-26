@@ -1,5 +1,6 @@
 """Synthetic arrays only; never enter --check or load the real native runtime."""
 
+import ast
 import builtins
 import copy
 import hashlib
@@ -18,12 +19,16 @@ import numpy as np
 import pytest
 
 from ace3.model.candidates import diagnose_q24_s16_final_head_final_rmsnorm_unselected_direct_hidden_mlp_stage17_stage11_attention_output_suffix_candidate_v1 as d
+from ace3.model.candidates import q24_s16_final_head_from_l23_coordinate62_suffix_execution_v1 as parent
 from tests.test_stage11_current_runtime_release import case, clone, production, SEMANTIC_DEFECTS
+
+
+REAL_POPEN = subprocess.Popen
 
 
 @pytest.fixture(autouse=True)
 def zero_invocations(monkeypatch, record_property):
-    counts = {"scientific": 0, "model": 0, "producer": 0, "service": 0}
+    counts = dict.fromkeys(d.release.ZERO_KINDS, 0)
 
     def denied(kind):
         def call(*args, **kwargs):
@@ -52,7 +57,7 @@ def zero_invocations(monkeypatch, record_property):
 
     def profile(frame, event, arg):
         if (event == "call" and frame.f_globals.get("__name__") == d.__name__
-                and frame.f_code.co_name in ("check", "execution_authorization", "_load_runtime")):
+                and frame.f_code.co_name in ("check", "_load_runtime")):
             counts["scientific"] += 1
             raise AssertionError("real execution/authority/runtime path entered")
 
@@ -63,7 +68,23 @@ def zero_invocations(monkeypatch, record_property):
         sys.setprofile(prior_profile)
         for kind, count in counts.items():
             record_property("forbidden_" + kind, count)
-    assert counts == {"scientific": 0, "model": 0, "producer": 0, "service": 0}
+    assert counts == dict.fromkeys(d.release.ZERO_KINDS, 0)
+
+
+@pytest.fixture
+def preparation_guard(monkeypatch, zero_invocations):
+    def denied(kind):
+        def call(*args, **kwargs):
+            zero_invocations[kind] += 1
+            raise AssertionError("pre-science preparation dispatched " + kind)
+        return call
+    for name, kind in (
+        ("compute_step", "numerical"), ("suffix_only", "numerical"),
+        ("_bound_reference", "reference"), ("_bound_replacement_stage11", "reference"),
+    ):
+        monkeypatch.setattr(d, name, denied(kind))
+    monkeypatch.setattr(parent.preflight.parent, "execute", denied("prefix"))
+    monkeypatch.setattr(d.Candidate, "run_suffix", denied("admission"))
 
 
 def synthetic_pin(role, data=None):
@@ -802,18 +823,62 @@ def test_executor_output_census_rejects_omissions(defect):
         d.output_census(controls, all_outputs, all_reports, rows)
 
 
+def test_source_authentication_precedes_real_dispatch_guard(
+        monkeypatch, zero_invocations):
+    entered = []
+
+    @contextmanager
+    def no_writes(audit):
+        entered.append(("no_writes", audit["forbidden_calls"]))
+        yield
+
+    runtime = SimpleNamespace(
+        parent=parent,
+        guards=SimpleNamespace(no_writes=no_writes),
+        SOURCE=parent.SOURCE,
+        TEST=parent.TEST,
+    )
+    audit = {"forbidden_calls": 0}
+    monkeypatch.setattr(subprocess, "Popen", REAL_POPEN)
+    with d._guarded_runtime_sources(runtime, audit) as sources:
+        assert entered == [("no_writes", 0)]
+        assert sources[parent.MODULE] == parent.record(parent.SOURCE)
+        assert sources["stage13_suffix"] == d.capture.binding(parent.SOURCE)
+        assert sources["stage13_tests"] == d.capture.binding(parent.TEST)
+        with pytest.raises(
+                RuntimeError,
+                match="decoder/prefix/admission/reference/external dispatch forbidden"):
+            parent.source_context()
+        with pytest.raises(
+                RuntimeError,
+                match="decoder/prefix/admission/reference/external dispatch forbidden"):
+            parent.preflight.parent.execute(None)
+    assert audit == {"forbidden_calls": 2}
+    assert all(value == 0 for value in zero_invocations.values())
+
+
 @pytest.fixture
 def authorization_fixture(case, monkeypatch):
     """Exact emitter serialization; only the future claim/review are virtual."""
     release = d.release
-    output, documents, unchanged = release.validate_after_claim(
-        case["put"](case["request_path"], case["request"]))
-    for name, raw in zip(release.OUTPUTS, documents):
-        case["virtual"][str(output / name)] = raw
-    unchanged()
-    declaration = json.loads(documents[1])
-    issuance = json.loads(documents[2])
-    envelope = json.loads(documents[3])
+    reserved = []
+    def reserve(output):
+        assert not reserved
+        reserved.append(output)
+    def exclusive(path, raw):
+        assert reserved == [path.parent]
+        assert str(path) not in case["virtual"]
+        case["virtual"][str(path)] = raw
+    original_pin = release.pin
+    with monkeypatch.context() as transport:
+        transport.setattr(release, "reserve_issuance", reserve)
+        transport.setattr(release, "exclusive", exclusive)
+        transport.setattr(release, "pin", lambda path: release.pin_bytes(
+            path, case["virtual"][str(path)]) if str(path) in case["virtual"] else original_pin(path))
+        emitted = release.emit_after_claim(case["put"](case["request_path"], case["request"]))
+    declaration = release.document(emitted["execution-authorization.json"])
+    issuance = release.document(emitted["manager-issuance.json"])
+    envelope = release.document(emitted["envelope.json"])
     launch = declaration["launch"]
     monkeypatch.setattr(d, "os", SimpleNamespace(
         environ=launch["environment"], getuid=lambda: launch["uid"]))
@@ -833,6 +898,7 @@ def authorization_fixture(case, monkeypatch):
         return release.pin_bytes(pin["path"], raw)
 
     preflight = {"execution_authorization": envelope, "mission_id": launch["mission_id"],
+                 "cwd": launch["cwd"], "uid": launch["uid"],
                  "sources": [release.pin(d.SOURCE), release.pin(d.TEST)],
                  "environment": launch["environment"],
                  "capture_implementation": d.capture.implementation_pins(),
@@ -858,6 +924,140 @@ def test_running_claim_accepts_actual_emitter_declaration_and_retained_lineage(
     assert d.validate_launch_claim(f.preflight) == f.envelope
     assert d.validate_execution_authorization(f.preflight) == f.declaration
     assert f.envelope["review"]["mission_id"] != f.preflight["mission_id"]
+    assert all(value == 0 for value in zero_invocations.values())
+
+
+def test_preparation_consumes_real_emitter_complete_contract(
+        authorization_fixture, zero_invocations, preparation_guard, monkeypatch):
+    f = authorization_fixture
+    declaration = d.prepare_execution(f.preflight)
+    expected = d.release.proposal_context()
+    assert declaration["reference_members"] == d.release.REFERENCE_MEMBERS
+    # Discover the production import closure from source, without executing
+    # model imports. Exercise the real parent census over these module origins,
+    # not pytest's partial, collection-order-dependent import set.
+    runtime_name = expected["expected_runtime_sources"]["stage13_suffix"]["path"]
+    pending = [d.MODULE, "ace3.model.candidates." + d.Path(runtime_name).stem]
+    modules = {}
+    while pending:
+        name = pending.pop()
+        path = d.ROOT.joinpath(*name.split(".")).with_suffix(".py")
+        if name in modules or not path.is_file():
+            continue
+        modules[name] = SimpleNamespace(__file__=str(path))
+        for node in ast.parse(path.read_bytes()).body:
+            if isinstance(node, ast.Import):
+                pending.extend(alias.name for alias in node.names
+                               if alias.name.startswith("ace3."))
+            elif (isinstance(node, ast.ImportFrom) and node.module
+                  and node.module.startswith("ace3.")):
+                pending.extend([node.module, *(
+                    node.module + "." + alias.name for alias in node.names)])
+    with monkeypatch.context() as source_reader:
+        source_reader.setattr(subprocess, "Popen", REAL_POPEN)
+        source_reader.setattr(sys, "modules", {
+            **{name: module for name, module in sys.modules.items()
+               if name != "ace3" and not name.startswith("ace3.")},
+            **modules,
+        })
+        sources = {**parent.source_context(),
+                   "stage13_suffix": d.capture.binding(d.Path(runtime_name)),
+                   "stage13_tests": d.capture.binding(
+                       d.ROOT / "tests" / ("test_" + d.Path(runtime_name).name))}
+    assert declaration["runtime_sources"] == sources == expected["expected_runtime_sources"]
+    assert all(value == 0 for value in zero_invocations.values())
+
+
+@pytest.mark.parametrize("field", ["runtime_sources", "reference_members"])
+@pytest.mark.parametrize("defect", ["missing", "empty", "splice", "incomplete"])
+@pytest.mark.parametrize("target", ["declaration", "contract"])
+def test_preparation_rejects_incomplete_or_spliced_interface(
+        authorization_fixture, zero_invocations, preparation_guard, field, defect, target):
+    f = authorization_fixture
+    value = f.declaration if target == "declaration" else copy.deepcopy(f.case["contract"])
+    if defect == "missing":
+        del value[field]
+    elif defect == "empty":
+        value[field] = {}
+    elif defect == "splice":
+        value[field][next(iter(value[field]))] = "spliced"
+    else:
+        value[field].pop(next(iter(value[field])))
+    if target == "contract":
+        f.case["rebind_contract"](value)
+    else:
+        f.rebind()
+    with pytest.raises(ValueError):
+        d.prepare_execution(f.preflight)
+    assert all(count == 0 for count in zero_invocations.values())
+
+
+@pytest.mark.parametrize("defect", [
+    None, "missing-lf", "extra-lf", "crlf", "invalid-utf8",
+    "command", "argv", "environment", "environment-extra", "environment-missing",
+    "suffix", "space",
+])
+def test_execution_authorization_consumes_shared_command_framing(
+        authorization_fixture, zero_invocations, monkeypatch, tmp_path, defect):
+    f = authorization_fixture
+    launch = f.declaration["launch"]
+    preflight = f.preflight
+    with monkeypatch.context() as transport:
+        run = tmp_path / "run"
+        run.mkdir()
+        results = []
+        calls = []
+
+        def no_dispatch(argv, cwd, environment, out, err, timeout):
+            assert argv == launch["argv"]
+            assert cwd == launch["cwd"]
+            assert environment == launch["environment"]
+            calls.append((argv, cwd, environment))
+            return 0, False, None
+
+        transport.setattr(d.capture, "_execute", no_dispatch)
+        d.capture.run_command(run, "check", launch["argv"], preflight, results)
+        command = run / "check.command.txt"
+        if defect == "missing-lf":
+            command.write_bytes(command.read_bytes()[:-1])
+        elif defect == "extra-lf":
+            command.write_bytes(command.read_bytes() + b"\n")
+        elif defect == "crlf":
+            command.write_bytes(command.read_bytes()[:-1] + b"\r\n")
+        elif defect == "invalid-utf8":
+            command.write_bytes(command.read_bytes()[:-1] + b"\xff\n")
+        elif defect == "command":
+            command.write_bytes(b"HOME=/changed /synthetic/python --check\n")
+        elif defect == "argv":
+            (run / "check.argv.json").write_bytes(
+                d.capture.encoded([*launch["argv"], "--changed"]))
+        elif defect in ("environment", "environment-extra", "environment-missing"):
+            changed = copy.deepcopy(preflight)
+            if defect == "environment":
+                changed["environment"]["HOME"] = "/changed"
+            elif defect == "environment-extra":
+                changed["environment"]["UNAUTHORIZED"] = "1"
+            else:
+                changed["environment"].pop(next(iter(changed["environment"])))
+            (run / "check.environment.json").write_bytes(d.capture.encoded(changed))
+        elif defect in ("suffix", "space"):
+            command.write_bytes(command.read_bytes()[:-1]
+                                + (b" arbitrary\n" if defect == "suffix" else b" \n"))
+
+        observed_preflight = d.capture.decode_retained(
+            (run / "check.environment.json").read_bytes())
+        if defect is None:
+            assert d.validate_launch_claim(observed_preflight) == f.envelope
+            assert d.validate_execution_authorization(observed_preflight) == f.declaration
+            assert d.verify_captured_command(
+                run / "check.stdout", observed_preflight, launch) is None
+        else:
+            with pytest.raises((RuntimeError, ValueError)):
+                d.verify_captured_command(run / "check.stdout", observed_preflight, launch)
+    assert len(results) == 1
+    assert len(calls) == 1
+    assert results[0]["exit_status"] == 0
+    assert "launch_error" not in results[0]
     assert all(value == 0 for value in zero_invocations.values())
 
 

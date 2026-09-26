@@ -4,8 +4,10 @@
 
 > **Continue or recover this work:** start with [AGENTS.md](AGENTS.md) and the
 > [Chinese continuation handoff](docs/continuation/HANDOFF.zh-CN.md). The dated
-> [progress snapshot](docs/continuation/progress-2026-09-24.json) preserves both
-> accepted and rejected/blocked history without claiming science restoration.
+> [September 26 progress snapshot](docs/continuation/progress-2026-09-26.json)
+> records restored CPU execution and two independently reviewed **REJECTED**
+> experiments, not a supported method or hardware result. See the
+> [results and publication boundary](docs/results/STAGE11_REJECTED_20260926.md).
 
 ACE-3 MP is an evidence-first mixed-precision accelerator project for
 transformer inference. Its first implementation profile targets the official

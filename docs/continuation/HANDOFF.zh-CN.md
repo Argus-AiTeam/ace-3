@@ -1,112 +1,68 @@
 # ACE-3 跨对话接续说明
 
-源码快照时间：**2026-09-24T16:50:59Z**；live state 读取时间：
-**2026-09-24T16:58:55Z**。live state 可能在此后继续前进。
+本次快照日期：**2026-09-26**。准确观察时间与当时任务见
+[progress-2026-09-26.json](progress-2026-09-26.json)，不要把快照当成实时状态。
 
-## GitHub 双镜像
+## 已完成的事实，不是要重做的任务
 
-两个仓库地位完全相同，每次发布都必须由 `aHappend` 同步更新：
+- 发布修复 `287d994f2fe4`、接续 `0426fd273809` 已独立审核并 native DONE。
+- `b4978b898600` 真正执行一次 CPU 数值检查，结果 **REJECTED**；有 63 次
+  local oracle、27 次 projection、9 次 final norm 和 9 次 selected-pair head。
+- `6738b75d0cc8` 的 v2 S18 边界实验也真实执行并独立审核，结果
+  **boundary_only_explanation_rejected**，18 项终态方向中恢复数为 0。
+- 后来的 `bb4f1b293dda` 是 **UNKNOWN_NOT_RUN**，不是第三个数值结果。
 
-- 个人：<https://github.com/aHappend/ace-3>
-- 团队：<https://github.com/Argus-AiTeam/ace-3>
-- 分支：`main`
-- 不可变日期 checkpoint：`refs/tags/checkpoint-2026-09-24-source`
-- checkpoint commit：`2b4eaeeec8280a2398ef9311fb606e28a2b5e850`
+这说明执行接口已恢复，不说明被检验的方法成功、项目完成或硬件可用。
+数值边界仍是 width896、pair `[34319,13]`、L23/P0，native S16 RTZ、G128 INT4、
+FP16 operator/KV、宽于 FP16 的 Q24 residual；不能宣称 strict-FP16-state W4A16。
 
-发布后必须核对两个远端的 commit 和 tree 相同。Git push 不是事务；如果只成功
-一个，必须如实记录 partial sync，并继续补齐另一个，不能声称已经双同步。
+随后发生过过期修复指令驱动的重复 v6 发布准备。该临时指令已撤下，13:00 UTC
+真实启动了基于两份 REJECTED 证据的后续分析。**不要再次创建“fresh v6 binding”
+仅为满足已完成的旧 checklist。** 新计算应由具体的新假设或诊断问题决定；
+新源码/权限准备仅在该任务确实需要时进行。失败和负结果必须保留。
 
-## 新对话可直接复制的 starter prompt
+## 新对话 starter prompt
 
 ```text
-请先阅读仓库 AGENTS.md、docs/continuation/HANDOFF.zh-CN.md 和
-progress-2026-09-24.json。先发现 live Argus daemon/status/runtime/backlog/
-current claim/最近 native events/normal Reviewer handoff/registry 与 terminal
-outputs；不要从 ambient checkout 猜 runtime。若 worker 或 mission 正在运行，
-不要重启、重复执行或抢 ownership，等待合法 terminal。通过 normal Manager
-沟通；Argus 负责 science、实现、运行与独立 review，我只提出目标并核对真实
-receipts。只有 issuer binding、normal Reviewer 和 native terminal acceptance
-才算完成。先报告 live state 相对快照发生了什么变化，再继续任务。
+先读 AGENTS.md、HANDOFF.zh-CN.md、progress-2026-09-26.json 和本次结果摘要。
+在原主机运行 python tools/argus_continuation.py inspect，核对实际 runtime、
+backlog、最近独立 Reviewer 和 native terminal，不从旧对话猜当前任务。
+已经完成的恢复指令、科学尝试和旧 publisher 都不能重放。运行中的任务不要
+打断或复制。通过正常 Manager 路径选择真正未完成的研究任务；从实际 REJECTED
+结果出发，避免无具体研究依赖的发布/授权循环。先说明 live state 相对快照的变化。
 ```
 
-## 同机丢对话：首选恢复路径
+原主机 workdir 为 `/home/argustest/ace3-argus`，state root 为
+`/home/argustest/.argus-skill-ace3/projects/s-62150b05`。这些只是定位信息，
+不是固定 launch command。原始 review/receipt 必须从主机核验。
 
-1. 在原主机和本仓库运行 `python tools/argus_continuation.py inspect`。默认
-   命令只读：它核对 daemon PID、从 `daemon.status.json` 发现实际 runtime，
-   并列出 backlog、active mission 和最近 native event。
-2. 再直接读取 state root 下的 `backlog.jsonl`、`events.jsonl`、
-   `handoffs/<mission>/round-*.json`、`continuous.json` 与 terminal output。
-   daemon alive 本身不等于 mission 有进度或已经验收。
-3. 若存在 running mission，等待真实 terminal，不重启 worker、不复制
-   Engineer one-shot、不清 claim/guard，也不要占用 Manager provider lock。
-4. 需要给 Manager 一次新信息时，先写一个全新 message file，并使用从未用过的
-   message ID；只有在 inspect 显示没有 running lifecycle 后才可显式执行：
+`tools/argus_continuation.py relay` 仅在没有运行中的 lifecycle 且需要新指令时
+显式使用；先读 `--help`，通过实际 WebAPI 的 credential-free localhost 地址，
+使用新的 message ID。不要在命令、URL 或 Git 中写凭据。
 
-   ```bash
-   python tools/argus_continuation.py relay \
-     --message-file /path/to/new-message.txt \
-     --message-id ace3-unique-purpose-YYYYMMDD-NN \
-     --manager-url http://127.0.0.1:<active-webapi-port> \
-     --confirm-provider-call
-   ```
+## 本次发布的范围
 
-   `--manager-url` 必须是当前 Argus WebAPI 的 credential-free localhost
-   origin。若 WebAPI 需要认证，把完整 `Authorization` 值仅放在外部环境变量
-   `ARGUS_WEBAPI_AUTHORIZATION`，不要写进命令、Git 或 URL。工具会从 live
-   daemon 核对 runtime/profile/role model，通过正式 WebAPI normal Manager
-   ingress（由 manager-context 和 session lock 串行化），并要求恰好一个
-   provider start 和匹配 completion。它不会内置旧 PID、thread、任务文本或
-   consumed message ID；失败/不完整回复不会伪装成 relay success。
+六份发布/candidate/capture 源码来自已审核 sealed release，三份 v2/helper/test
+来自该实验记录的精确 source hashes；补齐 v1 helper 的配套测试。另归档当前
+host publisher 源码，记录 mutable backlog hash 修复，但不将它冒充 sealed source，
+也不导出其 host-only helper/权限依赖。不是把后来仍在变化的 live release 模块
+混进旧实验的源码证明。另附 Argus Planner 一次格式修复补丁，供对应基线审阅；
+不自动升级运行时。[增量清单](source-manifest-2026-09-26.json)记录全部 hash。
+**不要用这个源码快照覆盖正在运行的工作区。**
 
-当前原主机位置：
+[结果 JSON](../results/STAGE11_REJECTED_20260926.json) 是公开摘要，含原始结果
+与 review 文件 hash，不是原样 authoritative receipt。权重、raw arrays、原始
+provider/operator transcript、完整状态、权限文件和凭据不上传；详见
+[HOST_ONLY_DEPENDENCIES.md](HOST_ONLY_DEPENDENCIES.md)。GitHub 不构成完整主机备份，
+也不能恢复或证明外部监督 schedule 正在执行。
 
-- workdir：`/home/argustest/ace3-argus`
-- state root：`/home/argustest/.argus-skill-ace3/projects/s-62150b05`
-- global root：`/home/argustest/.argus-skill-ace3`
+## 对等双镜像
 
-这些是 2026-09-24 的定位信息，不是永久 launch command。runtime 必须每次从
-live status 重新发现并验证 import path，不能重演历史上的 wrong-path pin。
+- <https://github.com/aHappend/ace-3>
+- <https://github.com/Argus-AiTeam/ace-3>
+- 两边 `main` 与 `refs/tags/checkpoint-2026-09-26-source` 必须一致。
 
-## 磁盘/主机丢失：能力边界
-
-GitHub 可恢复本次 curated source、RTL、host/oracle code、tests、contracts、
-scripts、文档与 sanitized progress。它**不是**完整运行现场备份，不能恢复
-active locks/PIDs/claims、Copilot/GitHub credential、完整 Argus state、模型
-权重、全部 raw evidence 或外部 scheduled supervision。详细清单见
-`HOST_ONLY_DEPENDENCIES.md`；缺失这些内容时不能声称 full recovery。
-
-仓库文档不会重建旧 schedule126，也不会证明检查仍在持续。恢复后的任何调度
-都要在新环境中重新、明确地建立。schedule126 里的 retired runtime/ID 不能
-覆盖更新的 intent 和 live receipts。
-
-## 当前科学/工程边界
-
-`04c9ee209234` 只验收了 current-runtime real-lineage emitter 的 operational
-contract，science count 为 0；它没有资格化 consumer/science。`e2ba4dbc8651`
-保留为 unsealed/replan history；`609b6cad06bc` 已 native FAILED，fresh root
-不存在。不能把 Reviewer 的“可在 build root 外使用 disposable temp”解释成
-任务已经恢复运行，也不能 force-resume terminal FAILED lifecycle。
-
-后续 lawful action 是 normal Manager 建立合法 successor，先在 disposable
-temp 做 exact prevalidation，清理 temp，再只构建新授权 root。只有新的
-post-claim Manager issuance、一次允许的 CPU-only `--check`、normal Reviewer
-与 native terminal acceptance 全部真实存在后，才能声称 science restored。
-不要在 review 中再次执行 Engineer one-shot。
-
-ACE-3 当前 scientific profile 是 native S16 RTZ INT4/FP16 operators/KV，
-Q24 signed-64 residual scale `2^-24`，其 residual state 宽于 FP16，不能改称
-unchanged strict-FP16-state W4A16。保留原 thresholds、lineage、失败与 UNKNOWN。
-GPU/RTL/FPGA/U280/XRT/HBM/Vivado/Vitis/synthesis/PPA/bitstream 仍不在当前
-scientific scope；但临时 task restriction 不能变成永久 global ban。
-
-原始 acceptance 要到 host-local handoff/terminal 中核对。公开 JSON 是带原始
-hash 的 sanitized summary，不是未经变化的 authoritative receipt。
-
-## GitHub 身份
-
-credential 只由用户在外部提供：
-`GH_CONFIG_DIR=/home/argustest/argustest2/.gh-config`，GitHub 身份必须是
-`aHappend`。不得复制 token、credential 文件内容，不能改用默认 gh profile。
-Copilot backend 仍在 `/home/argustest/.copilot`，与 GitHub 身份无关。
-
-未来发布流程见 `DUAL_MIRROR_PUBLICATION.md`。
+以 `aHappend` 身份执行每次发布，凭据从用户的外部
+`GH_CONFIG_DIR=/home/argustest/argustest2/.gh-config` 获取，不复制其内容，不切换
+Copilot 账号。遵循 [DUAL_MIRROR_PUBLICATION.md](DUAL_MIRROR_PUBLICATION.md)，
+一边失败就报告 partial sync，不能强推或伪称双同步完成。

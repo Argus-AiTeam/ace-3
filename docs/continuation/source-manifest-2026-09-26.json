@@ -1,0 +1,107 @@
+{
+  "schema": "ace-incremental-source-manifest/v1",
+  "project": "ACE3",
+  "snapshot_utc": "2026-09-26T13:11:25.984013+00:00",
+  "base_main_commit": "6e0d9a3ba4493b99afdbcafb80551e449fbe7b5f",
+  "policy": "Reviewed scientific basis, not all later live source. Do not overwrite active workspace from this snapshot.",
+  "files": [
+    {
+      "path": "ace3/model/stage11_current_runtime_release.py",
+      "bytes": 107447,
+      "sha256": "3dbf0f0eafd963012bded0ef72482dc6d8d2f2f959ffc0c876883ca88d69feea",
+      "status": "reviewed_scientific_basis",
+      "origin": "build/argus-stage11-reviewed-interface-release-287d994f2fe4-attempt001/source.py"
+    },
+    {
+      "path": "tests/test_stage11_current_runtime_release.py",
+      "bytes": 78923,
+      "sha256": "def1ef8d413fb4328db0baf1f50ba48e2e989f5b4a995f1e0c788ac191e08454",
+      "status": "reviewed_scientific_basis",
+      "origin": "build/argus-stage11-reviewed-interface-release-287d994f2fe4-attempt001/focused-tests.py"
+    },
+    {
+      "path": "ace3/model/candidates/diagnose_q24_s16_final_head_final_rmsnorm_unselected_direct_hidden_mlp_stage17_stage11_attention_output_suffix_candidate_v1.py",
+      "bytes": 51293,
+      "sha256": "8e18332bc97d7302ae3f3a26cdf01392434b12dea87cf7d537b192664ac83f5f",
+      "status": "reviewed_scientific_basis",
+      "origin": "build/argus-stage11-reviewed-interface-release-287d994f2fe4-attempt001/candidate-source.py"
+    },
+    {
+      "path": "tests/test_diagnose_q24_s16_final_head_final_rmsnorm_unselected_direct_hidden_mlp_stage17_stage11_attention_output_suffix_candidate_v1.py",
+      "bytes": 58980,
+      "sha256": "7254d462c4a132985d73aa1f93498168ab4875d4c19c0efff442021e717881d5",
+      "status": "reviewed_scientific_basis",
+      "origin": "build/argus-stage11-reviewed-interface-release-287d994f2fe4-attempt001/candidate-tests.py"
+    },
+    {
+      "path": "ace3/model/candidates/diagnostic_capture_v1.py",
+      "bytes": 36275,
+      "sha256": "de4166eab3a36c2045808c7b89a19a74066a7fe62f884599bf1e82723fe305b7",
+      "status": "reviewed_scientific_basis",
+      "origin": "build/argus-stage11-reviewed-interface-release-287d994f2fe4-attempt001/capture-source.py"
+    },
+    {
+      "path": "tests/test_diagnostic_capture_v1.py",
+      "bytes": 60060,
+      "sha256": "a8a684d1966d07c56cb1725c8731b04e0f70508072a182d5a4fd8e39cabdca01",
+      "status": "reviewed_scientific_basis",
+      "origin": "build/argus-stage11-reviewed-interface-release-287d994f2fe4-attempt001/capture-tests.py"
+    },
+    {
+      "path": "ace3/model/candidates/stage11_s18_boundary_localizer_v2.py",
+      "bytes": 11397,
+      "sha256": "71806b98261fbb5cbc1e93d33b385d29aafc194775d548a0e735dde92f6be6b1",
+      "status": "reviewed_boundary_experiment",
+      "origin": "ace3/model/candidates/stage11_s18_boundary_localizer_v2.py"
+    },
+    {
+      "path": "ace3/model/candidates/stage11_s18_boundary_localizer_v1.py",
+      "bytes": 15490,
+      "sha256": "9153c7b0501433095b98da2a3d34a6788295b2c589b378965675961220071754",
+      "status": "reviewed_boundary_experiment",
+      "origin": "ace3/model/candidates/stage11_s18_boundary_localizer_v1.py"
+    },
+    {
+      "path": "tests/test_stage11_s18_boundary_localizer_v2.py",
+      "bytes": 8121,
+      "sha256": "b266b63d5d3e18885f45169b15ddd9f16b217d2a6f3dcb8bc52a9decd536d657",
+      "status": "reviewed_boundary_experiment",
+      "origin": "tests/test_stage11_s18_boundary_localizer_v2.py"
+    },
+    {
+      "path": "docs/continuation/argus-planner-format-retry-20260926.patch",
+      "bytes": 7067,
+      "sha256": "1cacf638027066d96131da65d93368633e59536f0d03bd10733e1a1729790717",
+      "status": "reviewed_runtime_patch",
+      "sources": [
+        {
+          "path": "argus_skill/planner/planner.py",
+          "before_sha256": "de81a4919af0930c5e3afda320b6bffdcc7dfcc4577ce7395914b2c47963cdf2",
+          "after_sha256": "2841a3032dc0e3ed13f011406c2b000259782ba5d6c935bddff9b4adb0c61760"
+        },
+        {
+          "path": "tests/planner/test_planner.py",
+          "before_sha256": "82c32e00b9dc55428367e93a0021116dd4edc1c66efd7f37e052729a80c5f680",
+          "after_sha256": "13db21a7451bd63a6d8dfb645183504c012b623b250cced60c673b402e59663d"
+        }
+      ],
+      "reviewed_mission": "f419c2c864e1"
+    },
+    {
+      "path": "tests/test_stage11_s18_boundary_localizer_v1.py",
+      "bytes": 5665,
+      "sha256": "4ba2ad6f47bf119f1319e7071d661ae89932395e189233018be2f9a2d8917558",
+      "status": "supporting_helper_regression_source",
+      "origin": "tests/test_stage11_s18_boundary_localizer_v1.py"
+    },
+    {
+      "path": "docs/continuation/host-source-20260926/stage11_owner_claim_v6.py",
+      "bytes": 11860,
+      "sha256": "c10044ea32e72201d6b8f12462e6695578736ec2674f59c7a2ccf0aef057c3a5",
+      "status": "archival_host_publisher_source_not_sealed_scientific_source",
+      "origin": ".argus/live/manager-tools/publish-stage11-reviewed-interface-release-owner-claim-v6.py"
+    }
+  ],
+  "source_copy_hashes_verified": true,
+  "unchanged_source_inventory": "source-manifest-2026-09-24.json at checkpoint-2026-09-24-source"
+}

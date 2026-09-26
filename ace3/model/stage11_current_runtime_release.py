@@ -5,34 +5,78 @@ The issuer writes authority, not scientific results, and has no execution CLI.
 The candidate consumes its exact serialized envelope through this same
 non-executing validator; retained scientific identity and current source pins
 remain separate, authenticated bindings.
+
+Immutable 640 construction and independent 412 artifact review are separate
+provenance: 412 remains native FAILED after its final-delivery stage hold.
+Neither accepts changed implementation bytes. Future requests must pin a
+separate Manager operational-release
+selection, published after normal Reviewer DONE and native DONE. The selection
+binds all native evidence and exact implementation bytes without baking a
+future review digest into this source. The pinned latest handoff selects its
+canonical positive review round, not necessarily round one. It is not
+scientific authority. Selection follows the authenticated native completion
+event, not the earlier backlog timestamp. Runtime identity binds the observed
+continuous-mode flag and generation without requiring scheduling to be disabled.
+The v4 construction owner binds the reviewed runtime and continuous ON51;
+that build-time authority does not restrict later observation to disabled mode.
+Native handoff children bind their source through the exact launch environment,
+while controlled children retain their source-path argv binding.
+
+--prevalidate retains six-source compilation and narrow v6 release-binding
+checks outside the absent delivery root. The independently reviewed ed9 repair
+supplies authenticated retained candidate compatibility and 229-test evidence,
+not another repair run. Its complete runtime-source/reference-member interface
+is unchanged. --build PATH SHA256 requires an independent CONTINUE preseal
+review with BUILD_FINAL_FROM_REVIEWED_BYTES under the same running claim, then
+consumes unchanged passing bytes once. REPLAN terminates that claim and cannot
+authorize construction. Audits are Python-scoped, not OS-wide; final
+construction still requires independent Host review.
 """
 
 from __future__ import annotations
 
 import copy
 import datetime as dt
+import difflib
 import hashlib
+import io
 import json
 import os
 from pathlib import Path
-import py_compile
 import re
 import shlex
 import subprocess
 import sys
 import time
 import xml.etree.ElementTree as ET
+import zipfile
 
 
 REPOSITORY = Path(__file__).resolve().parents[2]
 LIFE = Path("/home/argustest/.argus-skill-ace3/projects/s-62150b05")
-MISSION = "e2ba4dbc8651"
-AUTHORITY = "s11-emitter-candidate-lineage-interface-20260924t143250z-e2ba4dbc8651-r1"
-ROOT = Path("build/argus-stage11-emitter-candidate-lineage-interface-e2ba4dbc8651-attempt001")
+MISSION = "287d994f2fe4"
+AUTHORITY = "s11-reviewed-interface-release-20260926-287d994f2fe4-r1"
+ROOT = Path("build/argus-stage11-reviewed-interface-release-287d994f2fe4-attempt001")
+FAILED_PREDECESSOR_MISSION = "fd53d72da1f9"
+CONSTRUCTION_MISSION = "640a6d6db0cf"
+CONSTRUCTION_ROOT = Path("build/argus-stage11-operational-ordering-successor-640a6d6db0cf-attempt001")
+ARTIFACT_REVIEW_MISSION = "4127f6bb1e4a"
+PROVENANCE_MISSION = "f1c261d97727"
+PROVENANCE_ROOT = Path("build/argus-stage11-operational-framing-successor-f1c261d97727-attempt001")
+VALIDATION_ROOT = Path(".argus/live/manager-validation/stage11-reviewed-interface-release-287d994f2fe4")
 SOURCE = Path("ace3/model/stage11_current_runtime_release.py")
 TEST = Path("tests/test_stage11_current_runtime_release.py")
-CLAIM_SHA256 = "96e568fb6ddfba4cc3e10b11a1bf9c7cb0972ce5135ced5376f3d22e7d4928dc"
-PROPOSAL_SHA256 = "530530060386a6af62f4cc5efc3c9a2bee5219ea1f97ae0d98357c7c3f6f97d9"
+CANDIDATE_NAME = "diagnose_q24_s16_final_head_final_rmsnorm_unselected_direct_hidden_mlp_stage17_stage11_attention_output_suffix_candidate_v1"
+SOURCE_LAYOUT = (
+    ("release_builder", SOURCE, "source.py"),
+    ("release_tests", TEST, "focused-tests.py"),
+    ("candidate", Path("ace3/model/candidates") / (CANDIDATE_NAME + ".py"), "candidate-source.py"),
+    ("candidate_tests", Path("tests") / ("test_" + CANDIDATE_NAME + ".py"), "candidate-tests.py"),
+    ("capture_helper", Path("ace3/model/candidates/diagnostic_capture_v1.py"), "capture-source.py"),
+    ("capture_tests", Path("tests/test_diagnostic_capture_v1.py"), "capture-tests.py"),
+)
+CLAIM_SHA256 = "96f345d706a2418e231c047bc4ff64bcc54bfa068c1350a11314269b4098e4e6"
+PROPOSAL_SHA256 = "0f860f4c7d9041845eb95684423247bd09f955fe20ac76bfb64322a4cf198bed"
 ADMISSION = "ADMISSIBLE_CURRENT_RUNTIME_NON_INHERITING"
 AUDIT_LIMIT = "ACCEPTED_PYTHON_SCOPED_NOT_OS_WIDE"
 OUTPUTS = (
@@ -45,9 +89,32 @@ BUILD_COMMAND = (
 )
 CLAIM_COMMAND = (
     "/home/argustest/miniconda3/bin/python -P -B "
-    ".argus/live/manager-tools/publish-native-manager-owner-claim-v1.py "
+    ".argus/live/manager-tools/publish-stage11-reviewed-interface-release-owner-claim-v6.py "
     "--authority-dir .argus/live/manager-authority/" + AUTHORITY
 )
+CONSUMPTION_MISSION = MISSION
+CONSUMPTION_AUTHORITY = AUTHORITY
+CONSUMPTION_ROOT = ROOT
+CONSUMPTION_INPUT = {
+    "path": str(REPOSITORY / ".argus/live/manager-inputs"
+                / "stage11-reviewed-interface-release-287d994f2fe4.json"),
+    "bytes": 40209,
+    "sha256": PROPOSAL_SHA256,
+}
+CONSUMPTION_DECISION = {
+    "path": str(REPOSITORY / ".argus/live/manager-authority"
+                / CONSUMPTION_AUTHORITY / "manager-consumption-decision.json"),
+    "bytes": 582,
+    "sha256": "ce0974a1b34cb0a2314f39ba8305bfd2ce7b09de871c143d83f3a2b20797143c",
+}
+REFERENCE_MEMBERS = {
+    "original_input_L23_fp16": "stage11",
+    "original_input_L23_binary64": None,
+    "original_input_final_fp16": None,
+    "original_input_final_binary64": None,
+}
+ZERO_KINDS = ("scientific", "model", "producer", "service",
+              "numerical", "prefix", "reference", "admission")
 
 
 def require(condition, message):
@@ -77,7 +144,9 @@ def pin(path):
 
 
 def authenticate(record):
-    require(set(record) == {"path", "bytes", "sha256"}, "invalid pin fields")
+    require(isinstance(record, dict) and set(record) == {"path", "bytes", "sha256"},
+            "invalid pin fields")
+    require(isinstance(record["path"], str) and bool(record["path"]), "invalid pin path")
     path = Path(record["path"])
     require(path.is_absolute() and path.resolve() == path and not path.is_symlink(),
             "noncanonical or symlinked input")
@@ -86,6 +155,73 @@ def authenticate(record):
     require(len(raw) == record["bytes"] and digest(raw) == record["sha256"],
             "authenticated bytes changed: " + str(path))
     return raw
+
+
+def proposal_context():
+    """Bind proposed implementation imports without rewriting Manager authority."""
+    repair = document(CONSUMPTION_INPUT)
+    previous = document(repair["accepted_release"]["contract"])
+    inherited = document(previous["manager_proposal"])
+    # The retained Stage13 census predates the Stage11 candidate and consumer.
+    # Their reviewed current bytes also appear in parent.source_context().
+    repair["expected_runtime_sources"] = {
+        **repair["expected_runtime_sources"],
+        "ace3.model.stage11_current_runtime_release": pin(REPOSITORY / SOURCE),
+        "ace3.model.candidates." + CANDIDATE_NAME: pin(REPOSITORY / SOURCE_LAYOUT[2][1]),
+    }
+    return {**inherited, **repair}
+
+
+def validate_preparation_contract(contract):
+    """Authenticate the complete data-only interface before any runtime/array load."""
+    expected = proposal_context()
+    sources = contract.get("runtime_sources")
+    require(isinstance(sources, dict)
+            and same(sources, expected["expected_runtime_sources"]),
+            "runtime_sources missing or differs from retained census plus current implementation")
+    require(same(expected["expected_reference_members"], REFERENCE_MEMBERS)
+            and same(contract.get("reference_members"), REFERENCE_MEMBERS),
+            "reference_members missing or differs from exact reference member census")
+    for role, record in sources.items():
+        try:
+            authenticate(record)
+        except (ValueError, OSError) as error:
+            raise ValueError("runtime_sources " + role + ": " + str(error)) from error
+    references = contract["execution_contract"]["references"]
+    require(isinstance(references, dict) and set(references) == set(REFERENCE_MEMBERS),
+            "incomplete reference pin census")
+    for role, member in REFERENCE_MEMBERS.items():
+        record = references[role]
+        try:
+            raw = authenticate(record)
+        except (ValueError, OSError) as error:
+            raise ValueError("reference " + role + ": " + str(error)) from error
+        path = Path(record["path"])
+        if member is None:
+            require(path.suffix == ".npy" and raw.startswith(b"\x93NUMPY"),
+                    role + ": no-member reference requires a .npy array")
+        else:
+            require(path.suffix == ".npz", role + ": stage11 reference requires a .npz archive")
+            try:
+                with zipfile.ZipFile(io.BytesIO(raw)) as archive:
+                    names = archive.namelist()
+                    require(len(names) == len(set(names))
+                            and names.count("stage11.npy") == 1 and "stage11" not in names,
+                            role + ": missing or ambiguous stage11 archive member")
+                    require(archive.read("stage11.npy").startswith(b"\x93NUMPY"),
+                            role + ": stage11 archive member is not a .npy array")
+            except (zipfile.BadZipFile, RuntimeError) as error:
+                raise ValueError(role + ": invalid .npz reference archive: " + str(error)) from error
+    return sources, contract["reference_members"]
+
+
+def implementation_pins():
+    return [pin(REPOSITORY / path) for _, path, _ in SOURCE_LAYOUT]
+
+
+def current_source_pins():
+    return dict(zip(("candidate", "tests", "capture_helper", "capture_tests"),
+                    implementation_pins()[2:]))
 
 
 def document(record):
@@ -168,15 +304,30 @@ def observe_runtime():
     source_path = LIFE / "daemon.source.json"
     source = json.loads(source_path.read_bytes())
     continuous = json.loads((LIFE / "continuous.json").read_bytes())
-    require(continuous["enabled"] is False, "continuous execution must remain disabled")
+    require(type(continuous["enabled"]) is bool, "continuous enabled flag must be boolean")
     process = Path("/proc") / str(source["pid"])
     ticks = int((process / "stat").read_text().rsplit(")", 1)[1].split()[19])
     command = (process / "cmdline").read_bytes()
     source_root = Path(source["source_root"])
     require(source_root.is_absolute() and source_root.resolve() == source_root,
             "runtime source root is not canonical")
-    require(str(source_root.parent).encode() in command.split(b"\0"),
-            "running process does not name the advertised runtime")
+    handoff_command = [
+        sys.executable.encode(), b"-c",
+        b"from argus_skill.daemon.life_worker import run_handoff_child; "
+        b"raise SystemExit(run_handoff_child())", b"",
+    ]
+    if command.split(b"\0") == handoff_command:
+        environment = dict(entry.split(b"=", 1)
+                           for entry in (process / "environ").read_bytes().split(b"\0")
+                           if b"=" in entry)
+        require(environment.get(b"ARGUS_SKILL_SOURCE_ROOT") == str(source_root.parent).encode()
+                and environment.get(b"PYTHONPATH", b"").split(b":")[0]
+                == str(source_root.parent).encode()
+                and (process / "cwd").resolve() == Path("/"),
+                "running handoff process does not bind the advertised runtime")
+    else:
+        require(str(source_root.parent).encode() in command.split(b"\0"),
+                "running process does not name the advertised runtime")
     return {
         "pid": source["pid"], "start_ticks": ticks,
         "source_record": pin_bytes(source_path, json_bytes(source))
@@ -184,7 +335,7 @@ def observe_runtime():
         "source_root": str(source_root),
         "source_fingerprint": source["source_fingerprint"],
         "cmdline_sha256": digest(command),
-        "continuous_enabled": False,
+        "continuous_enabled": continuous["enabled"],
         "continuous_generation": continuous["generation"],
     }
 
@@ -242,6 +393,357 @@ def review_bundle(bundle, mission, expected_review=None):
     reviewer_done(review, mission)
     require(checkpoint, "empty review checkpoint")
     return review
+
+
+def native_review_consumption(bundle, contract_pin, seal_pin):
+    """Authenticate f1 provenance only, not its obsolete implementation pins."""
+    inputs = proposal_context()
+    decision = document(CONSUMPTION_DECISION)
+    accepted = construction_input(inputs)["accepted_provenance"]
+    require(inputs["mission_id"] == MISSION
+            and type(inputs["repair"]["scientific_run_budget"]) is int
+            and inputs["repair"]["scientific_run_budget"] == 0
+            and accepted["mission_id"] == PROVENANCE_MISSION
+            and accepted["status"] == "NORMAL_REVIEWER_DONE_NATIVE_DONE",
+            "wrong Manager consumption input")
+    require(same(contract_pin, accepted["contract"])
+            and same(seal_pin, accepted["seal"])
+            and same(bundle, dict(
+                mission_id=PROVENANCE_MISSION,
+                **{key: accepted[key] for key in ("latest", "review", "checkpoint")})),
+            "current release acceptance pins differ")
+    review = native_acceptance(accepted, bundle, PROVENANCE_ROOT)
+    require(same(decision, {
+        "accepted_release": "d15533af5bdf", "authorized_root": str(ROOT),
+        "decision": "BUILD_REVIEWED_INTERFACE_RELEASE",
+        "failed_science": "b7d95bd6e7f2",
+        "issuer": "manager", "mission_id": MISSION,
+        "post_review_action": "PUBLISH_CANONICAL_SELECTION_THEN_RELEASE_DEPENDENT_SCIENCE_CONTINUATION",
+        "post_review_owner": "manager",
+        "repository_repair": "ed9ef3afb3ad",
+        "scientific_run_budget": 0,
+        "validation_root": str(VALIDATION_ROOT),
+    }), "exact Manager consumption decision differs")
+    return review
+
+
+def construction_input(inputs):
+    if "accepted_construction" not in inputs:
+        previous = document(inputs["accepted_release"]["contract"])
+        inputs = document(previous["manager_proposal"])
+    return document(inputs["accepted_construction"]["manager_input"])
+
+
+def continuation_provenance(inputs):
+    """Authenticate retained construction and review as data, never execute them."""
+    construction = inputs["accepted_construction"]
+    artifact_review = inputs["accepted_artifact_review"]
+    root = REPOSITORY / CONSTRUCTION_ROOT
+    require(inputs["mission_id"] == MISSION
+            and construction["mission_id"] == CONSTRUCTION_MISSION
+            and construction["root"] == str(root)
+            and artifact_review["mission_id"] == ARTIFACT_REVIEW_MISSION
+            and artifact_review["native_status"] == "failed_stage_hold_after_reviewer_done",
+            "split construction/review identity differs")
+    for value in construction.values():
+        if isinstance(value, dict):
+            authenticate(value)
+    seal, members = sealed_members(construction["seal"])
+    require(construction["seal"]["path"] == str(root / "seal.json")
+            and seal["mission_id"] == CONSTRUCTION_MISSION and len(members) == 81
+            and all(any(same(record, member) for member in members)
+                    for record in (construction["contract"], construction["construction_receipt"],
+                                   construction["manager_input"], construction["termination"],
+                                   construction["zero_invocations"], *inputs["construction_sources"])),
+            "immutable construction seal differs")
+    contract = document(construction["contract"])
+    owner = document(construction["owner"])
+    receipt = document(construction["construction_receipt"])
+    require(contract["mission_id"] == receipt["mission_id"] == CONSTRUCTION_MISSION
+            and owner["schema"] == "argus.manager-stage11-operational-successor-owner.v2"
+            and owner["mission_id"] == CONSTRUCTION_MISSION
+            and owner["state"] == "BOUND_TO_NATIVE_RUNNING_CLAIM"
+            and same(receipt["manager_owner_claim"], construction["owner"])
+            and same(receipt["authority"], construction["authority"])
+            and receipt["builder_invocations"] == 1
+            and receipt["claim_predates_root"] is True
+            and receipt["prevalidation_completed_before_root"] is True
+            and same(receipt["prevalidation"], construction["prevalidation"])
+            and owner["native_claim"]["started_ts"] <= owner["published_at"],
+            "original v2 owner/construction binding differs")
+    by_name = {Path(member["path"]).relative_to(root).as_posix(): member for member in members}
+    require(authenticate(by_name["manager-owner-claim.json"]) == authenticate(construction["owner"])
+            and authenticate(by_name["claim.command.txt"]) == (
+                "/home/argustest/miniconda3/bin/python -P "
+                ".argus/live/manager-tools/publish-stage11-operational-ordering-successor-owner-claim-v2.py "
+                "--authority-dir .argus/live/manager-authority/" + owner["authority_id"] + "\n").encode(),
+            "original owner publication differs")
+    build_receipt = document(by_name["build-receipt.json"])
+    require(build_receipt["builder_invocations"] == 1 and build_receipt["exit_status"] == 0
+            and build_receipt["validation_reruns"] == 0, "original single build differs")
+    final_validation = None
+    prior_finished = owner["published_at"]
+    for attempt, status, failures in ((1, "FAIL", 2), (2, "PASS", 0)):
+        evidence_pin = by_name[f"validation/attempt-{attempt:03d}/prevalidation.json"]
+        evidence = document(evidence_pin)
+        require(evidence["mission_id"] == CONSTRUCTION_MISSION and evidence["status"] == status
+                and evidence["owner_sha256"] == construction["owner"]["sha256"]
+                and prior_finished < evidence["started_at"] <= evidence["finished_at"]
+                < receipt["created_at"], "original retained validation ordering differs")
+        for member in evidence["members"]:
+            authenticate(member)
+        compile_result, tests = evidence["commands"]
+        require(compile_result["name"] == "py_compile" and compile_result["exit_code"] == 0
+                and compile_result["argv"][-6:] == [r["path"] for r in evidence["sources"]]
+                and len(evidence["sources"]) == 6
+                and tests["name"] == "focused-tests"
+                and tests["exit_code"] == (1 if failures else 0)
+                and same(tests["test_summary"], {
+                    "tests": 436, "failures": failures, "errors": 0, "skipped": 0}),
+                "original six-source compile/436 evidence differs")
+        prior_finished = evidence["finished_at"]
+        final_validation = evidence
+    require(same(final_validation, document(construction["prevalidation"])),
+            "original final PASS receipt differs")
+    zero = document(construction["zero_invocations"])
+    require(all(type(value) is int and value == 0 for key, value in zero.items()
+                if key != "candidate_authority_test_properties")
+            and zero["candidate_authority_test_properties"]
+            and all(p["value"] == "0" for p in zero["candidate_authority_test_properties"]),
+            "construction zero-science evidence differs")
+    previous_inputs = construction_input(inputs)
+    provenance = previous_inputs["accepted_provenance"]
+    native_review_consumption(dict(mission_id=PROVENANCE_MISSION, **{
+        key: provenance[key] for key in ("latest", "review", "checkpoint")}),
+        provenance["contract"], provenance["seal"])
+    failed = previous_inputs["failed_science_terminal"]
+    for value in failed.values():
+        if isinstance(value, dict):
+            authenticate(value)
+    require(failed["mission_id"] == "445f400d92c4" and failed["classification"] == "UNKNOWN"
+            and document(failed["terminal"])["status"] == "UNKNOWN"
+            and document(failed["terminal"])["scientific_check_invocations"] == 0,
+            "445 trustworthy UNKNOWN changed")
+    authenticate(previous_inputs["accepted_operational_release_selection"])
+    for (role, path, name), snapshot in zip(SOURCE_LAYOUT, inputs["construction_sources"], strict=True):
+        require(snapshot["path"] == str(root / name), "construction source snapshot path differs")
+        raw = authenticate(snapshot)
+        if role in ("capture_helper", "capture_tests"):
+            require(raw == authenticate(inputs["source_baseline"][role])
+                    == (REPOSITORY / path).read_bytes(),
+                    "candidate/capture drift from sealed construction")
+    bundle = dict(mission_id=ARTIFACT_REVIEW_MISSION, **{
+        key: artifact_review[key] for key in ("latest", "review", "checkpoint")})
+    review = review_bundle(bundle, ARTIFACT_REVIEW_MISSION)
+    base = LIFE / "handoffs" / ARTIFACT_REVIEW_MISSION
+    mission = document(artifact_review["mission"])
+    require(artifact_review["mission"]["path"] == str(base / "mission.json")
+            and mission["mission_id"] == ARTIFACT_REVIEW_MISSION
+            and review["round"] == 1 and review["schema_version"] == 3
+            and artifact_review["review"]["path"] == str(base / "round-0001.json")
+            and review["mission_context"] == artifact_review["mission"]["path"]
+            and same(document(artifact_review["latest"]), {
+                "kind": "handoff_ref", "schema_version": 3,
+                "handoff": {"path": artifact_review["review"]["path"]},
+                "mission": {"path": artifact_review["mission"]["path"]}})
+            and same(review["review"], {
+                "status": "done", "reason": "requested outcome is materially complete",
+                "operator_question": "", "next_action": ""}),
+            "exact 412 normal independent review differs")
+    rows = {}
+    for raw in (LIFE / "backlog.jsonl").read_bytes().splitlines():
+        if raw.strip():
+            row = json.loads(raw)
+            if row.get("id") in (CONSTRUCTION_MISSION, ARTIFACT_REVIEW_MISSION, "ab65cb0e6bea"):
+                require(row["id"] not in rows, "duplicate historical native row")
+                rows[row["id"]] = (row, raw)
+    require(set(rows) == {CONSTRUCTION_MISSION, ARTIFACT_REVIEW_MISSION, "ab65cb0e6bea"}
+            and rows[CONSTRUCTION_MISSION][0]["status"] == "failed"
+            and rows["ab65cb0e6bea"][0]["status"] == "aborted",
+            "construction FAILED or ab65 ABORTED history changed")
+    row, raw = rows[ARTIFACT_REVIEW_MISSION]
+    require(digest(raw) == artifact_review["backlog_row_sha256"]
+            and row["status"] == "failed" and row["attempt"] == 1
+            and row["finished_ts"] == artifact_review["finished_ts"]
+            and same(row["outcome"], {
+                "execution_status": "ended", "interruption_kind": "none", "resumable": False,
+                "review_status": "done", "stage_certification": "not_certified"})
+            and row["last_error"] == (
+                "manager stage hold: Latest Reviewer accepted the bounded delivery increment, "
+                "but this is an open-ended campaign with unresolved follow-on work and no legal "
+                "advance or rollback target from the final delivery stage."),
+            "exact 412 stage-hold FAILED terminal changed")
+    events = [json.loads(raw) for raw in (LIFE / "events.jsonl").read_bytes().splitlines()
+              if digest(raw) == artifact_review["review_completed_event_sha256"]]
+    require(len(events) == 1 and events[0]["type"] == "round.review.completed"
+            and events[0]["review_source"] == "reviewer" and events[0]["status"] == "done"
+            and events[0]["review_skipped"] is False
+            and events[0]["ts"] == artifact_review["review_completed_ts"]
+            and receipt["created_at"] < events[0]["ts"] <= review["created_at"]
+            < row["finished_ts"] <= time.time(), "exact 412 review event differs")
+    return {"construction": construction, "artifact_review": artifact_review}
+
+
+def native_acceptance(accepted, bundle, root, *, selection_issued_at=None):
+    """Read native terminal evidence and the normal path-only Host handoff."""
+    mission_id = accepted["mission_id"]
+    contract_pin, seal_pin = accepted["contract"], accepted["seal"]
+    require(accepted["status"] == "NORMAL_REVIEWER_DONE_NATIVE_DONE"
+            and same(bundle, dict(mission_id=mission_id, **{
+                key: accepted[key] for key in ("latest", "review", "checkpoint")})),
+            "selected review bundle differs")
+    base = LIFE / "handoffs" / mission_id
+    require(accepted["mission"]["path"] == str(base / "mission.json")
+            and contract_pin["path"] == str(REPOSITORY / root / "current-runtime-contract.json")
+            and seal_pin["path"] == str(REPOSITORY / root / "seal.json"),
+            "native acceptance paths differ")
+    latest = document(accepted["latest"])
+    mission = document(accepted["mission"])
+    review = review_bundle(bundle, mission_id, accepted["review"])
+    require(same(latest, {
+        "schema_version": 3, "kind": "handoff_ref",
+        "handoff": {"path": accepted["review"]["path"]},
+        "mission": {"path": accepted["mission"]["path"]},
+    }), "native latest must use the exact path-only schema")
+    require(mission["kind"] == "mission_context" and mission["schema_version"] == 3
+            and mission["mission_id"] == mission_id
+            and review["schema_version"] == 3
+            and type(review["round"]) is int and review["round"] > 0
+            and accepted["review"]["path"] == str(base / f"round-{review['round']:04d}.json")
+            and review["mission_context"] == accepted["mission"]["path"]
+            and same(review["review"], {
+                "status": "done", "reason": "requested outcome is materially complete",
+                "operator_question": "", "next_action": "",
+            }), "exact normalized native Reviewer DONE required")
+    contract = document(contract_pin)
+    seal, members = sealed_members(seal_pin)
+    require(contract["mission_id"] == seal["mission_id"] == mission_id
+            and any(same(member, contract_pin) for member in members)
+            and number(review["created_at"])
+            and contract["created_at"] <= review["created_at"] <= time.time(),
+            "native review does not bind this sealed contract")
+    terminal = accepted["native_terminal"]
+    rows = []
+    events = []
+    for name, matches, key in (
+        ("backlog.jsonl", rows, "id"), ("events.jsonl", events, "item_id"),
+    ):
+        for raw in (LIFE / name).read_bytes().splitlines():
+            if raw.strip():
+                value = json.loads(raw)
+                if value.get(key) == mission_id and (
+                    key == "id" or value.get("type") == "life.mission.completed"
+                ):
+                    matches.append((value, raw))
+    require(len(rows) == len(events) == 1, "missing or duplicate native terminal")
+    row, row_raw = rows[0]
+    event, event_raw = events[0]
+    if mission_id == MISSION:
+        require("stage_transition:skip" in mission.get("tags", [])
+                and "stage_transition:skip" in row.get("tags", [])
+                and row["outcome"].get("stage_certification") == "intentionally_skipped"
+                and event.get("outcome", {}).get("stage_certification") == "intentionally_skipped",
+                "current release must skip campaign stage transition")
+    require(digest(row_raw) == terminal["backlog_row_sha256"]
+            and digest(event_raw) == terminal["mission_completed_event_sha256"]
+            and row["status"] == event["status"] == "done"
+            and type(row["attempt"]) is int and row["attempt"] == 1
+            and row["finished_ts"] == terminal["finished_ts"]
+            and row["outcome"]["review_status"] == "done"
+            and row["outcome"]["resumable"] is False
+            and event["independent_review_required"] is True
+            and event["resumable"] is False
+            and number(row["finished_ts"]) and number(event["ts"])
+            and review["created_at"] <= row["finished_ts"] <= event["ts"] <= time.time(),
+            "exact native DONE terminal changed")
+    if selection_issued_at is not None:
+        require(event["ts"] <= selection_issued_at <= time.time(),
+                "selection must follow native DONE")
+    return review
+
+
+def operational_release_selection(selection_pin, bundle, contract_pin, seal_pin):
+    """Authenticate a separately published Manager selection, without issuing it."""
+    selection = document(selection_pin)
+    require(set(selection) == {
+        "kind", "issuer", "status", "decision", "scientific_run_budget", "issued_at_utc",
+        "selected", "implementation_sources", "provenance", "manager_input",
+        "manager_decision", "admission", "audit_limit",
+    }, "unexpected operational-release selection fields")
+    selected = selection["selected"]
+    mission = selected["mission_id"]
+    require(isinstance(mission, str) and re.fullmatch(r"[0-9a-f]{12}", mission)
+            and mission == MISSION,
+            "provenance is not a changed-byte release")
+    authority = REPOSITORY / ".argus/live/manager-authority" / (
+        "stage11-operational-release-" + mission)
+    require(selection_pin["path"] == str(authority / "selection.json"),
+            "noncanonical Manager operational-release selection")
+    require(selection["kind"] == "manager_stage11_operational_release_selection"
+            and selection["issuer"] == "manager"
+            and selection["status"] == "SELECTED_AFTER_NORMAL_REVIEW_AND_NATIVE_DONE"
+            and selection["decision"] == "ADMISSIBLE_POST_REVIEW_CONSUMPTION"
+            and type(selection["scientific_run_budget"]) is int
+            and selection["scientific_run_budget"] == 0
+            and selection["admission"] == ADMISSION and selection["audit_limit"] == AUDIT_LIMIT
+            and same(selection["manager_input"], CONSUMPTION_INPUT)
+            and same(selection["manager_decision"], CONSUMPTION_DECISION),
+            "Manager operational-release decision differs")
+    inputs = proposal_context()
+    provenance = continuation_provenance(inputs)
+    require(same(selection["provenance"], provenance),
+            "selected provenance differs from Manager input")
+    require(same(contract_pin, selected["contract"]) and same(seal_pin, selected["seal"]),
+            "request differs from selected release")
+    review = native_acceptance(
+        selected, bundle, ROOT,
+        selection_issued_at=timestamp(selection["issued_at_utc"]),
+    )
+    contract = document(contract_pin)
+    for record in selection["implementation_sources"]:
+        try:
+            authenticate(record)
+        except (ValueError, OSError) as error:
+            raise ValueError("selected implementation source version: " + str(error)) from error
+    expected = implementation_pins()
+    require(same(selection["implementation_sources"], expected)
+            and same(contract["implementation_sources"], expected)
+            and same(contract["construction_provenance"], provenance["construction"])
+            and same(contract["artifact_review_provenance"], provenance["artifact_review"])
+            and same(contract["manager_proposal"], CONSUMPTION_INPUT)
+            and same(contract["current_sources"], current_source_pins()),
+            "selected implementation/provenance/source version differs")
+    previous = document(provenance["construction"]["contract"])
+    operational_fields = {
+        "mission_id", "created_at", "runtime", "manager_proposal", "implementation_sources",
+        "validation_policy", "boundary", "post_review_owner", "source_snapshots", "capture_snapshots",
+        "current_sources", "source_roles", "execution_contract",
+    }
+    require(all(key in contract and same(contract[key], value)
+                for key, value in previous.items() if key not in operational_fields),
+            "immutable construction scientific contract differs")
+    execution = copy.deepcopy(previous["execution_contract"])
+    execution["sources"]["current_diagnostic"] = contract["current_sources"]["candidate"]
+    execution["sources"]["current_tests"] = contract["current_sources"]["tests"]
+    roles = copy.deepcopy(previous["source_roles"])
+    roles["current_diagnostic"] = {
+        "source": contract["current_sources"]["candidate"],
+        "retained": contract["current_sources"]["candidate"],
+    }
+    require(same(contract["execution_contract"], execution)
+            and same(contract["source_roles"], roles),
+            "immutable construction scientific contract differs")
+    validate_preparation_contract(contract)
+    require(isinstance(contract.get("capture_snapshots"), dict)
+            and set(contract["capture_snapshots"]) == {"capture_helper", "capture_tests"},
+            "capture snapshot census differs")
+    for key, name in (("capture_helper", "capture-source.py"),
+                      ("capture_tests", "capture-tests.py")):
+        snapshot = contract["capture_snapshots"][key]
+        require(snapshot["path"] == str(REPOSITORY / ROOT / name)
+                and authenticate(snapshot) == authenticate(contract["current_sources"][key]),
+                "capture snapshot differs")
+    return review, selection
 
 
 def command_identity(launch):
@@ -524,10 +1026,14 @@ def _validate_after_claim(request_pin, *, issued_at=None):
         "kind", "issuer", "mission_id", "attempt", "scientific_run_budget",
         "issued_at_utc", "native_record", "mission_started_event", "contract",
         "seal", "contract_review", "accepted_identity", "accepted_review", "launch",
+        "operational_release_selection",
     }, "unexpected or missing Manager request fields")
     mission = request["mission_id"]
     require(isinstance(mission, str) and re.fullmatch(r"[0-9a-f]{12}", mission)
-            and mission not in (MISSION, "04c9ee209234", "dec0e93fccfd", "208e2ffd3bca", "33543e0d3d9f",
+            and mission not in (MISSION, CONSTRUCTION_MISSION, ARTIFACT_REVIEW_MISSION,
+                                PROVENANCE_MISSION, "94e2e47338e2",
+                                "bc4840101b6f", "fc2f78aa2e3a", "609b6cad06bc", "e2ba4dbc8651",
+                                "04c9ee209234", "dec0e93fccfd", "208e2ffd3bca", "33543e0d3d9f",
                                 "ed8fb34bae3a", "8df9b6fd2f5c"),
             "a distinct fresh science mission is required")
     authority = REPOSITORY / ".argus/live/manager-authority" / (
@@ -541,16 +1047,20 @@ def _validate_after_claim(request_pin, *, issued_at=None):
             and type(request["scientific_run_budget"]) is int
             and request["scientific_run_budget"] == 1,
             "ordinary Manager first-attempt integer-budget-one request required")
-    root = REPOSITORY / ROOT
-    require(request["contract"]["path"] == str(root / "current-runtime-contract.json")
-            and request["seal"]["path"] == str(root / "seal.json"),
-            "wrong current release root")
+    review, selection = operational_release_selection(
+        request["operational_release_selection"], request["contract_review"],
+        request["contract"], request["seal"])
+    selected_mission = selection["selected"]["mission_id"]
+    require(mission != selected_mission, "science cannot reuse the selected release mission")
     contract = document(request["contract"])
+    validate_preparation_contract(contract)
     seal, members = sealed_members(request["seal"])
-    require(seal["mission_id"] == MISSION
+    require(seal["mission_id"] == selected_mission
             and seal["status"] == "PROPOSED_PENDING_INDEPENDENT_REVIEW"
+            and type(seal["scientific_run_budget"]) is int
+            and seal["scientific_run_budget"] == 0
             and any(same(r, request["contract"]) for r in members)
-            and contract["mission_id"] == MISSION
+            and contract["mission_id"] == selected_mission
             and contract["status"] == "PROPOSED_PENDING_INDEPENDENT_REVIEW"
             and contract["admission_decision_requested"] == ADMISSION
             and contract["scientific_run_budget"] == 0
@@ -562,12 +1072,9 @@ def _validate_after_claim(request_pin, *, issued_at=None):
     original = document(contract["accepted_proposal"])
     require(same(original["identity"], contract["identity"]),
             "accepted scientific identity changed")
-    review = review_bundle(request["contract_review"], MISSION)
     require(review["created_at"] >= contract["created_at"]
-            and review["created_at"] <= now
-            and review["review"]["reason"] == review_acceptance(
-                request["contract"], request["seal"]),
-            "Reviewer must explicitly accept this seal, audit limit, gates, and zero science")
+            and review["created_at"] <= now,
+            "Reviewer acceptance is outside the current contract lifetime")
     review_bundle(request["accepted_review"], contract["accepted_mission"],
                   contract["accepted_review"])
     require(same(request["accepted_review"]["checkpoint"],
@@ -580,6 +1087,7 @@ def _validate_after_claim(request_pin, *, issued_at=None):
             and same(event, request["mission_started_event"]),
             "stale, wrong, or rebound post-claim Manager request")
     require(contract["created_at"] < row["started_ts"]
+            and timestamp(selection["issued_at_utc"]) < row["started_ts"]
             and event["ts"] <= timestamp(request["issued_at_utc"]) <= now,
             "pre-claim or nonfresh Manager issuance")
     launch = request["launch"]
@@ -621,12 +1129,15 @@ def _validate_after_claim(request_pin, *, issued_at=None):
                   "status_path": ["status"], "constraints_path": ["constraints"]},
         "contract": contract["execution_contract"], "identity": contract["identity"],
         "source_roles": contract["source_roles"], "source_snapshots": contract["source_snapshots"],
+        "runtime_sources": contract["runtime_sources"],
+        "reference_members": contract["reference_members"],
         "accepted_identity": request["accepted_identity"],
         "accepted_proposal": contract["accepted_proposal"],
         "accepted_preflight_mission": contract["accepted_mission"],
         "accepted_preflight_terminal_receipt": contract["accepted_terminal"],
         "current_release_contract": request["contract"],
         "current_release_review": request["contract_review"],
+        "operational_release_selection": request["operational_release_selection"],
         "audit_limit": AUDIT_LIMIT, "attempt": 1,
     }
     declaration_raw = json_bytes(declaration)
@@ -641,6 +1152,7 @@ def _validate_after_claim(request_pin, *, issued_at=None):
         "accepted_proposal": contract["accepted_proposal"],
         "current_release_contract": request["contract"],
         "current_release_review": request["contract_review"],
+        "operational_release_selection": request["operational_release_selection"],
         "manager_request": request_pin, "runtime": contract["runtime"],
     }
     issuance_raw = json_bytes(issuance)
@@ -651,14 +1163,18 @@ def _validate_after_claim(request_pin, *, issued_at=None):
         "review": request["accepted_review"],
         "current_release_contract": request["contract"],
         "current_release_review": request["contract_review"],
+        "operational_release_selection": request["operational_release_selection"],
         "audit_limit": AUDIT_LIMIT,
     }
 
     def unchanged():
         require(authenticate(request_pin) == request_raw, "Manager request changed during issuance")
         document(request["contract"])
+        validate_preparation_contract(contract)
         sealed_members(request["seal"])
-        review_bundle(request["contract_review"], MISSION)
+        operational_release_selection(
+            request["operational_release_selection"], request["contract_review"],
+            request["contract"], request["seal"])
         review_bundle(request["accepted_review"], contract["accepted_mission"],
                       contract["accepted_review"])
         accepted_lineage(request["accepted_identity"], contract)
@@ -688,173 +1204,642 @@ def emit_after_claim(request_pin):
     return {name: pin(output / name) for name in OUTPUTS}
 
 
-def build():
-    require(Path.cwd() == REPOSITORY and sys.dont_write_bytecode
-            and not sys.flags.optimize, "wrong workdir or interpreter flags")
+def proposed_contract(previous, proposal_pin, snapshot_root, now, runtime):
+    """Rebind operational bytes, never the accepted scientific identity."""
+    contract = copy.deepcopy(previous)
+    proposal = document(proposal_pin)
+    require(same(proposal_pin, CONSUMPTION_INPUT), "wrong repair proposal")
+    proposal = proposal_context()
+    current = current_source_pins()
+    for record in current.values():
+        authenticate(record)
+    contract.update(
+        mission_id=MISSION, created_at=now, runtime=runtime, manager_proposal=proposal_pin,
+        status="PROPOSED_PENDING_INDEPENDENT_REVIEW", inherits_operational_admission=False,
+        scientific_run_budget=0, current_sources=current,
+        implementation_sources=implementation_pins())
+    require(all(same(current[key], previous["current_sources"][key])
+                for key in ("capture_helper", "capture_tests")),
+            "capture source version differs from construction")
+    contract["runtime_sources"] = proposal["expected_runtime_sources"]
+    contract["reference_members"] = proposal["expected_reference_members"]
+    contract["construction_provenance"] = proposal["accepted_construction"]
+    contract["artifact_review_provenance"] = proposal["accepted_artifact_review"]
+    contract["validation_policy"] = proposal["validation_policy"]
+    contract["boundary"] = previous["boundary"].replace(
+        "No validation rerun or dispatch.",
+        "Ordinary software validation may repeat with retained receipts; no scientific dispatch.")
+    contract["post_review_owner"] = {
+        "owner": "manager", "action": "PUBLISH_AUTHENTICATED_OPERATIONAL_RELEASE_SELECTION",
+        "requires_normal_reviewer_done_and_native_done": True, "science_authorized": False,
+    }
+    for role, key, name in (
+        ("current_diagnostic", "candidate", "candidate-source.py"),
+        ("current_tests", "tests", "candidate-tests.py"),
+    ):
+        contract["execution_contract"]["sources"][role] = current[key]
+        snapshot = pin(snapshot_root / name)
+        require(authenticate(snapshot) == authenticate(current[key]),
+                "candidate snapshot must be materialized before proposing")
+        contract["source_snapshots"][role] = snapshot
+    contract["source_roles"]["current_diagnostic"] = {
+        "source": current["candidate"], "retained": current["candidate"],
+    }
+    contract["capture_snapshots"] = {}
+    for key, name in (("capture_helper", "capture-source.py"),
+                      ("capture_tests", "capture-tests.py")):
+        snapshot = pin(snapshot_root / name)
+        require(authenticate(snapshot) == authenticate(current[key]),
+                "capture snapshot must be materialized before proposing")
+        contract["capture_snapshots"][key] = snapshot
+    validate_preparation_contract(contract)
+    return contract
+
+
+def source_edit_bindings(proposal, owner):
+    bindings = {}
+    for role, path, _ in SOURCE_LAYOUT:
+        source = REPOSITORY / path
+        unchanged = same(pin(source), proposal["source_baseline"][role])
+        require(role in ("release_builder", "release_tests") or unchanged,
+                "reviewed ed9 candidate/capture drift")
+        require(unchanged or source.stat().st_mtime_ns > owner["published_at"] * 1e9,
+                "native owner claim must precede changed source bytes")
+        bindings[role] = "UNCHANGED_MANAGER_BASELINE" if unchanged else "POSTCLAIM_EDIT"
+    return bindings
+
+
+def reviewed_repair_evidence(proposal):
+    """Consume immutable ed9 review/validation bytes without rerunning the repair."""
+    repair = proposal["repository_repair"]
+    mission = repair["mission_id"]
+    require(mission == "ed9ef3afb3ad", "wrong reviewed repository repair")
+    review = review_bundle(dict(mission_id=mission, **{
+        key: repair[key] for key in ("latest", "review", "checkpoint")}), mission)
+    base = LIFE / "handoffs" / mission
+    require(repair["mission"]["path"] == str(base / "mission.json")
+            and document(repair["mission"])["mission_id"] == mission
+            and review["round"] == 2
+            and repair["review"]["path"] == str(base / "round-0002.json")
+            and review["mission_context"] == repair["mission"]["path"]
+            and same(review["review"], {
+                "status": "done", "reason": "requested outcome is materially complete",
+                "operator_question": "", "next_action": "",
+            }), "exact ed9 round-2 Reviewer DONE required")
+    proposed = document(repair["proposed_bytes"])
+    root = Path(repair["proposed_bytes"]["path"]).parent
+    sources = [proposal["source_baseline"][role] for role, _, _ in SOURCE_LAYOUT]
+    require(proposed["status"] == "PROPOSED_PENDING_INDEPENDENT_REVIEW"
+            and proposed["owner_authority_claimed"] is False
+            and proposed["final_root_built"] is False
+            and len(sources) == 6 and same(proposed["sources"], sources),
+            "reviewed ed9 six-source census differs")
+    for (_, path, name), source in zip(SOURCE_LAYOUT, sources, strict=True):
+        require(source["path"] == str(REPOSITORY / path)
+                and same(pin_bytes(REPOSITORY / path, (root / name).read_bytes()), source),
+                "reviewed ed9 snapshot differs")
+    commands = [document(repair[key]) for key in ("compile_receipt", "focused_tests_receipt")]
+    require(same(commands, proposed["results"])
+            and commands[0]["name"] == "py_compile"
+            and commands[0]["argv"][-6:] == [source["path"] for source in sources]
+            and commands[1]["name"] == "focused-tests"
+            and same(commands[1]["test_summary"], {
+                "tests": 229, "failures": 0, "errors": 0, "skipped": 0}),
+            "reviewed ed9 compile/229 evidence differs")
+    for result in commands:
+        name = result["name"]
+        require(type(result["exit_code"]) is int and result["exit_code"] == 0
+                and result["timed_out"] is False and result["cwd"] == str(REPOSITORY)
+                and result["started_at"] <= result["finished_at"] <= review["created_at"]
+                and same(json.loads((root / (name + ".argv.json")).read_bytes()), result["argv"])
+                and (root / (name + ".command.txt")).read_bytes()
+                == (shlex.join(result["argv"]) + "\n").encode()
+                and same(json.loads((root / (name + ".environment.json")).read_bytes()),
+                         result["environment"]),
+                "reviewed ed9 command evidence differs")
+        authenticate(result["stdout"])
+        authenticate(result["stderr"])
+    xml = authenticate(repair["focused_tests_xml"])
+    forbidden = test_summary(xml, authenticate(commands[1]["stdout"]))
+    cases = ET.fromstring(xml).findall(".//testcase")
+    require(len(cases) == 229 and all(any(case.attrib["name"] == name for case in cases)
+            for name in (
+                "test_fresh_proposed_contract_consumes_production",
+                "test_running_claim_accepts_actual_emitter_declaration_and_retained_lineage",
+                "test_source_authentication_precedes_real_dispatch_guard",
+                "test_preparation_consumes_real_emitter_complete_contract",
+            )), "retained real emitter/candidate compatibility coverage missing")
+    rows, events = [], []
+    for filename, matches, key in (
+        ("backlog.jsonl", rows, "id"), ("events.jsonl", events, "item_id"),
+    ):
+        for raw in (LIFE / filename).read_bytes().splitlines():
+            if raw.strip():
+                value = json.loads(raw)
+                if value.get(key) == mission and (
+                    key == "id" or value.get("type") == "life.mission.completed"
+                ):
+                    matches.append((value, raw))
+    require(len(rows) == len(events) == 1, "ed9 native terminal missing or duplicate")
+    row, _ = rows[0]
+    event, event_raw = events[0]
+    require(row["status"] == event["status"] == "done"
+            and type(row["attempt"]) is int and row["attempt"] == 1
+            and row["outcome"]["review_status"] == "done"
+            and event["final_review_source"] == "reviewer"
+            and event["final_review_status"] == "done"
+            and review["created_at"] <= event["ts"] <= time.time()
+            and digest(event_raw) == repair["mission_completed_event_sha256"],
+            "ed9 immutable native completion differs")
+    return forbidden
+
+
+def successor_inputs():
     authority_path = REPOSITORY / ".argus/live/manager-authority" / AUTHORITY / "build-authorization.json"
-    authority_raw = authority_path.read_bytes()
-    authority = json.loads(authority_raw)
+    authority = json.loads(authority_path.read_bytes())
     owner_path = authority_path.with_name("manager-owner-claim.json")
-    owner_raw = owner_path.read_bytes()
-    require(digest(owner_raw) == CLAIM_SHA256, "authenticated Manager claim differs")
-    owner = json.loads(owner_raw)
-    require(authority["authority_id"] == owner["authority_id"] == AUTHORITY
-            and authority["mission_id"] == owner["mission_id"] == MISSION
-            and authority["authorized_root"] == owner["authorized_root"] == str(ROOT)
+    owner = document(dict(pin(owner_path), sha256=CLAIM_SHA256))
+    require(owner["authority_id"] == authority["authority_id"] == AUTHORITY
+            and owner["mission_id"] == authority["mission_id"] == MISSION
+            and owner["authorized_root"] == authority["authorized_root"] == str(ROOT)
+            and authority["validation_root"] == str(VALIDATION_ROOT)
             and authority["issuer"] == owner["issuer"] == "manager"
+            and owner["schema"] == "argus.manager-stage11-reviewed-interface-release-owner.v6"
+            and owner["accepted_release_mission"] == "d15533af5bdf"
+            and owner["accepted_repository_repair_mission"] == "ed9ef3afb3ad"
+            and owner["failed_science_mission"] == "b7d95bd6e7f2"
+            and owner["state"] == "BOUND_TO_NATIVE_RUNNING_CLAIM"
             and authority["authorized_science"] is False
             and type(authority["scientific_run_budget"]) is int
+            and type(owner["scientific_run_budget"]) is int
             and authority["scientific_run_budget"] == owner["scientific_run_budget"] == 0
-            and owner["state"] == "BOUND_TO_NATIVE_RUNNING_CLAIM"
-            and owner["science_issuance"] is None
-            and owner["manager_inputs"] == authority["manager_inputs"]
-            and authority["native_task_metadata"]["authorization_id"] == ""
-            and authority["native_task_metadata"]["authorization_action"] == "",
-            "ambiguous_objective: ordinary zero-science authority differs")
-    authenticated = {}
-
-    def retain(record):
-        raw = authenticate(record)
-        authenticated[record["path"]] = (record, raw)
-        return raw
-
+            and authority["scope"]["ordinary_validation_repeatable"] is True
+            and authority["scope"]["stage_transition"] is False
+            and authority["scope"]["independent_review_required"] is True,
+            "operational-transition authority differs")
     for record in authority["manager_inputs"].values():
-        retain(record)
-    proposal_pin = authority["manager_inputs"]["interface_repair"]
-    require(proposal_pin["sha256"] == PROPOSAL_SHA256, "wrong pinned Manager proposal")
-    proposal = json.loads(authenticated[proposal_pin["path"]][1])
-    accepted = proposal["accepted_current_runtime"]
-    old = json.loads(retain(accepted["contract"]))
-    accepted_review = json.loads(retain(accepted["review"]))
-    reviewer_done(accepted_review, "04c9ee209234")
-    require(accepted["mission_id"] == old["mission_id"] == "04c9ee209234"
-            and old["status"] == "PROPOSED_PENDING_INDEPENDENT_REVIEW",
-            "accepted current-runtime evidence differs")
-    retain(accepted["termination_proposal"])
-    predecessor = old["failed_predecessor"]
-    retain(predecessor["contract"])
-    failed_review = json.loads(retain(predecessor["review"]))
-    retain(predecessor["seal"])
-    previous_seal = document(predecessor["seal"])
-    previous_root = Path(predecessor["seal"]["path"]).parent
-    previous_members = []
-    preserved_links = {}
-
-    def preserve_member(member, previous_root):
-        relative = Path(member["path"])
-        require(not relative.is_absolute() and ".." not in relative.parts,
-                "predecessor seal member escaped its root")
-        path = previous_root / relative
-        record = dict(member, path=str(path))
-        # Preserve the predecessor's deliberate symlink-rejection test artifact,
-        # without permitting symlinks in any current authority input.
-        if path.is_symlink():
-            require(path.is_relative_to(previous_root / "pytest-tmp")
-                    and path.resolve().is_relative_to(previous_root / "pytest-tmp"),
-                    "unexpected predecessor symlink")
-            preserved_links[str(path)] = os.readlink(path)
-            record = dict(record, path=str(path.resolve()))
-        retain(record)
-
-    for member in previous_seal["members"]:
-        previous_members.append(dict(member, path=str(previous_root / member["path"])))
-        preserve_member(member, previous_root)
-    accepted_seal = json.loads(retain(accepted["seal"]))
-    require(accepted_seal["mission_id"] == "04c9ee209234"
-            and any(same(dict(m, path=str(Path(accepted["seal"]["path"]).parent / m["path"])),
-                         accepted["contract"]) for m in accepted_seal["members"]),
-            "accepted contract is not sealed")
-    for member in accepted_seal["members"]:
-        preserve_member(member, Path(accepted["seal"]["path"]).parent)
-    require(predecessor["mission_id"] == previous_seal["mission_id"] == "dec0e93fccfd"
-            and failed_review["producer_role"] == "reviewer"
-            and failed_review["review"]["status"] == "replan_requested"
-            and any(same(r, predecessor["contract"]) for r in previous_members),
-            "failed predecessor must remain sealed REPLAN")
-    report = document(authority["manager_inputs"]["preflight_report"])
-    require(report["report"] == json.loads(retain(report["source"]))
-            and report["status"] == report["report"]["status"] == "UNKNOWN"
-            and report["report"]["release_consumption_admissible"] is False
-            and report["report"]["release_consumption_authorized"] is False
-            and report["report"]["checks"]["historical_failure_closure"] is False,
-            "frozen 016 cannot be promoted")
-    for group in ("current_operational_evidence", "original_scientific_lineage"):
-        for value in old[group].values():
-            if isinstance(value, dict) and set(value) == {"path", "bytes", "sha256"}:
-                retain(value)
-    evidence = old["current_operational_evidence"]
-    reviewer_done(document(evidence["data_only_review"]), "33543e0d3d9f")
-    lineage = old["original_scientific_lineage"]
-    reviewer_done(document(lineage["accepted_review"]), "ed8fb34bae3a")
-    terminal = document(lineage["accepted_terminal"])
-    original = document(lineage["proposal"])
-    origin = document(lineage["manager_origin_issuance"])
-    require(terminal["status"] == "ACCEPTED_NOVEL"
-            and terminal["dispatch_authorized"] is False
-            and terminal["closure_check"]["identity_decision"] == "ACCEPTED_NOVEL"
-            and terminal["proposal_id"] == origin["proposal_id"] == lineage["proposal_id"]
-            and same(terminal["manager_authority"]["issuance"], lineage["manager_origin_issuance"])
-            and origin["authorized_science"] is False,
-            "original accepted scientific lineage differs")
-    origin_review = terminal["manager_authority"]["review"]
-    for key in ("latest", "review", "checkpoint"):
-        retain(origin_review[key])
-    review_bundle(origin_review, origin_review["mission_id"])
-    scientific_contract = json.loads(retain(origin["contract"]))
-    require(same(scientific_contract["sources"], original["identity"]["sources"]),
-            "original identity/source contract differs")
-    accepted_index = json.loads(retain(terminal["receipt_index"]))
-    for record in accepted_index["files"]:
-        retain(record)
-    historical_snapshot = original["source_snapshots"]["historical_generation"]
-    retain(historical_snapshot)
-    production = old["accepted_lineage"]
-    for record in production.values():
-        retain(record)
+        authenticate(record)
+    proposal_pin = authority["manager_inputs"]["source_input"]
+    require(same(proposal_pin, CONSUMPTION_INPUT)
+            and same(authority["manager_inputs"]["consumption_decision"], CONSUMPTION_DECISION),
+            "wrong operational-transition input")
+    proposal = proposal_context()
+    require(same(owner["reviewed_proposed_bytes"], proposal["repository_repair"]["proposed_bytes"]),
+            "v6 owner reviewed-source binding differs")
+    reviewed_repair_evidence(proposal)
+    expected = proposal["expected_runtime"]
+    observed = observe_runtime()
+    startup = document(observed["source_record"])
+    status = json.loads((LIFE / "daemon.status.json").read_bytes())
+    continuous = json.loads((LIFE / "continuous.json").read_bytes())
+    runtime = status["runtime"]
+    accepted_root = Path(proposal["accepted_release"]["contract"]["path"]).parent
+    runtime_owner = document(pin(accepted_root / "manager-owner-claim.json"))
+    require(same(owner["runtime"], runtime_owner["runtime"])
+            and same(runtime_owner["runtime"], {
+                **{key: expected[key] for key in (
+                    "pid", "release_id", "source_root", "source_digest",
+                    "source_fingerprint", "source_file_count", "continuous_generation")},
+                "started_at_iso": status["started_at_iso"],
+                "continuous_enabled": True, "continuous_open_ended": True,
+                "continuous_objective_sha256": digest(expected["continuous_objective"].encode()),
+            })
+            and status["pid"] == observed["pid"] == expected["pid"]
+            and runtime["release_id"] == expected["release_id"]
+            and runtime["source_root"] == expected["source_root"]
+            and runtime["runtime_source_digest"] == runtime["manifest_source_digest"]
+            == expected["source_digest"]
+            and runtime["release_matches_source"] is True
+            and observed["source_root"] == expected["argus_source_root"]
+            and observed["source_fingerprint"] == expected["source_fingerprint"]
+            and startup["source_file_count"] == expected["source_file_count"]
+            and observed["continuous_enabled"] is continuous["enabled"] is True
+            and observed["continuous_generation"] == continuous["generation"]
+            == expected["continuous_generation"]
+            and continuous["open_ended"] is True
+            and continuous["objective"] == expected["continuous_objective"],
+            "v4 owner runtime or continuous scheduling differs")
+    continuation_provenance(proposal)
+    accepted = proposal["accepted_release"]
+    for value in accepted.values():
+        if isinstance(value, dict):
+            authenticate(value)
+    sealed_members(accepted["seal"])
+    selection = document(accepted["selection"])
+    native_acceptance(selection["selected"], dict(mission_id=accepted["mission_id"], **{
+        key: accepted[key] for key in ("latest", "review", "checkpoint")}), accepted_root,
+        selection_issued_at=timestamp(selection["issued_at_utc"]))
+    for value in proposal["failed_science"].values():
+        if isinstance(value, dict):
+            authenticate(value)
+    require(document(proposal["failed_science"]["terminal"])["status"] == "UNKNOWN",
+            "consumed b7d trustworthy UNKNOWN changed")
+    previous = document(accepted["contract"])
+    rows = [(json.loads(raw), raw) for raw in (LIFE / "backlog.jsonl").read_bytes().splitlines()
+            if raw.strip()]
+    predecessor = [row for row, _ in rows if row.get("id") == FAILED_PREDECESSOR_MISSION]
+    require(len(predecessor) == 1 and predecessor[0]["status"] == "failed"
+            and predecessor[0]["attempt"] == 1
+            and predecessor[0]["last_error"] == (
+                "Sealing the sole root before independent review left no legal "
+                "in-mission repair path for a production-validator defect."),
+            "fd53 failed predecessor differs")
+    original_inputs = construction_input(proposal)
+    for record in original_inputs["failed_science_terminal"].values():
+        if isinstance(record, dict) and set(record) == {"path", "bytes", "sha256"}:
+            authenticate(record)
+    authenticate(original_inputs["accepted_operational_release_selection"])
+    failed = previous["terminal_successor_lineage"]["failed_terminal_successor"]
+    require(not Path(failed["root"]).exists() and not Path(failed["root"]).is_symlink(),
+            "609 root must stay absent")
+    document(failed["claim"])
+    require(document(failed["review"])["review"]["status"] == "replan_requested",
+            "609 review changed")
+    terminal = [row for row, _ in rows if row.get("id") == failed["mission_id"]]
+    require(len(terminal) == 1 and terminal[0]["status"] == "failed"
+            and terminal[0]["finished_ts"] == failed["native_finished_ts"], "609 terminal changed")
     now = time.time()
-    row, event, row_raw, event_raw = native_claim(LIFE, MISSION, now)
-    claim = owner["native_claim"]
-    require(digest(row_raw) == claim["backlog_row_sha256"]
-            and digest(event_raw) == claim["mission_started_event_sha256"]
+    row, event, raw, event_raw = native_claim(LIFE, MISSION, now)
+    require(digest(raw) == owner["native_claim"]["backlog_row_sha256"]
+            and digest(event_raw) == owner["native_claim"]["mission_started_event_sha256"]
             and row["objective"] == authority["expected_objective"]
-            and row["started_ts"] == claim["started_ts"]
-            and row["attempt"] == claim["attempt"] == authority["expected_attempt"]
-            and row["node_key"] == claim["node_key"] == authority["planner"]["node_key"]
-            and event["ts"] == claim["mission_started_ts"]
-            and claim["started_ts"] <= event["ts"] <= owner["published_at"] <= now,
-            "exact authenticated implementation claim changed")
+            and "stage_transition:skip" in row.get("tags", [])
+            and same(owner["native_claim"], {
+                "attempt": 1, "backlog_row_sha256": digest(raw),
+                "mission_started_event_sha256": digest(event_raw),
+                "mission_started_ts": event["ts"], "owner": "primary",
+                "started_ts": row["started_ts"],
+                "usage_attempt_id": MISSION + ":attempt:1",
+            })
+            and row["started_ts"] <= event["ts"] <= owner["published_at"] <= now,
+            "native owner claim differs")
+    source_edit_bindings(proposal, owner)
+    return proposal_pin, proposal, previous, owner, terminal[0]
+
+
+def tree_state(root):
+    members = []
+    for path in sorted(root.rglob("*")):
+        relative = str(path.relative_to(root))
+        if path.is_symlink():
+            members.append({"path": relative, "symlink": os.readlink(path)})
+        elif path.is_file():
+            members.append(dict(pin(path), path=relative))
+        else:
+            require(path.is_dir(), "unexpected predecessor member")
+            members.append({"path": relative, "directory": True})
+    return members
+
+
+def preserved_trees(proposal, previous):
+    sealed_members(proposal["accepted_construction"]["seal"])
+    baseline_path = REPOSITORY / CONSTRUCTION_ROOT / "preserved-inputs.json"
+    baseline = json.loads(baseline_path.read_bytes())
+    require(all(tree_state(Path(path)) == members for path, members in baseline.items()),
+            "immutable predecessor tree changed")
+    roots = [
+        Path(proposal["accepted_release"]["contract"]["path"]).parent,
+        Path(proposal["failed_science"]["terminal"]["path"]).parent,
+        LIFE / "handoffs" / "d15533af5bdf",
+        LIFE / "handoffs" / "b7d95bd6e7f2",
+        REPOSITORY / CONSTRUCTION_ROOT,
+        Path(proposal["accepted_construction"]["prevalidation"]["path"]).parent.parent,
+        *map(Path, baseline),
+    ]
+    missions = {PROVENANCE_MISSION, CONSTRUCTION_MISSION, ARTIFACT_REVIEW_MISSION,
+                FAILED_PREDECESSOR_MISSION,
+                "ab65cb0e6bea", "445f400d92c4",
+                "f5fb1a5b3487", "25482bb8477b",
+                "9d53694fd875", "6a7d8ff8feea"}
+    roots += [path for path in sorted((REPOSITORY / "build").iterdir())
+              if path.is_dir() and any(mission in path.name for mission in missions)]
+    roots += [LIFE / "handoffs" / mission for mission in sorted(missions)]
+    roots += [path for path in sorted((REPOSITORY / ".argus/live/manager-authority").iterdir())
+              if path.is_dir() and any(mission in path.name for mission in missions)]
+    require(all(root.is_dir() and root.resolve() == root for root in roots),
+            "immutable predecessor root missing or rebound")
+    return {str(root): tree_state(root) for root in roots}
+
+
+def focused_command(scratch, current):
+    """Check only the new owner/binding bytes; ed9 retains the repair coverage."""
+    release_tests = [
+        "test_fresh_proposed_contract_consumes_production",
+        "test_actual_successor_v6_owner_and_source_bindings",
+        "test_successor_rejects_obsolete_owner_schema",
+        "test_successor_rejects_owner_runtime_drift",
+        "test_source_binding_requires_baseline_or_postclaim_bytes",
+        "test_reviewed_candidate_capture_cannot_be_edited",
+        "test_reviewed_repair_rejects_changed_evidence",
+        "test_preseal_verdict_matches_real_runtime_classification",
+        "test_preseal_rejects_rebound_review",
+        "test_authenticated_validation_receipt_requires_exact_evidence",
+        "test_validation_receipt_requires_release_binding_coverage",
+        "test_validation_receipt_rejects_repinned_bindings",
+        "test_validation_receipt_rejects_changed_command",
+    ]
+    return [sys.executable, "-B", "-m", "pytest", "-q", "-p", "no:cacheprovider",
+            *[str(TEST) + "::" + name for name in release_tests],
+            "--durations=10", "-o", "junit_family=legacy", "--basetemp", str(scratch / "pytest-tmp"),
+            "--junitxml", str(scratch / "focused-tests.xml")]
+
+
+def test_summary(raw, stdout, *, require_candidate=True):
+    xml = ET.fromstring(raw)
+    suites = xml.findall(".//testsuite")
+    cases = xml.findall(".//testcase")
+    require(suites and sum(int(s.attrib["tests"]) for s in suites) == len(cases) > 0
+            and all(int(s.attrib[k]) == 0 for s in suites for k in ("failures", "errors", "skipped"))
+            and not any(c.find(k) is not None for c in cases for k in ("failure", "error", "skipped"))
+            and re.search(rb"(?:^|\n)" + str(len(cases)).encode()
+                          + rb" passed in [0-9.]+s(?: \([0-9]+:[0-9]{2}:[0-9]{2}\))?\s*$", stdout),
+            "prevalidation requires all collected tests passed, zero failures, errors, or skips")
+    forbidden = []
+    for case in cases:
+        if "test_diagnose_" in case.attrib["classname"]:
+            properties = [p.attrib for p in case.findall("./properties/property")]
+            require({p["name"] for p in properties} == {
+                "forbidden_" + kind for kind in ZERO_KINDS
+            } and len(properties) == len(ZERO_KINDS) and all(p["value"] == "0" for p in properties),
+                "candidate authority test lacks exact zero-invocation evidence")
+            forbidden.extend(properties)
+    require(forbidden or not require_candidate, "candidate authority coverage missing")
+    return forbidden
+
+
+def prevalidate():
+    require(Path.cwd() == REPOSITORY and sys.dont_write_bytecode and not sys.flags.optimize,
+            "wrong prevalidation interpreter or workdir")
+    proposal_pin, proposal, previous, owner, terminal = successor_inputs()
+    root = REPOSITORY / ROOT
+    require(not root.exists() and not root.is_symlink(), "delivery root must remain absent")
+    preserved = preserved_trees(proposal, previous)
     runtime = observe_runtime()
-    require(runtime["pid"] == authority["runtime"]["daemon_pid"]
-            and runtime["start_ticks"] == authority["runtime"]["daemon_start_ticks"]
-            and runtime["source_root"] == str(REPOSITORY /
-                "build/argus-stage11-terminal-replan-ledger-repair-attempt007/candidate/argus_skill"),
-            "current runtime no longer matches ordinary Manager authority")
-    source_pins = [pin(REPOSITORY / SOURCE), pin(REPOSITORY / TEST)]
-    current = {key: pin(record["path"]) for key, record in old["current_sources"].items()}
-    require(all(Path(r["path"]).stat().st_mtime_ns > owner["published_at"] * 1e9
-                for r in source_pins + list(current.values())),
-            "claim must predate implementation edits")
-    require(now < timestamp(authority["expiry"]), "ordinary build authority expired")
-    for record in source_pins + list(current.values()):
-        retain(record)
+    validation = REPOSITORY / VALIDATION_ROOT
+    require(validation.resolve() == validation and not validation.is_symlink(),
+            "noncanonical validation storage")
+    validation.mkdir(parents=True, exist_ok=True)
+    attempts = sorted(validation.glob("attempt-*"))
+    require([p.name for p in attempts] == [
+        f"attempt-{i:03d}" for i in range(1, len(attempts) + 1)], "validation attempt gap")
+    scratch = validation / f"attempt-{len(attempts) + 1:03d}"
+    scratch.mkdir()
+    started = time.time()
+    sources = implementation_pins()
+    receipt = {
+        "mission_id": MISSION, "status": "FAIL", "manager_proposal": proposal_pin,
+        "owner_sha256": CLAIM_SHA256, "started_at": started, "sources": sources,
+        "terminal_609": terminal, "preserved_trees": preserved, "commands": [],
+        "audit_limit": AUDIT_LIMIT, "repository_repair": proposal["repository_repair"],
+    }
+    exclusive(scratch / "prevalidation.command.txt", (shlex.join(sys.orig_argv) + "\n").encode())
+    write_json(scratch / "prevalidation.argv.json", sys.orig_argv)
+    try:
+        for index, ((_, _, name), record) in enumerate(zip(SOURCE_LAYOUT, sources, strict=True)):
+            raw = authenticate(record)
+            if index >= 2:
+                snapshot = authenticate(proposal["source_baseline"][SOURCE_LAYOUT[index][0]])
+                require(raw == snapshot, "candidate/capture changed before snapshot copy")
+                raw = snapshot
+            exclusive(scratch / name, raw)
+        reviewed_root = Path(proposal["repository_repair"]["proposed_bytes"]["path"]).parent
+        differences = []
+        for (_, path, name), source in zip(SOURCE_LAYOUT, sources, strict=True):
+            differences.extend(difflib.unified_diff(
+                (reviewed_root / name).read_text().splitlines(keepends=True),
+                authenticate(source).decode().splitlines(keepends=True),
+                fromfile="reviewed-ed9/" + str(path), tofile="proposed/" + str(path)))
+        exclusive(scratch / "source.diff", "".join(differences).encode())
+        contract = proposed_contract(previous, proposal_pin, scratch, started, runtime)
+        write_json(scratch / "current-runtime-contract.json", contract)
+        for name, argv in validation_commands(scratch, sources):
+            result = run_validation_command(scratch, name, argv)
+            receipt["commands"].append(result)
+            require(result["exit_code"] == 0, name + " failed; delivery root left absent")
+        test_summary((scratch / "focused-tests.xml").read_bytes(),
+                     (scratch / "focused-tests.stdout").read_bytes(), require_candidate=False)
+        require(preserved_trees(proposal, previous) == preserved and not root.exists(),
+                "prevalidation altered roots")
+        for record in sources:
+            authenticate(record)
+        receipt["status"] = "PASS"
+    except (ValueError, OSError, ET.ParseError) as error:
+        receipt["failure"] = {"type": type(error).__name__, "message": str(error)}
+        raise
+    finally:
+        receipt["finished_at"] = time.time()
+        receipt["members"] = [pin(p) for p in sorted(scratch.iterdir()) if p.is_file()]
+        write_json(scratch / "prevalidation.json", receipt)
+        print(json.dumps({"status": receipt["status"],
+                          "prevalidation": pin(scratch / "prevalidation.json")}))
+
+
+def validation_commands(scratch, sources):
+    return [
+        ("py_compile", [
+            sys.executable, "-P", "-B", "-c",
+            "import py_compile,sys; "
+            "[py_compile.compile(p,cfile=sys.argv[1]+'/compile-'+str(i)+'.pyc',doraise=True) "
+            "for i,p in enumerate(sys.argv[2:])]",
+            str(scratch), *[r["path"] for r in sources],
+        ]),
+        ("focused-tests", focused_command(scratch, {"tests": sources[3]})),
+    ]
+
+
+def validation_environment(scratch):
+    return {
+        "PATH": str(Path(sys.executable).parent) + ":/usr/bin:/bin",
+        "HOME": str(scratch), "TMPDIR": str(scratch), "LANG": "C.UTF-8",
+        "PYTHONDONTWRITEBYTECODE": "1", "PYTEST_DISABLE_PLUGIN_AUTOLOAD": "1",
+        "PYTHONPATH": str(REPOSITORY), "STAGE11_TEST_ROOT": str(scratch / "pytest-tmp"),
+        "STAGE11_PREVALIDATION_ROOT": str(scratch),
+    }
+
+
+def run_validation_command(scratch, name, argv):
+    environment = validation_environment(scratch)
+    exclusive(scratch / (name + ".command.txt"), (shlex.join(argv) + "\n").encode())
+    write_json(scratch / (name + ".argv.json"), argv)
+    write_json(scratch / (name + ".environment.json"), environment)
+    started = time.time()
+    timed_out = False
+    try:
+        completed = subprocess.run(argv, cwd=REPOSITORY, env=environment,
+                                   capture_output=True, timeout=900, check=False)
+        stdout, stderr, code = completed.stdout, completed.stderr, completed.returncode
+    except subprocess.TimeoutExpired as error:
+        stdout, stderr, code = error.stdout or b"", error.stderr or b"", 124
+        timed_out = True
+    exclusive(scratch / (name + ".stdout"), stdout)
+    exclusive(scratch / (name + ".stderr"), stderr)
+    summary = None
+    if name == "focused-tests" and (scratch / "focused-tests.xml").is_file():
+        suites = ET.fromstring((scratch / "focused-tests.xml").read_bytes()).findall(".//testsuite")
+        summary = {key: sum(int(s.attrib[key]) for s in suites)
+                   for key in ("tests", "failures", "errors", "skipped")}
+    result = {"name": name, "argv": argv, "environment": environment, "cwd": str(REPOSITORY),
+              "exit_code": code, "timed_out": timed_out,
+              "started_at": started, "finished_at": time.time(),
+              "stdout": pin(scratch / (name + ".stdout")),
+              "stderr": pin(scratch / (name + ".stderr")), "test_summary": summary}
+    write_json(scratch / (name + ".receipt.json"), result)
+    print(stdout.decode(), end="")
+    print(stderr.decode(), end="", file=sys.stderr)
+    return result
+
+
+def authenticate_prevalidation(record, source_pins, owner, proposal, terminal):
+    evidence = document(record)
+    scratch = Path(record["path"]).parent
+    require(scratch.parent == REPOSITORY / VALIDATION_ROOT
+            and re.fullmatch(r"attempt-[0-9]{3}", scratch.name)
+            and record["path"] == str(scratch / "prevalidation.json")
+            and scratch.stat().st_ctime_ns >= owner["published_at"] * 1e9
+            and evidence["mission_id"] == MISSION and evidence["status"] == "PASS"
+            and evidence["owner_sha256"] == CLAIM_SHA256
+            and same(evidence["manager_proposal"], CONSUMPTION_INPUT)
+            and same(evidence["repository_repair"], proposal["repository_repair"])
+            and owner["published_at"] < evidence["started_at"] <= evidence["finished_at"] <= time.time()
+            and same(evidence["sources"], source_pins) and same(evidence["terminal_609"], terminal),
+            "prevalidation claim, timing, or source binding differs")
+    members = {}
+    for member in evidence["members"]:
+        path = Path(member["path"])
+        require(path.parent == scratch and path.name not in members, "invalid prevalidation member")
+        members[path.name] = authenticate(member)
+    commands = validation_commands(scratch, source_pins)
+    require(len(evidence["commands"]) == len(commands), "required validation command missing")
+    for (name, argv), result in zip(commands, evidence["commands"]):
+        require(same(result, json.loads(members[name + ".receipt.json"]))
+                and result["name"] == name and same(result["argv"], argv)
+                and result["cwd"] == str(REPOSITORY)
+                and type(result["exit_code"]) is int and result["exit_code"] == 0
+                and result["timed_out"] is False
+                and evidence["started_at"] <= result["started_at"]
+                <= result["finished_at"] <= evidence["finished_at"]
+                and same(result["environment"], validation_environment(scratch))
+                and same(json.loads(members[name + ".environment.json"]), result["environment"])
+                and same(json.loads(members[name + ".argv.json"]), argv)
+                and members[name + ".command.txt"] == (shlex.join(argv) + "\n").encode()
+                and same(result["stdout"], pin_bytes(scratch / (name + ".stdout"), members[name + ".stdout"]))
+                and same(result["stderr"], pin_bytes(scratch / (name + ".stderr"), members[name + ".stderr"])),
+                "compile/test command, environment, timing, or result differs")
+    require(all("compile-" + str(i) + ".pyc" in members for i in range(len(source_pins))),
+            "compiled source census differs")
+    for (_, _, name), source in zip(SOURCE_LAYOUT, source_pins, strict=True):
+        require(members[name] == authenticate(source), "validation snapshot differs")
+    test_summary(members["focused-tests.xml"], members["focused-tests.stdout"],
+                 require_candidate=False)
+    forbidden = reviewed_repair_evidence(proposal)
+    cases = ET.fromstring(members["focused-tests.xml"]).findall(".//testcase")
+    require(any(c.attrib["name"] == "test_fresh_proposed_contract_consumes_production" for c in cases)
+            and any(c.attrib["name"] == "test_actual_successor_v6_owner_and_source_bindings"
+                    for c in cases)
+            and all(any(c.attrib["name"] == (
+                "test_preseal_verdict_matches_real_runtime_classification[" + status + "]")
+                for c in cases) for status in ("continue", "replan_requested")),
+            "required release-binding validation coverage missing")
+    summary = evidence["commands"][1]["test_summary"]
+    require(same(summary, {"tests": len(cases), "failures": 0, "errors": 0, "skipped": 0}),
+            "validation test summary differs")
+    previous = document(proposal["accepted_construction"]["contract"])
+    require(preserved_trees(proposal, previous) == evidence["preserved_trees"],
+            "immutable predecessor tree changed")
+    return evidence, members, forbidden
+
+
+def authenticate_preseal_review(prevalidation, source_pins):
+    base = LIFE / "handoffs" / MISSION
+    latest = document(pin(base / "latest.json"))
+    require(latest["kind"] == "handoff_ref"
+            and latest["mission"] == {"path": str(base / "mission.json")},
+            "independent preseal review required")
+    review_pin = pin(Path(latest["handoff"]["path"]))
+    review = document(review_pin)
+    for record in source_pins:
+        authenticate(record)
+    require(review["kind"] == "round_reviewed_handoff" and review["schema_version"] == 3
+            and review["mission_id"] == MISSION and review["producer_role"] == "reviewer"
+            and type(review["round"]) is int and review["round"] > 0
+            and review_pin["path"] == str(base / f"round-{review['round']:04d}.json")
+            and review["mission_context"] == str(base / "mission.json")
+            and review["review"]["status"] == "continue"
+            and review["review"]["next_action"] == "BUILD_FINAL_FROM_REVIEWED_BYTES"
+            and prevalidation["finished_at"] <= review["created_at"] <= time.time()
+            and all(Path(record["path"]).stat().st_mtime <= review["created_at"]
+                    for record in source_pins),
+            "independent preseal review of unchanged validated bytes required")
+    return review_pin
+
+
+def build(prevalidation_pin):
+    require(Path.cwd() == REPOSITORY and sys.dont_write_bytecode
+            and not sys.flags.optimize, "wrong workdir or interpreter flags")
+    proposal_pin, proposal, previous, owner, terminal = successor_inputs()
+    source_pins = implementation_pins()
     root = REPOSITORY / ROOT
     require(root.resolve() == root and not root.exists() and not root.is_symlink(),
             "sole fresh root already exists; no overwrite or retry")
+    prevalidation, members, forbidden = authenticate_prevalidation(
+        prevalidation_pin, source_pins, owner, proposal, terminal)
+    review_pin = authenticate_preseal_review(prevalidation, source_pins)
+    validation = REPOSITORY / VALIDATION_ROOT
+    attempts = sorted(validation.glob("attempt-*"))
+    require([p.name for p in attempts] == [
+        f"attempt-{i:03d}" for i in range(1, len(attempts) + 1)]
+        and attempts[-1] == Path(prevalidation_pin["path"]).parent,
+        "final validation must be the latest retained attempt")
+    retained = {}
+    for attempt in attempts:
+        receipt_pin = pin(attempt / "prevalidation.json")
+        receipt = document(receipt_pin)
+        require(receipt["mission_id"] == MISSION and receipt["owner_sha256"] == CLAIM_SHA256
+                and same(receipt["manager_proposal"], proposal_pin)
+                and owner["published_at"] < receipt["started_at"] <= receipt["finished_at"]
+                <= prevalidation["finished_at"], "retained validation claim/timing differs")
+        retained[str(attempt.name + "/prevalidation.json")] = authenticate(receipt_pin)
+        for member in receipt["members"]:
+            path = Path(member["path"])
+            require(path.parent == attempt and path.name != "prevalidation.json",
+                    "retained validation member escaped its attempt")
+            retained[attempt.name + "/" + path.name] = authenticate(member)
+    scratch = Path(prevalidation_pin["path"]).parent
+    contract = proposed_contract(previous, proposal_pin, scratch,
+                                 prevalidation["started_at"], observe_runtime())
+    require(same(contract, json.loads(members["current-runtime-contract.json"])),
+            "final contract differs from validated bytes or runtime")
+    accepted_lineage(contract["accepted_lineage"], contract)
+    now = time.time()
+    contract["created_at"] = now
+    for role, name in (("current_diagnostic", "candidate-source.py"),
+                       ("current_tests", "candidate-tests.py")):
+        contract["source_snapshots"][role] = pin_bytes(root / name, members[name])
+    for key, name in (("capture_helper", "capture-source.py"),
+                      ("capture_tests", "capture-tests.py")):
+        contract["capture_snapshots"][key] = pin_bytes(root / name, members[name])
+    authority_path = REPOSITORY / ".argus/live/manager-authority" / AUTHORITY / "build-authorization.json"
+    owner_path = authority_path.with_name("manager-owner-claim.json")
+    authority = json.loads(authority_path.read_bytes())
+    payload = {
+        "current-runtime-contract.json": json_bytes(contract),
+        "build-authorization.json": authority_path.read_bytes(),
+        "manager-owner-claim.json": authenticate(dict(pin(owner_path), sha256=CLAIM_SHA256)),
+        "manager-input.json": authenticate(proposal_pin),
+        "preseal-review.json": authenticate(review_pin),
+        "manager-consumption-decision.json": authenticate(CONSUMPTION_DECISION),
+        "post-review-manager-owner.json": json_bytes(authority["post_review_owner"]),
+        "claim.command.txt": (CLAIM_COMMAND + "\n").encode(),
+        "build.command.txt": (shlex.join(sys.orig_argv) + "\n").encode(),
+        "build.argv.json": json_bytes(sys.orig_argv),
+        **{name: members[name] for _, _, name in SOURCE_LAYOUT},
+        **{"validation/" + name: raw for name, raw in retained.items()},
+    }
+    successor_inputs()
+    for record in source_pins:
+        authenticate(record)
     root.mkdir()
-    audit = {"writes": [], "subprocesses": [], "blocked": []}
-    candidate_tests = [
-        "test_running_claim_accepts_actual_emitter_declaration_and_retained_lineage",
-        "test_launch_authorization_rejects_invalid_bindings",
-        "test_launch_requires_exact_one_shot_budget",
-        "test_candidate_lineage_member_rejections",
-        "test_candidate_obsolete_authorization_schema_rejected",
-        "test_candidate_shared_lineage_rejects_repinned_semantics",
-    ]
-    command = [sys.executable, "-B", "-m", "pytest", "-q", "-p", "no:cacheprovider",
-               str(TEST), *[current["tests"]["path"] + "::" + name for name in candidate_tests],
-               "-o", "junit_family=legacy",
-               "--basetemp", str(root / "pytest-tmp"),
-               "--junitxml", str(root / "focused-tests.xml")]
+    audit = {"writes": [], "blocked": []}
 
     def audit_hook(name, args):
         if name == "open":
@@ -871,152 +1856,54 @@ def build():
                 audit["blocked"].append([name, str(target)])
                 raise PermissionError("builder write outside fresh root")
             audit["writes"].append(str(target))
-        elif name == "subprocess.Popen":
-            require(args[1] == command and not audit["subprocesses"],
-                    "only one focused pytest command is permitted")
-            audit["subprocesses"].append(command)
-        elif name in ("os.system", "os.exec", "os.posix_spawn", "socket.connect"):
+        elif name in ("subprocess.Popen", "os.system", "os.exec", "os.posix_spawn", "socket.connect"):
             audit["blocked"].append(name)
             raise PermissionError("dispatch forbidden in zero-science builder")
-        elif name == "import" and ".candidates." in args[0]:
+        elif name == "import" and (".candidates." in args[0]
+                                  or args[0].split(".")[0] in ("numpy", "torch", "transformers")):
             audit["blocked"].append(name)
             raise PermissionError("candidate imports forbidden")
 
     sys.addaudithook(audit_hook)
+    for name, raw in payload.items():
+        path = root / name
+        path.parent.mkdir(parents=True, exist_ok=True)
+        exclusive(path, raw)
+    row, event, _, _ = native_claim(LIFE, MISSION, time.time())
     write_json(root / "construction-receipt.json", {
-        "mission_id": MISSION, "authority": pin_bytes(authority_path, authority_raw),
-        "manager_owner_claim": pin_bytes(owner_path, owner_raw),
-        "claim_predates_edits_and_root": True, "runtime": runtime,
+        "mission_id": MISSION, "authority": pin(authority_path),
+        "manager_owner_claim": pin(owner_path),
+        "claim_predates_root": True, "source_edit_bindings": source_edit_bindings(proposal, owner),
+        "runtime": contract["runtime"],
         "native_record": row, "mission_started_event": event, "created_at": now,
         "consumption": "AUTHENTICATED_JSON_DATA_ONLY", "executing_role": "engineer",
+        "prevalidation": prevalidation_pin,
+        "retained_candidate_authority_evidence": proposal["repository_repair"]["focused_tests_xml"],
+        "retained_prevalidation": pin(root / "validation" / scratch.name / "prevalidation.json"),
+        "prevalidation_completed_before_root": prevalidation["finished_at"] <= now,
+        "sources": source_pins, "builder_invocations": 1,
+        "provenance_is_not_implementation_acceptance": True,
     })
-    for name, raw in (
-        ("build.command.txt", (BUILD_COMMAND + "\n").encode()),
-        ("claim.command.txt", (CLAIM_COMMAND + "\n").encode()),
-        ("claim.stdout", (json.dumps({
-            "candidate_imports": 0, "mission_id": MISSION, "receipt": str(owner_path),
-            "scientific_invocations": 0, "sha256": CLAIM_SHA256,
-            "status": "BOUND_TO_NATIVE_RUNNING_CLAIM",
-        }) + "\n").encode()),
-        ("build-authorization.json", authority_raw), ("manager-owner-claim.json", owner_raw),
-        ("manager-proposal.json", authenticate(proposal_pin)),
-        ("manager-preflight-report.json", authenticate(authority["manager_inputs"]["preflight_report"])),
-        ("source.py", authenticate(source_pins[0])), ("focused-tests.py", authenticate(source_pins[1])),
-        ("candidate-source.py", authenticate(current["candidate"])),
-        ("candidate-tests.py", authenticate(current["tests"])),
-    ):
-        exclusive(root / name, raw)
-    execution_contract = copy.deepcopy(scientific_contract)
-    execution_contract["sources"]["current_diagnostic"] = current["candidate"]
-    execution_contract["sources"]["current_tests"] = current["tests"]
-    roles = copy.deepcopy(original["source_roles"])
-    roles["current_diagnostic"] = {
-        "source": current["candidate"], "retained": current["candidate"],
-    }
-    snapshots = {"current_diagnostic": pin(root / "candidate-source.py"),
-                 "current_tests": pin(root / "candidate-tests.py"),
-                 "historical_generation": historical_snapshot}
-    contract = {
-        "schema_version": 1, "kind": "fresh_non_inheriting_current_runtime",
-        "mission_id": MISSION, "created_at": now, "status": "PROPOSED_PENDING_INDEPENDENT_REVIEW",
-        "admission_decision_requested": ADMISSION, "scientific_run_budget": 0,
-        "inherits_operational_admission": False, "manager_proposal": proposal_pin,
-        "audit_limit": old["audit_limit"], "runtime": runtime,
-        "failed_predecessor": predecessor, "accepted_current_runtime": accepted,
-        "accepted_lineage": production,
-        "implementation_sources": source_pins, "current_sources": current,
-        "current_operational_evidence": evidence, "original_scientific_lineage": lineage,
-        "identity": original["identity"], "accepted_proposal": lineage["proposal"],
-        "accepted_mission": "ed8fb34bae3a", "accepted_review": lineage["accepted_review"],
-        "accepted_terminal": lineage["accepted_terminal"], "accepted_files": accepted_index["files"],
-        "execution_contract": execution_contract, "source_roles": roles,
-        "source_snapshots": snapshots, "launch": original["launch"],
-        "launch_constraints": scientific_contract["launch_constraints"],
-        "historical_state": dict(old["historical_state"],
-                                 observer_4e91="HISTORICAL_STATE_UNCHANGED_NOT_CLOSED"),
-        "frozen_016_report": report, "boundary": report["report"]["boundary"],
-        "future_science": {"scientific_run_budget": 1, "command_count": 1, "cpu_only": True,
-                           "fresh_distinct_normal_claim": True, "attempt": 1, "retry": False},
-        "review_policy": {
-            "independent_host_reviewer": "REQUIRED", "root_expected_to_exist": True,
-            "read_only_integrity_operations_only": True, "engineer_commands_allowed": False,
-            "candidate_observer_builder_emitter_tests_allowed": False,
-            "stage_transition_allowed": False,
-            "acceptance_encoding": "Exact six-line review.reason from review_acceptance(contract_pin, seal_pin)",
-        },
-        "emitter": {"entry": "ace3.model.stage11_current_runtime_release.emit_after_claim",
-                    "live_invocations": 0, "outputs": list(OUTPUTS),
-                    "request_path": ".argus/live/manager-authority/stage11-science-<mission>-attempt001/request.json",
-                    "output_path": "issued", "envelope_written_last": True,
-                    "partial_issuance_consumes_attempt": True},
-    }
-    accepted_lineage(production, contract)
-    write_json(root / "current-runtime-contract.json", contract)
-    exclusive(root / "py_compile.command.txt", (
-        BUILD_COMMAND + "\n"
-        "py_compile.compile(source, cfile=fresh_root/compile-N.pyc, doraise=True)\n"
-    ).encode())
-    compile_sources = source_pins + list(current.values())
-    for index, record in enumerate(compile_sources):
-        py_compile.compile(record["path"], cfile=str(root / f"compile-{index}.pyc"),
-                           doraise=True)
-    write_json(root / "compile-receipt.json", {
-        "status": "PASS", "mode": "py_compile explicit fresh-root cfile", "sources": compile_sources,
-        "candidate_imports": 0, "candidate_compiles": 1,
-    })
-    environment = dict(os.environ, PYTHONDONTWRITEBYTECODE="1",
-                       PYTEST_DISABLE_PLUGIN_AUTOLOAD="1", PYTHONPATH=str(REPOSITORY),
-                       STAGE11_TEST_ROOT=str(root / "pytest-tmp"))
-    exclusive(root / "focused-tests.command.txt", (shlex.join(command) + "\n").encode())
-    write_json(root / "focused-tests.argv.json", command)
-    completed = subprocess.run(command, cwd=REPOSITORY, env=environment,
-                               capture_output=True, timeout=60, check=False)
-    exclusive(root / "focused-tests.stdout", completed.stdout)
-    exclusive(root / "focused-tests.stderr", completed.stderr)
-    write_json(root / "focused-tests-receipt.json", {
-        "argv": command, "exit_status": completed.returncode, "suite_runs": 1,
-        "actual_authenticated_production_lineage_files": 33,
-        "synthetic_future_claim_and_review_only": True,
-        "candidate_selection": "data-only authority tests; no synthetic arithmetic or arrays",
-        "emitter_invocations": 0,
-        "environment_overrides": {k: environment[k] for k in (
-            "PYTHONDONTWRITEBYTECODE", "PYTEST_DISABLE_PLUGIN_AUTOLOAD", "PYTHONPATH",
-            "STAGE11_TEST_ROOT")},
-    })
-    require(completed.returncode == 0, "focused tests failed; retained output is authoritative")
-    properties = ET.parse(root / "focused-tests.xml").findall(".//property")
-    forbidden = [p.attrib for p in properties if p.attrib["name"].startswith("forbidden_")]
-    require(forbidden and all(p["value"] == "0" for p in forbidden),
-            "candidate authority tests must record zero forbidden invocations")
     write_json(root / "zero-invocations.json", {
         "candidate_authority_test_properties": forbidden,
         "candidate_check_invocations": 0, "scientific_invocations": 0,
         "model_invocations": 0, "runtime_loads": 0, "array_loads": 0,
+        "producer_invocations": 0, "service_invocations": 0,
         "live_emitter_invocations": 0,
     })
-    for record, raw in authenticated.values():
-        require(authenticate(record) == raw, "authenticated input drift")
-    require(all(Path(path).is_symlink() and os.readlink(path) == target
-                for path, target in preserved_links.items()), "predecessor test symlink drift")
-    require(authority_path.read_bytes() == authority_raw and owner_path.read_bytes() == owner_raw,
-            "ordinary authority or owner receipt drift")
-    after, after_event, _, _ = native_claim(LIFE, MISSION, time.time())
-    require(same(stable_claim(after), stable_claim(row)) and same(after_event, event)
-            and same(observe_runtime(), runtime), "claim/runtime drift during construction")
+    require(preserved_trees(proposal, previous) == prevalidation["preserved_trees"],
+            "immutable predecessor drift")
+    successor_inputs()
+    require(same(observe_runtime(), contract["runtime"]), "runtime drift during construction")
     write_json(root / "audit-disclosure.json", {
-        "scope": "Python builder audit hooks and test process guards; command receipts and member census",
+        "scope": "Python builder audit hooks and prevalidation test guards; command receipts and member census",
         "not_claimed": "OS-wide write confinement, sandbox equivalence, historical closure, or scientific results",
-        "source_edits": "Engineer tool edits preceded builder audit; claim predates those edits",
+        "source_edits": "Each source matches its Manager baseline or its modification time postdates the claim",
         "claim_command_sidecar": "Exact operator command recorded after binder returned its authenticated receipt",
         "runtime_limit": "PID/start/cmdline and startup fingerprint record identity, not an OS attestation",
         "independent_acceptance_required": AUDIT_LIMIT, "builder_audit": audit,
     })
-    write_json(root / "preserved-inputs.json", {
-        "files": [record for record, _ in authenticated.values()],
-        "predecessor_test_symlinks": preserved_links,
-        "failed_predecessor_unchanged": True, "accepted_lineage_files": 33,
-        "accepted_current_runtime_unchanged": True, "frozen_016_unchanged": True,
-    })
+    write_json(root / "preserved-inputs.json", prevalidation["preserved_trees"])
     write_json(root / "termination-receipt.json", {
         "mission_id": MISSION, "status": "PROPOSED_PENDING_INDEPENDENT_REVIEW",
         "scientific_run_budget": 0, "scientific_invocations": 0, "candidate_imports": 0,
@@ -1035,7 +1922,8 @@ def build():
     }) + "\n"
     exclusive(root / "build.stdout", result.encode())
     exclusive(root / "build.stderr", b"")
-    write_json(root / "build-receipt.json", {"command": BUILD_COMMAND, "exit_status": 0})
+    write_json(root / "build-receipt.json", {"command": shlex.join(sys.orig_argv), "exit_status": 0,
+                                           "builder_invocations": 1, "validation_reruns": 0})
     census = [dict(pin(p), path=str(p.relative_to(root)))
               for p in sorted(root.rglob("*")) if p.is_file()]
     write_json(root / "seal.json", {
@@ -1047,5 +1935,10 @@ def build():
 
 
 if __name__ == "__main__":
-    require(sys.argv[1:] == ["--build"], "only zero-science --build is exposed")
-    build()
+    if sys.argv[1:] == ["--prevalidate"]:
+        prevalidate()
+    else:
+        require(len(sys.argv) == 4 and sys.argv[1] == "--build",
+                "only zero-science --prevalidate or --build PATH SHA256 is exposed")
+        evidence_path = Path(sys.argv[2])
+        build(dict(pin(evidence_path), sha256=sys.argv[3]))

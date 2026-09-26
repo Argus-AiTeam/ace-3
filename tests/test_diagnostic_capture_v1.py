@@ -74,6 +74,75 @@ def test_byte_exact_streams_and_legacy_frame(tmp_path, status, stderr):
     assert_pins(result["files"])
 
 
+def test_preflight_cwd_records_and_executes_captured_command_path(tmp_path, monkeypatch):
+    workdir, directory = tmp_path / "command-workdir", tmp_path / "capture"
+    workdir.mkdir()
+    directory.mkdir()
+    (workdir / "command.py").write_text(
+        "import os\nos.write(1, os.fsencode(os.getcwd()) + b'\\x00\\xff')\n")
+    with monkeypatch.context() as context:
+        context.chdir(workdir)
+        before = preflight()
+    monkeypatch.chdir(tmp_path)
+    assert before["cwd"] == str(workdir)
+    argv, results = [sys.executable, "-B", "command.py"], []
+    output = os.fsencode(workdir) + b"\x00\xff"
+    assert capture.run_command(directory, "check", argv, before, results) == output
+    result, = results
+    assert result["exit_status"] == 0 and result["timed_out"] is False
+    assert "launch_error" not in result
+    assert (directory / "check.environment.json").read_bytes() == capture.encoded(before)
+    command = (capture.environment_command(before["environment"], argv) + "\n").encode()
+    assert (directory / "check.whole-command.log").read_bytes() == (
+        b"COMMAND\n" + command + b"ENVIRONMENT\n" + capture.encoded(before)
+        + b"\nSTDOUT\n" + output + b"\nSTDERR\n\nEXIT_STATUS=0\nTIMED_OUT=False\n")
+    assert_pins(result["files"])
+
+
+@pytest.mark.parametrize("defect", [
+    "missing", None, "", 0, True, [], {}, "invalid\0cwd",
+])
+def test_preflight_cwd_rejects_malformed_records_before_dispatch(tmp_path, monkeypatch, defect):
+    before, results = preflight(), []
+    if defect == "missing":
+        del before["cwd"]
+    else:
+        before["cwd"] = defect
+
+    def forbidden(*args):
+        pytest.fail("dispatch with missing/invalid cwd")
+
+    monkeypatch.setattr(capture, "_execute", forbidden)
+    with pytest.raises(ValueError, match="preflight requires a nonempty cwd string without NUL"):
+        capture.run_command(tmp_path, "check", [sys.executable, "-B", "-c", "pass"], before, results)
+    assert results == []
+    assert list(tmp_path.iterdir()) == []
+
+
+@pytest.mark.parametrize("kind,error_type", [
+    ("missing", "FileNotFoundError"), ("file", "NotADirectoryError"),
+])
+def test_preflight_cwd_filesystem_failure_is_sealed(tmp_path, kind, error_type):
+    cwd = tmp_path / "invalid-cwd"
+    if kind == "file":
+        cwd.write_bytes(b"not a directory")
+    before, results = preflight(), []
+    before["cwd"] = str(cwd)
+    with pytest.raises(RuntimeError, match="complete bytes retained"):
+        capture.run_command(tmp_path, "check", [sys.executable, "-B", "-c", "print('unexpected')"],
+                            before, results)
+    result, = results
+    assert result["exit_status"] == 127 and result["timed_out"] is False
+    assert result["launch_error"]["type"] == error_type
+    assert result["launch_error"]["message"]
+    assert (tmp_path / "check.stdout").read_bytes() == b""
+    assert (tmp_path / "check.stderr").read_bytes() == b""
+    assert (tmp_path / "check.environment.json").read_bytes() == capture.encoded(before)
+    assert (tmp_path / "check.whole-command.log").read_bytes().endswith(
+        b"\nSTDOUT\n\nSTDERR\n\nEXIT_STATUS=127\nTIMED_OUT=False\n")
+    assert_pins(result["files"])
+
+
 def test_timeout_retains_partial_bytes_and_stops_descendant(tmp_path):
     descendant = "import time,os; time.sleep(2); os.write(1,b'late bytes')"
     code = ("import os,subprocess,sys,time; "
@@ -1079,6 +1148,19 @@ def _run_retained_authentication_validation(attempt):
         active = False
         sys.setprofile(None)
         tempfile.tempdir = previous_tempdir
+
+
+@pytest.mark.parametrize("data", [
+    b"command", b"command\n\n", b"command\r\n", b"command\xff\n", "command\n",
+])
+def test_command_file_rejects_malformed_framing(data):
+    with pytest.raises(RuntimeError):
+        capture.decode_command_file(data)
+
+
+def test_command_file_decodes_only_one_terminal_lf():
+    command = "HOME=/home/example python 'embedded\nnewline' 'trailing space '"
+    assert capture.decode_command_file((command + "\n").encode()) == command
 
 
 if __name__ == "__main__":
