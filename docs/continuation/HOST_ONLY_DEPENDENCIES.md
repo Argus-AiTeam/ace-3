@@ -2,10 +2,13 @@
 
 This repository is a curated source snapshot, not a full host image.
 
-| Dependency | Location / provenance (updated September 26) | Published here | Recovery consequence |
+| Dependency | Location / provenance (updated September 28) | Published here | Recovery consequence |
 | --- | --- | --- | --- |
 | Live Argus state, backlog, handoffs, native events, registry and claims | `/home/argustest/.argus-skill-ace3/projects/s-62150b05` | No | Same-host continuation can inspect it. Disk loss removes lifecycle and authoritative receipts not separately archived. |
-| Active runtime source | `build/argus-planner-recovery-20260925-attempt001/candidate`; release `0.1.2+f0d9ffb2b15a2dbb` at observation | Only the reviewed Planner format-retry diff, not the whole runtime | Discover current runtime from live status. The old attempt007 runtime is not the active launch instruction. |
+| Active runtime source | `build/argus-planner-structured-empty-hold-release-input-fcd4bb2c7c09-attempt001/snapshot`; release `0.1.2+e69764dbdb9bd222` at observation | Runtime identity/progress only; older published patches are historical, not this complete runtime | Discover current runtime from live status. Do not copy the public `argus_skill` snapshot over this sealed release or replay its deployment. |
+| Latest exact-integer Stage11 software | `d12e372181f0` and its 64-source execution dependency set | Four exact historical implementation/test files, dependency sources and companion tests; hashes in September 28 manifest | Subsequent native-schema/source-census defects prevent execution as published. Repair owner is active; no new numerical result exists. |
+| Latest measured S13-S17 composition | `build/stage16_silu_product_execution_v1-92e4223ef310-attempt001` | Small REJECTED summary and original result/review hashes | All nine S18 and eighteen direction checks failed. The unchanged composition is consumed and must not be replayed. |
+| Current Stage11 handoff and source lineage | Native state and original retained Stage10/tensor/state/KV payloads | No authoritative handoff, claim, arrays or active authority | The first science owner stopped before claim. Public source does not supply missing Manager inputs or grant authority. |
 | Reviewed scientific release | `build/argus-stage11-reviewed-interface-release-287d994f2fe4-attempt001` | Six exact source snapshots at normal source paths; full seal/authority/state remain host-only | Source publication does not grant execution authority or permit replay. |
 | Actual rejected scientific evidence | `build/stage11-attention-output-suffix-authorized-b4978b898600-attempt001` and `build/stage11_s18_boundary_localizer_v2_attempt001` | Sanitized numerical rows, counts and original hashes | Both are consumed REJECTED results with normal review; raw arrays and original receipts remain on the host. |
 | Accepted `04c` root | `build/argus-stage11-current-runtime-lineage-schema-04c9ee209234-attempt001` | No, hash-linked summary only | Operational acceptance cannot be recovered from the summary alone. |

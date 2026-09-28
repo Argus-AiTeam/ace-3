@@ -22,15 +22,36 @@ that build-time authority does not restrict later observation to disabled mode.
 Native handoff children bind their source through the exact launch environment,
 while controlled children retain their source-path argv binding.
 
---prevalidate retains six-source compilation and narrow v6 release-binding
-checks outside the absent delivery root. The independently reviewed ed9 repair
+--prevalidate retains six-source compilation and v6 release-binding checks,
+including the full ed9 reconciliation matrix, outside the absent
+delivery root. The independently reviewed ed9 repair
 supplies authenticated retained candidate compatibility and 229-test evidence,
-not another repair run. Its complete runtime-source/reference-member interface
-is unchanged. --build PATH SHA256 requires an independent CONTINUE preseal
-review with BUILD_FINAL_FROM_REVIEWED_BYTES under the same running claim, then
-consumes unchanged passing bytes once. REPLAN terminates that claim and cannot
-authorize construction. Audits are Python-scoped, not OS-wide; final
-construction still requires independent Host review.
+not another repair run. Only ed9's deferred-to-not_certified backlog
+reconciliation may differ from its pinned row; the completion event stays exact.
+Its complete runtime-source/reference-member interface is retained. The v7
+value-content authority binds a new target and explicit output and validates
+the complete release and candidate suites. Publication repairs additionally
+authenticate and run the complete reviewed publication-compatibility suite.
+Self-test recovery decisions additionally bind the pinned recovery identities
+and canonical absolute candidate output from their Manager proposal.
+Future value-target proposals may declare a complete `current_runtime_sources`
+census instead of inheriting historical surplus imports. Its editable entries
+must match the Manager source baselines; other entries authenticate as issued.
+Omitting this field preserves the historical census, not an inferred replacement.
+Current-census supersession authenticates the declared historical release owner,
+independently of any superseded publication owners.
+Both v6 and v7 require a nonterminal CONTINUE
+preseal review requesting BUILD_FINAL_FROM_REVIEWED_BYTES. Audits are
+Python-scoped, not OS-wide; final construction still requires independent
+Host review. Construction selects the sole fresh-root binding once, then
+reauthenticates that exact binding, native claim and source bytes without
+rediscovering an absent-root authority after creating its own root.
+
+Active identity comes from the sole unfinished Manager-prepared release authority,
+including the value-content forward, self-test and current-census release families,
+including its authenticated input, decision, owner receipt and validation path.
+Missing or overlapping preparation is a technical blocker, never permission to
+reuse the completed 287 release. Its bindings remain historical references.
 """
 
 from __future__ import annotations
@@ -54,16 +75,12 @@ import zipfile
 
 REPOSITORY = Path(__file__).resolve().parents[2]
 LIFE = Path("/home/argustest/.argus-skill-ace3/projects/s-62150b05")
-MISSION = "287d994f2fe4"
-AUTHORITY = "s11-reviewed-interface-release-20260926-287d994f2fe4-r1"
-ROOT = Path("build/argus-stage11-reviewed-interface-release-287d994f2fe4-attempt001")
 FAILED_PREDECESSOR_MISSION = "fd53d72da1f9"
 CONSTRUCTION_MISSION = "640a6d6db0cf"
 CONSTRUCTION_ROOT = Path("build/argus-stage11-operational-ordering-successor-640a6d6db0cf-attempt001")
 ARTIFACT_REVIEW_MISSION = "4127f6bb1e4a"
 PROVENANCE_MISSION = "f1c261d97727"
 PROVENANCE_ROOT = Path("build/argus-stage11-operational-framing-successor-f1c261d97727-attempt001")
-VALIDATION_ROOT = Path(".argus/live/manager-validation/stage11-reviewed-interface-release-287d994f2fe4")
 SOURCE = Path("ace3/model/stage11_current_runtime_release.py")
 TEST = Path("tests/test_stage11_current_runtime_release.py")
 CANDIDATE_NAME = "diagnose_q24_s16_final_head_final_rmsnorm_unselected_direct_hidden_mlp_stage17_stage11_attention_output_suffix_candidate_v1"
@@ -75,8 +92,7 @@ SOURCE_LAYOUT = (
     ("capture_helper", Path("ace3/model/candidates/diagnostic_capture_v1.py"), "capture-source.py"),
     ("capture_tests", Path("tests/test_diagnostic_capture_v1.py"), "capture-tests.py"),
 )
-CLAIM_SHA256 = "96f345d706a2418e231c047bc4ff64bcc54bfa068c1350a11314269b4098e4e6"
-PROPOSAL_SHA256 = "0f860f4c7d9041845eb95684423247bd09f955fe20ac76bfb64322a4cf198bed"
+HISTORICAL_SOURCE_LAYOUT = SOURCE_LAYOUT
 ADMISSION = "ADMISSIBLE_CURRENT_RUNTIME_NON_INHERITING"
 AUDIT_LIMIT = "ACCEPTED_PYTHON_SCOPED_NOT_OS_WIDE"
 OUTPUTS = (
@@ -87,26 +103,28 @@ BUILD_COMMAND = (
     "/home/argustest/miniconda3/bin/python -P -B "
     "ace3/model/stage11_current_runtime_release.py --build"
 )
-CLAIM_COMMAND = (
-    "/home/argustest/miniconda3/bin/python -P -B "
-    ".argus/live/manager-tools/publish-stage11-reviewed-interface-release-owner-claim-v6.py "
-    "--authority-dir .argus/live/manager-authority/" + AUTHORITY
-)
-CONSUMPTION_MISSION = MISSION
-CONSUMPTION_AUTHORITY = AUTHORITY
-CONSUMPTION_ROOT = ROOT
-CONSUMPTION_INPUT = {
+HISTORICAL_MISSION = "287d994f2fe4"
+HISTORICAL_AUTHORITY = "s11-reviewed-interface-release-20260926-287d994f2fe4-r1"
+HISTORICAL_ROOT = Path("build/argus-stage11-reviewed-interface-release-287d994f2fe4-attempt001")
+HISTORICAL_VALIDATION_ROOT = Path(
+    ".argus/live/manager-validation/stage11-reviewed-interface-release-287d994f2fe4")
+HISTORICAL_INPUT = {
     "path": str(REPOSITORY / ".argus/live/manager-inputs"
                 / "stage11-reviewed-interface-release-287d994f2fe4.json"),
     "bytes": 40209,
-    "sha256": PROPOSAL_SHA256,
+    "sha256": "0f860f4c7d9041845eb95684423247bd09f955fe20ac76bfb64322a4cf198bed",
 }
-CONSUMPTION_DECISION = {
+HISTORICAL_DECISION = {
     "path": str(REPOSITORY / ".argus/live/manager-authority"
-                / CONSUMPTION_AUTHORITY / "manager-consumption-decision.json"),
+                / HISTORICAL_AUTHORITY / "manager-consumption-decision.json"),
     "bytes": 582,
     "sha256": "ce0974a1b34cb0a2314f39ba8305bfd2ce7b09de871c143d83f3a2b20797143c",
 }
+ACTIVE_BINDING = None
+MISSION = AUTHORITY = ROOT = VALIDATION_ROOT = None
+CLAIM_SHA256 = PROPOSAL_SHA256 = CLAIM_COMMAND = None
+CONSUMPTION_MISSION = CONSUMPTION_AUTHORITY = CONSUMPTION_ROOT = None
+CONSUMPTION_INPUT = CONSUMPTION_DECISION = None
 REFERENCE_MEMBERS = {
     "original_input_L23_fp16": "stage11",
     "original_input_L23_binary64": None,
@@ -157,11 +175,201 @@ def authenticate(record):
     return raw
 
 
+def prepared_release_binding(authority_path):
+    """Read Manager-owned bindings without issuing or consuming a claim."""
+    authority_pin = pin(authority_path)
+    authority = document(authority_pin)
+    inputs = authority["manager_inputs"]
+    for record in inputs.values():
+        authenticate(record)
+    proposal = document(inputs["source_input"])
+    decision = document(inputs["consumption_decision"])
+    mission = authority["mission_id"]
+    root = Path(authority["authorized_root"])
+    validation = Path(authority["validation_root"])
+    require(authority["issuer"] == decision["issuer"] == "manager"
+            and authority["workspace"] == str(REPOSITORY)
+            and authority["life_dir"] == str(LIFE)
+            and authority_path == REPOSITORY / ".argus/live/manager-authority"
+            / authority["authority_id"] / "build-authorization.json"
+            and inputs["source_input"]["path"] == str(
+                REPOSITORY / ".argus/live/manager-inputs"
+                / f"stage11-reviewed-interface-release-{mission}.json")
+            and inputs["consumption_decision"]["path"] == str(
+                authority_path.with_name("manager-consumption-decision.json"))
+            and mission == proposal["mission_id"] == decision["mission_id"]
+            and decision["decision"] == (
+                "BUILD_VALUE_CONTENT_OPERATIONAL_RELEASE" if "candidate_binding" in proposal
+                else "BUILD_REVIEWED_INTERFACE_RELEASE")
+            and str(root) == proposal["repair"]["authorized_root"] == decision["authorized_root"]
+            and str(validation) == proposal["repair"]["validation_root"] == decision["validation_root"]
+            and not root.is_absolute() and root.parts[:1] == ("build",)
+            and not validation.is_absolute()
+            and validation.parts[:3] == (".argus", "live", "manager-validation")
+            and (REPOSITORY / root).resolve() == REPOSITORY / root
+            and (REPOSITORY / validation).resolve() == REPOSITORY / validation
+            and authority["authorized_science"] is False
+            and all(type(value) is int and value == 0 for value in (
+                authority["scientific_run_budget"], decision["scientific_run_budget"],
+                proposal["repair"]["scientific_run_budget"])),
+            "Manager input/authority/decision/validation binding differs")
+    owner_path = authority_path.with_name("manager-owner-claim.json")
+    require(owner_path.is_file(), "MISSING_MANAGER_OWNER_RECEIPT: " + mission)
+    owner_pin = pin(owner_path)
+    owner = document(owner_pin)
+    target = proposal.get("candidate_binding")
+    schema = ("argus.manager-stage11-value-content-release-owner.v7" if target else
+              "argus.manager-stage11-reviewed-interface-release-owner.v6")
+    require(owner["schema"] == schema,
+            "prepared release requires v6 owner schema")
+    binding = {
+        "authority": authority_pin, "owner": owner_pin,
+        "MISSION": mission, "AUTHORITY": authority["authority_id"],
+        "ROOT": root, "VALIDATION_ROOT": validation,
+        "CONSUMPTION_MISSION": mission, "CONSUMPTION_AUTHORITY": authority["authority_id"],
+        "CONSUMPTION_ROOT": root,
+        "CONSUMPTION_INPUT": inputs["source_input"],
+        "CONSUMPTION_DECISION": inputs["consumption_decision"],
+        "CLAIM_SHA256": owner_pin["sha256"], "PROPOSAL_SHA256": inputs["source_input"]["sha256"],
+        "CLAIM_COMMAND": (
+            "/home/argustest/miniconda3/bin/python -P -B "
+            + shlex.quote(str(Path(inputs["claim_binder"]["path"]).relative_to(REPOSITORY)))
+            + " --authority-dir "
+            + shlex.quote(str(authority_path.parent.relative_to(REPOSITORY)))),
+    }
+    layout = HISTORICAL_SOURCE_LAYOUT
+    if target:
+        validate_target_binding(proposal)
+        require(same(owner["candidate_binding"], target)
+                and owner["candidate_review_mission"] == proposal["candidate_review"]["mission_id"]
+                and owner["accepted_release_mission"] == proposal["accepted_release"]["mission_id"],
+                "v7 owner target/review differs")
+        layout = tuple(
+            (role, Path(target[role]["path"]).relative_to(REPOSITORY), name)
+            if role in ("candidate", "candidate_tests") else (role, path, name)
+            for role, path, name in layout)
+    binding["SOURCE_LAYOUT"] = layout
+    binding["CANDIDATE_NAME"] = target["name"] if target else CANDIDATE_NAME
+    return binding
+
+
+def validate_target_binding(proposal):
+    target = proposal["candidate_binding"]
+    name, mission = target["name"], target["future_science_mission"]
+    require(re.fullmatch(r"[a-z][a-z0-9_]+", name)
+            and re.fullmatch(r"[0-9a-f]{12}", mission)
+            and target["module"] == "ace3.model.candidates." + name
+            and target["candidate"]["path"] == str(
+                REPOSITORY / "ace3/model/candidates" / (name + ".py"))
+            and target["candidate_tests"]["path"] == str(
+                REPOSITORY / "tests" / ("test_" + name + ".py"))
+            and same(target["candidate"], proposal["source_baseline"]["candidate"])
+            and same(target["candidate_tests"], proposal["source_baseline"]["candidate_tests"])
+            and same(target["candidate"], proposal["candidate_review"]["candidate"])
+            and same(target["candidate_tests"], proposal["candidate_review"]["tests"]),
+            "Manager target candidate/test baseline differs")
+    output = REPOSITORY / "build" / (name + "-" + mission + "-attempt001")
+    launch = target["launch"]
+    require(target["output"] == str(output)
+            and output.resolve() == output and not output.is_symlink()
+            and launch["argv"] == [sys.executable, "-B", "-m", target["module"],
+                                   "--check", "--output", str(output)],
+            "Manager target launch/output differs")
+    command_identity(launch)
+    return target
+
+
+def resolve_release_binding():
+    """Select exactly one unfinished preparation; never select by recency."""
+    rows = [json.loads(raw) for raw in (LIFE / "backlog.jsonl").read_bytes().splitlines()
+            if raw.strip()]
+    candidates = []
+    rejected = []
+    authorities = []
+    directory = REPOSITORY / ".argus/live/manager-authority"
+    for path in sorted(
+            list(directory.glob("s11-reviewed-interface-release-*/build-authorization.json"))
+            + list(directory.glob("s11-value-content-release-*/build-authorization.json"))
+            + list(directory.glob("s11-value-content-forward-release-*/build-authorization.json"))
+            + list(directory.glob("s11-value-content-selftest-release-*/build-authorization.json"))
+            + list(directory.glob("s11-value-content-current-census-release-*/build-authorization.json"))):
+        authority = document(pin(path))
+        authorities.append((path, authority))
+        mission = authority["mission_id"]
+        owners = [row for row in rows if row.get("id") == mission]
+        require(len(owners) == 1, "missing or duplicate prepared release owner: " + mission)
+        root = REPOSITORY / authority["authorized_root"]
+        if owners[0]["status"] not in ("pending", "running"):
+            rejected.append(mission + ":completed-or-terminal-owner")
+        elif root.exists() or root.is_symlink():
+            rejected.append(mission + ":existing-final-root")
+        else:
+            candidates.append((path, authority))
+    require(candidates, "NO_UNFINISHED_MANAGER_RELEASE_BINDING: " + ", ".join(rejected))
+    require(len(candidates) == 1, "ambiguous_objective: overlapping unfinished release bindings")
+    path, selected = candidates[0]
+    for other_path, other in authorities:
+        if other_path == path:
+            continue
+        require(selected["mission_id"] != other["mission_id"],
+                "ambiguous_objective: duplicate release owner authorities")
+        for key in ("authorized_root", "validation_root"):
+            left, right = ((REPOSITORY / item[key]).resolve() for item in (selected, other))
+            require(left != right and left not in right.parents and right not in left.parents,
+                    "prepared release overlaps historical " + key)
+    return prepared_release_binding(path)
+
+
+def activate_release_binding(binding):
+    global ACTIVE_BINDING
+    require(ACTIVE_BINDING is None or ACTIVE_BINDING == binding,
+            "active Manager release binding changed")
+    for record in (binding["authority"], binding["owner"],
+                   binding["CONSUMPTION_INPUT"], binding["CONSUMPTION_DECISION"]):
+        authenticate(record)
+    ACTIVE_BINDING = binding
+    for name, value in binding.items():
+        if name.isupper():
+            globals()[name] = value
+
+
 def proposal_context():
     """Bind proposed implementation imports without rewriting Manager authority."""
+    if ACTIVE_BINDING is None:
+        activate_release_binding(resolve_release_binding())
     repair = document(CONSUMPTION_INPUT)
     previous = document(repair["accepted_release"]["contract"])
     inherited = document(previous["manager_proposal"])
+    ancestors = [inherited]
+    while "accepted_construction" not in inherited:
+        previous = document(inherited["accepted_release"]["contract"])
+        inherited = document(previous["manager_proposal"])
+        require(not any(same(inherited, item) for item in ancestors),
+                "cyclic Manager proposal lineage")
+        ancestors.append(inherited)
+    inherited = {key: value for ancestor in reversed(ancestors) for key, value in ancestor.items()}
+    if "current_runtime_sources" in repair:
+        sources = repair["current_runtime_sources"]
+        editable = {
+            "ace3.model.stage11_current_runtime_release": "release_builder",
+            "ace3.model.candidates." + CANDIDATE_NAME: "candidate",
+            "value_sufficiency_source": "candidate",
+            "value_sufficiency_test": "candidate_tests",
+        }
+        require("candidate_binding" in repair and isinstance(sources, dict)
+                and set(editable).union({"focused_test", "stage13_suffix", "stage13_tests"})
+                <= sources.keys(),
+                "current_runtime_sources requires a complete value-target census")
+        for role, record in sources.items():
+            if role in editable:
+                require(same(record, repair["source_baseline"][editable[role]]),
+                        "current_runtime_sources editable baseline differs: " + role)
+            else:
+                try:
+                    authenticate(record)
+                except (ValueError, OSError) as error:
+                    raise ValueError("current_runtime_sources " + role + ": " + str(error)) from error
+        repair["expected_runtime_sources"] = sources
     # The retained Stage13 census predates the Stage11 candidate and consumer.
     # Their reviewed current bytes also appear in parent.source_context().
     repair["expected_runtime_sources"] = {
@@ -169,6 +377,10 @@ def proposal_context():
         "ace3.model.stage11_current_runtime_release": pin(REPOSITORY / SOURCE),
         "ace3.model.candidates." + CANDIDATE_NAME: pin(REPOSITORY / SOURCE_LAYOUT[2][1]),
     }
+    if "candidate_binding" in repair:
+        repair["expected_runtime_sources"].update(
+            value_sufficiency_source=pin(REPOSITORY / SOURCE_LAYOUT[2][1]),
+            value_sufficiency_test=pin(REPOSITORY / SOURCE_LAYOUT[3][1]))
     return {**inherited, **repair}
 
 
@@ -178,7 +390,7 @@ def validate_preparation_contract(contract):
     sources = contract.get("runtime_sources")
     require(isinstance(sources, dict)
             and same(sources, expected["expected_runtime_sources"]),
-            "runtime_sources missing or differs from retained census plus current implementation")
+            "runtime_sources missing or differs from declared census plus current implementation")
     require(same(expected["expected_reference_members"], REFERENCE_MEMBERS)
             and same(contract.get("reference_members"), REFERENCE_MEMBERS),
             "reference_members missing or differs from exact reference member census")
@@ -187,6 +399,15 @@ def validate_preparation_contract(contract):
             authenticate(record)
         except (ValueError, OSError) as error:
             raise ValueError("runtime_sources " + role + ": " + str(error)) from error
+    if "candidate_binding" in expected:
+        current = current_source_pins()
+        require(same(contract["current_sources"], current)
+                and same(contract["implementation_sources"], implementation_pins())
+                and same(contract["execution_contract"]["sources"]["current_diagnostic"],
+                         current["candidate"])
+                and same(contract["execution_contract"]["sources"]["current_tests"],
+                         current["tests"]),
+                "runtime_sources differ from reviewed candidate/test bindings")
     references = contract["execution_contract"]["references"]
     require(isinstance(references, dict) and set(references) == set(REFERENCE_MEMBERS),
             "incomplete reference pin census")
@@ -413,7 +634,7 @@ def native_review_consumption(bundle, contract_pin, seal_pin):
                 **{key: accepted[key] for key in ("latest", "review", "checkpoint")})),
             "current release acceptance pins differ")
     review = native_acceptance(accepted, bundle, PROVENANCE_ROOT)
-    require(same(decision, {
+    expected_decision = {
         "accepted_release": "d15533af5bdf", "authorized_root": str(ROOT),
         "decision": "BUILD_REVIEWED_INTERFACE_RELEASE",
         "failed_science": "b7d95bd6e7f2",
@@ -423,7 +644,40 @@ def native_review_consumption(bundle, contract_pin, seal_pin):
         "repository_repair": "ed9ef3afb3ad",
         "scientific_run_budget": 0,
         "validation_root": str(VALIDATION_ROOT),
-    }), "exact Manager consumption decision differs")
+    }
+    if "candidate_binding" in inputs:
+        target = validate_target_binding(inputs)
+        expected_decision = {
+            "accepted_release": inputs["accepted_release"]["mission_id"],
+            "authorized_root": str(ROOT),
+            "candidate_review": inputs["candidate_review"]["mission_id"],
+            "decision": "BUILD_VALUE_CONTENT_OPERATIONAL_RELEASE",
+            "future_candidate_output": str(Path(target["output"]).relative_to(REPOSITORY)),
+            "future_capture_root": target["capture_root"],
+            "future_science_mission": target["future_science_mission"],
+            "issuer": "manager", "mission_id": MISSION,
+            "prior_science": inputs["prior_science"]["mission_id"],
+            "scientific_run_budget": 0, "validation_root": str(VALIDATION_ROOT),
+        }
+        if "current_runtime_sources" in inputs and "software_review" in inputs:
+            rows = [json.loads(raw) for raw in (LIFE / "backlog.jsonl").read_bytes().splitlines()
+                    if raw.strip()]
+            superseded = [row for row in rows if row.get("id") == "f1a28e051c63"]
+            require(len(superseded) == 1 and superseded[0]["status"] == "superseded"
+                    and superseded[0].get("superseded_by_plan_id") == MISSION,
+                    "current-census superseded owner differs")
+            expected_decision.update(
+                software_review=inputs["software_review"]["mission_id"],
+                supersedes_preclaim_release=superseded[0]["id"],
+            )
+        elif "recovery_context" in inputs:
+            recovery = inputs["recovery_context"]
+            expected_decision.update(
+                failed_assignment=recovery["failed_assignment"],
+                runtime_failure_canary=recovery["runtime_failure_canary"],
+                future_candidate_output=target["output"],
+            )
+    require(same(decision, expected_decision), "exact Manager consumption decision differs")
     return review
 
 
@@ -611,10 +865,15 @@ def native_acceptance(accepted, bundle, root, *, selection_issued_at=None):
             and type(review["round"]) is int and review["round"] > 0
             and accepted["review"]["path"] == str(base / f"round-{review['round']:04d}.json")
             and review["mission_context"] == accepted["mission"]["path"]
-            and same(review["review"], {
-                "status": "done", "reason": "requested outcome is materially complete",
-                "operator_question": "", "next_action": "",
-            }), "exact normalized native Reviewer DONE required")
+            and set(review["review"]) == {
+                "status", "reason", "operator_question", "next_action",
+            }
+            and review["review"]["status"] == "done"
+            and isinstance(review["review"]["reason"], str)
+            and bool(review["review"]["reason"].strip())
+            and review["review"]["operator_question"] == ""
+            and review["review"]["next_action"] == "",
+            "exact normalized native Reviewer DONE structure required")
     contract = document(contract_pin)
     seal, members = sealed_members(seal_pin)
     require(contract["mission_id"] == seal["mission_id"] == mission_id
@@ -662,9 +921,9 @@ def native_acceptance(accepted, bundle, root, *, selection_issued_at=None):
     return review
 
 
-def operational_release_selection(selection_pin, bundle, contract_pin, seal_pin):
-    """Authenticate a separately published Manager selection, without issuing it."""
-    selection = document(selection_pin)
+def validate_operational_release_selection(
+        selection, selection_path, bundle, contract_pin, seal_pin):
+    """Prevalidate a Manager selection document before its exclusive publication."""
     require(set(selection) == {
         "kind", "issuer", "status", "decision", "scientific_run_budget", "issued_at_utc",
         "selected", "implementation_sources", "provenance", "manager_input",
@@ -672,12 +931,23 @@ def operational_release_selection(selection_pin, bundle, contract_pin, seal_pin)
     }, "unexpected operational-release selection fields")
     selected = selection["selected"]
     mission = selected["mission_id"]
+    if ACTIVE_BINDING is None:
+        contract = document(contract_pin)
+        paths = []
+        for path in (REPOSITORY / ".argus/live/manager-authority").glob(
+                "s11-*-release-*/build-authorization.json"):
+            authority = document(pin(path))
+            if authority["mission_id"] == mission and same(
+                    authority["manager_inputs"]["source_input"], contract["manager_proposal"]):
+                paths.append(path)
+        require(len(paths) == 1, "ambiguous_objective: selected release authority differs")
+        activate_release_binding(prepared_release_binding(paths[0]))
     require(isinstance(mission, str) and re.fullmatch(r"[0-9a-f]{12}", mission)
             and mission == MISSION,
             "provenance is not a changed-byte release")
     authority = REPOSITORY / ".argus/live/manager-authority" / (
         "stage11-operational-release-" + mission)
-    require(selection_pin["path"] == str(authority / "selection.json"),
+    require(Path(selection_path).resolve() == authority / "selection.json",
             "noncanonical Manager operational-release selection")
     require(selection["kind"] == "manager_stage11_operational_release_selection"
             and selection["issuer"] == "manager"
@@ -718,7 +988,10 @@ def operational_release_selection(selection_pin, bundle, contract_pin, seal_pin)
         "mission_id", "created_at", "runtime", "manager_proposal", "implementation_sources",
         "validation_policy", "boundary", "post_review_owner", "source_snapshots", "capture_snapshots",
         "current_sources", "source_roles", "execution_contract",
+        "runtime_sources", "reference_members",
     }
+    if "candidate_binding" in inputs:
+        operational_fields.add("launch")
     require(all(key in contract and same(contract[key], value)
                 for key, value in previous.items() if key not in operational_fields),
             "immutable construction scientific contract differs")
@@ -733,6 +1006,8 @@ def operational_release_selection(selection_pin, bundle, contract_pin, seal_pin)
     require(same(contract["execution_contract"], execution)
             and same(contract["source_roles"], roles),
             "immutable construction scientific contract differs")
+    require(same(contract["launch"], proposed_launch(previous, inputs)),
+            "selected target launch differs")
     validate_preparation_contract(contract)
     require(isinstance(contract.get("capture_snapshots"), dict)
             and set(contract["capture_snapshots"]) == {"capture_helper", "capture_tests"},
@@ -744,6 +1019,12 @@ def operational_release_selection(selection_pin, bundle, contract_pin, seal_pin)
                 and authenticate(snapshot) == authenticate(contract["current_sources"][key]),
                 "capture snapshot differs")
     return review, selection
+
+
+def operational_release_selection(selection_pin, bundle, contract_pin, seal_pin):
+    """Authenticate a separately published Manager selection, without issuing it."""
+    return validate_operational_release_selection(
+        document(selection_pin), selection_pin["path"], bundle, contract_pin, seal_pin)
 
 
 def command_identity(launch):
@@ -935,9 +1216,11 @@ def accepted_lineage(run, contract):
             "Manager proposal/source identity binding differs")
     for key in ("launch", "source_roles", "source_snapshots"):
         require(same(proposal[key], declaration[key]), "proposal declaration differs: " + key)
-    for launch in (contract["launch"], inputs["launch"],
-                   document(origin["actual_launch"])):
+    for launch in (inputs["launch"], document(origin["actual_launch"])):
         require(same(launch, proposal["launch"]), "candidate launch differs from accepted proposal")
+    require(same(contract["launch"], proposed_launch(
+        {"launch": proposal["launch"]}, proposal_context())),
+        "candidate launch differs from accepted proposal and authorized target")
     # Custody serializes the same launch with sorted environment assignments.
     custody_launch = dict(proposal["launch"], command=" ".join(
         f"{key}={shlex.quote(value)}"
@@ -1105,7 +1388,25 @@ def _validate_after_claim(request_pin, *, issued_at=None):
             and type(launch["budget"]["check"]) is int and launch["budget"]["check"] == 1,
             "account/access/role/science budget differs")
     command_identity(launch)
-    require(launch["argv"][1:] == original["identity"]["command_semantics"]["entry"],
+    target = proposal_context().get("candidate_binding")
+    if target:
+        require(mission == target["future_science_mission"]
+                and not Path(target["output"]).exists()
+                and not Path(target["output"]).is_symlink(),
+                "target science identity or occupied output differs")
+    semantics = original["identity"]["command_semantics"]
+    if "direct_p0" in contract["execution_contract"]:
+        # The accepted direct-P0 entry names a data-only preparation function,
+        # not an argv. Its scientific launch still uses the exact captured CLI.
+        require(original["identity"]["diagnostic"] == CANDIDATE_NAME
+                and semantics["mode"] == "dormant-direct-p0-requires-external-authority"
+                and semantics["entry"] == "prepare_direct_p0"
+                and same(semantics["derivation"], contract["execution_contract"]["direct_p0"]),
+                "direct P0 command derivation changed")
+        recipe = ["-B", "-m", "ace3.model.candidates." + CANDIDATE_NAME, "--check"]
+    else:
+        recipe = semantics["entry"]
+    require(launch["argv"][1:] == (target["launch"]["argv"][1:] if target else recipe),
             "candidate command recipe changed")
     output = authority / "issued"
     require(output.resolve() == output and not output.is_symlink(), "noncanonical issuance root")
@@ -1204,6 +1505,17 @@ def emit_after_claim(request_pin):
     return {name: pin(output / name) for name in OUTPUTS}
 
 
+def proposed_launch(previous, proposal):
+    launch = copy.deepcopy(previous["launch"])
+    if "candidate_binding" in proposal:
+        target = validate_target_binding(proposal)
+        require(all(same(value, launch[key]) for key, value in target["launch"].items()
+                    if key not in ("argv", "command")),
+                "target launch changes inherited environment/account/model")
+        launch.update(target["launch"])
+    return launch
+
+
 def proposed_contract(previous, proposal_pin, snapshot_root, now, runtime):
     """Rebind operational bytes, never the accepted scientific identity."""
     contract = copy.deepcopy(previous)
@@ -1222,6 +1534,7 @@ def proposed_contract(previous, proposal_pin, snapshot_root, now, runtime):
                 for key in ("capture_helper", "capture_tests")),
             "capture source version differs from construction")
     contract["runtime_sources"] = proposal["expected_runtime_sources"]
+    contract["launch"] = proposed_launch(previous, proposal)
     contract["reference_members"] = proposal["expected_reference_members"]
     contract["construction_provenance"] = proposal["accepted_construction"]
     contract["artifact_review_provenance"] = proposal["accepted_artifact_review"]
@@ -1261,7 +1574,10 @@ def source_edit_bindings(proposal, owner):
     for role, path, _ in SOURCE_LAYOUT:
         source = REPOSITORY / path
         unchanged = same(pin(source), proposal["source_baseline"][role])
-        require(role in ("release_builder", "release_tests") or unchanged,
+        editable = ("release_builder", "release_tests")
+        if "candidate_binding" in proposal:
+            editable += ("candidate", "candidate_tests")
+        require(role in editable or unchanged,
                 "reviewed ed9 candidate/capture drift")
         require(unchanged or source.stat().st_mtime_ns > owner["published_at"] * 1e9,
                 "native owner claim must precede changed source bytes")
@@ -1288,13 +1604,16 @@ def reviewed_repair_evidence(proposal):
             }), "exact ed9 round-2 Reviewer DONE required")
     proposed = document(repair["proposed_bytes"])
     root = Path(repair["proposed_bytes"]["path"]).parent
-    sources = [proposal["source_baseline"][role] for role, _, _ in SOURCE_LAYOUT]
+    baseline = (document(HISTORICAL_INPUT)["source_baseline"]
+                if "candidate_binding" in proposal else proposal["source_baseline"])
+    layout = HISTORICAL_SOURCE_LAYOUT if "candidate_binding" in proposal else SOURCE_LAYOUT
+    sources = [baseline[role] for role, _, _ in layout]
     require(proposed["status"] == "PROPOSED_PENDING_INDEPENDENT_REVIEW"
             and proposed["owner_authority_claimed"] is False
             and proposed["final_root_built"] is False
             and len(sources) == 6 and same(proposed["sources"], sources),
             "reviewed ed9 six-source census differs")
-    for (_, path, name), source in zip(SOURCE_LAYOUT, sources, strict=True):
+    for (_, path, name), source in zip(layout, sources, strict=True):
         require(source["path"] == str(REPOSITORY / path)
                 and same(pin_bytes(REPOSITORY / path, (root / name).read_bytes()), source),
                 "reviewed ed9 snapshot differs")
@@ -1341,8 +1660,17 @@ def reviewed_repair_evidence(proposal):
                 ):
                     matches.append((value, raw))
     require(len(rows) == len(events) == 1, "ed9 native terminal missing or duplicate")
-    row, _ = rows[0]
+    row, row_raw = rows[0]
     event, event_raw = events[0]
+    certification = row["outcome"].get("stage_certification")
+    reconciled = copy.deepcopy(row)
+    reconciled["outcome"]["stage_certification"] = "deferred"
+    require(certification in ("deferred", "not_certified")
+            and (digest(row_raw) == repair["backlog_row_sha256"]
+                 or certification == "not_certified"
+                 and digest(json.dumps(reconciled, sort_keys=True, ensure_ascii=False).encode())
+                 == repair["backlog_row_sha256"]),
+            "ed9 backlog differs beyond stage-certification reconciliation")
     require(row["status"] == event["status"] == "done"
             and type(row["attempt"]) is int and row["attempt"] == 1
             and row["outcome"]["review_status"] == "done"
@@ -1354,20 +1682,31 @@ def reviewed_repair_evidence(proposal):
     return forbidden
 
 
-def successor_inputs():
+def successor_inputs(binding=None):
+    activate_release_binding(resolve_release_binding() if binding is None else binding)
     authority_path = REPOSITORY / ".argus/live/manager-authority" / AUTHORITY / "build-authorization.json"
     authority = json.loads(authority_path.read_bytes())
     owner_path = authority_path.with_name("manager-owner-claim.json")
     owner = document(dict(pin(owner_path), sha256=CLAIM_SHA256))
+    proposal = proposal_context()
+    target = proposal.get("candidate_binding")
+    owner_identity = (
+        owner["schema"] == "argus.manager-stage11-value-content-release-owner.v7"
+        and owner["accepted_release_mission"] == proposal["accepted_release"]["mission_id"]
+        and owner["candidate_review_mission"] == proposal["candidate_review"]["mission_id"]
+        and owner["prior_science_mission"] == proposal["prior_science"]["mission_id"]
+        and same(owner["candidate_binding"], target)
+        if target else
+        owner["schema"] == "argus.manager-stage11-reviewed-interface-release-owner.v6"
+        and owner["accepted_release_mission"] == "d15533af5bdf"
+        and owner["accepted_repository_repair_mission"] == "ed9ef3afb3ad"
+        and owner["failed_science_mission"] == "b7d95bd6e7f2")
     require(owner["authority_id"] == authority["authority_id"] == AUTHORITY
             and owner["mission_id"] == authority["mission_id"] == MISSION
             and owner["authorized_root"] == authority["authorized_root"] == str(ROOT)
             and authority["validation_root"] == str(VALIDATION_ROOT)
             and authority["issuer"] == owner["issuer"] == "manager"
-            and owner["schema"] == "argus.manager-stage11-reviewed-interface-release-owner.v6"
-            and owner["accepted_release_mission"] == "d15533af5bdf"
-            and owner["accepted_repository_repair_mission"] == "ed9ef3afb3ad"
-            and owner["failed_science_mission"] == "b7d95bd6e7f2"
+            and owner_identity
             and owner["state"] == "BOUND_TO_NATIVE_RUNNING_CLAIM"
             and authority["authorized_science"] is False
             and type(authority["scientific_run_budget"]) is int
@@ -1383,9 +1722,20 @@ def successor_inputs():
     require(same(proposal_pin, CONSUMPTION_INPUT)
             and same(authority["manager_inputs"]["consumption_decision"], CONSUMPTION_DECISION),
             "wrong operational-transition input")
-    proposal = proposal_context()
-    require(same(owner["reviewed_proposed_bytes"], proposal["repository_repair"]["proposed_bytes"]),
-            "v6 owner reviewed-source binding differs")
+    if target:
+        validate_target_binding(proposal)
+        review = proposal["candidate_review"]
+        review_bundle({key: review[key] for key in
+                       ("mission_id", "latest", "review", "checkpoint")}, review["mission_id"])
+        document(review["mission"])
+        for record in proposal["prior_science"].values():
+            if isinstance(record, dict):
+                authenticate(record)
+        require(document(proposal["prior_science"]["terminal"])["status"] == "REJECTED",
+                "consumed prior science changed")
+    else:
+        require(same(owner["reviewed_proposed_bytes"], proposal["repository_repair"]["proposed_bytes"]),
+                "v6 owner reviewed-source binding differs")
     reviewed_repair_evidence(proposal)
     expected = proposal["expected_runtime"]
     observed = observe_runtime()
@@ -1507,30 +1857,37 @@ def preserved_trees(proposal, previous):
         *map(Path, baseline),
     ]
     missions = {PROVENANCE_MISSION, CONSTRUCTION_MISSION, ARTIFACT_REVIEW_MISSION,
-                FAILED_PREDECESSOR_MISSION,
+                FAILED_PREDECESSOR_MISSION, HISTORICAL_MISSION,
                 "ab65cb0e6bea", "445f400d92c4",
                 "f5fb1a5b3487", "25482bb8477b",
                 "9d53694fd875", "6a7d8ff8feea"}
+    if "candidate_binding" in proposal:
+        missions.update((proposal["candidate_review"]["mission_id"],
+                         proposal["prior_science"]["mission_id"]))
     roots += [path for path in sorted((REPOSITORY / "build").iterdir())
               if path.is_dir() and any(mission in path.name for mission in missions)]
     roots += [LIFE / "handoffs" / mission for mission in sorted(missions)]
     roots += [path for path in sorted((REPOSITORY / ".argus/live/manager-authority").iterdir())
               if path.is_dir() and any(mission in path.name for mission in missions)]
+    roots += [REPOSITORY / HISTORICAL_VALIDATION_ROOT]
     require(all(root.is_dir() and root.resolve() == root for root in roots),
             "immutable predecessor root missing or rebound")
     return {str(root): tree_state(root) for root in roots}
 
 
 def focused_command(scratch, current):
-    """Check only the new owner/binding bytes; ed9 retains the repair coverage."""
+    """Check release bindings and the complete value-target interface suites."""
     release_tests = [
         "test_fresh_proposed_contract_consumes_production",
-        "test_actual_successor_v6_owner_and_source_bindings",
+        "test_isolated_value_successor_owner_and_source_bindings",
+        "test_prepared_release_resolution",
+        "test_prepared_release_binding_splices",
         "test_successor_rejects_obsolete_owner_schema",
         "test_successor_rejects_owner_runtime_drift",
         "test_source_binding_requires_baseline_or_postclaim_bytes",
         "test_reviewed_candidate_capture_cannot_be_edited",
         "test_reviewed_repair_rejects_changed_evidence",
+        "test_reviewed_repair_allows_only_stage_certification_reconciliation",
         "test_preseal_verdict_matches_real_runtime_classification",
         "test_preseal_rejects_rebound_review",
         "test_authenticated_validation_receipt_requires_exact_evidence",
@@ -1538,8 +1895,33 @@ def focused_command(scratch, current):
         "test_validation_receipt_rejects_repinned_bindings",
         "test_validation_receipt_rejects_changed_command",
     ]
+    selectors = [str(TEST) + "::" + name for name in release_tests]
+    proposal = proposal_context()
+    if "candidate_binding" in proposal:
+        selectors = [str(TEST), str(SOURCE_LAYOUT[3][1])]
+        if "publication_repair" in proposal:
+            ancestor = proposal
+            seen = []
+            while "publication_tests" not in ancestor["candidate_review"]:
+                accepted = ancestor.get("accepted_release")
+                require(isinstance(accepted, dict),
+                        "reviewed publication compatibility test ancestry missing")
+                contract = document(accepted["contract"])
+                proposal_pin = contract["manager_proposal"]
+                require(not any(same(proposal_pin, item) for item in seen),
+                        "cyclic publication compatibility proposal lineage")
+                seen.append(proposal_pin)
+                ancestor = document(proposal_pin)
+                require(accepted["mission_id"] == contract["mission_id"] == ancestor["mission_id"],
+                        "publication compatibility ancestor identity differs")
+            publication_tests = ancestor["candidate_review"]["publication_tests"]
+            path = REPOSITORY / "tests/test_stage11_publication_compatibility.py"
+            require(publication_tests["path"] == str(path),
+                    "reviewed publication compatibility test path differs")
+            authenticate(publication_tests)
+            selectors.append(str(path.relative_to(REPOSITORY)))
     return [sys.executable, "-B", "-m", "pytest", "-q", "-p", "no:cacheprovider",
-            *[str(TEST) + "::" + name for name in release_tests],
+            *selectors,
             "--durations=10", "-o", "junit_family=legacy", "--basetemp", str(scratch / "pytest-tmp"),
             "--junitxml", str(scratch / "focused-tests.xml")]
 
@@ -1548,11 +1930,16 @@ def test_summary(raw, stdout, *, require_candidate=True):
     xml = ET.fromstring(raw)
     suites = xml.findall(".//testsuite")
     cases = xml.findall(".//testcase")
-    require(suites and sum(int(s.attrib["tests"]) for s in suites) == len(cases) > 0
+    summary = re.search(
+        rb"(?:^|\n)([0-9]+) passed(?:, ([0-9]+) subtests passed)? in [0-9.]+s"
+        rb"(?: \([0-9]+:[0-9]{2}:[0-9]{2}\))?\s*$", stdout)
+    # Pytest counts successful subtests in suite totals, not testcase nodes.
+    require(suites and len(cases) > 0
             and all(int(s.attrib[k]) == 0 for s in suites for k in ("failures", "errors", "skipped"))
             and not any(c.find(k) is not None for c in cases for k in ("failure", "error", "skipped"))
-            and re.search(rb"(?:^|\n)" + str(len(cases)).encode()
-                          + rb" passed in [0-9.]+s(?: \([0-9]+:[0-9]{2}:[0-9]{2}\))?\s*$", stdout),
+            and summary and int(summary[1]) == len(cases)
+            and sum(int(s.attrib["tests"]) for s in suites)
+            == sum(int(count or 0) for count in summary.groups()),
             "prevalidation requires all collected tests passed, zero failures, errors, or skips")
     forbidden = []
     for case in cases:
@@ -1597,7 +1984,8 @@ def prevalidate():
     try:
         for index, ((_, _, name), record) in enumerate(zip(SOURCE_LAYOUT, sources, strict=True)):
             raw = authenticate(record)
-            if index >= 2:
+            if index >= 2 and not (
+                    "candidate_binding" in proposal and index in (2, 3)):
                 snapshot = authenticate(proposal["source_baseline"][SOURCE_LAYOUT[index][0]])
                 require(raw == snapshot, "candidate/capture changed before snapshot copy")
                 raw = snapshot
@@ -1605,8 +1993,9 @@ def prevalidate():
         reviewed_root = Path(proposal["repository_repair"]["proposed_bytes"]["path"]).parent
         differences = []
         for (_, path, name), source in zip(SOURCE_LAYOUT, sources, strict=True):
+            baseline = (reviewed_root / name).read_text()
             differences.extend(difflib.unified_diff(
-                (reviewed_root / name).read_text().splitlines(keepends=True),
+                baseline.splitlines(keepends=True),
                 authenticate(source).decode().splitlines(keepends=True),
                 fromfile="reviewed-ed9/" + str(path), tofile="proposed/" + str(path)))
         exclusive(scratch / "source.diff", "".join(differences).encode())
@@ -1732,16 +2121,31 @@ def authenticate_prevalidation(record, source_pins, owner, proposal, terminal):
     test_summary(members["focused-tests.xml"], members["focused-tests.stdout"],
                  require_candidate=False)
     forbidden = reviewed_repair_evidence(proposal)
-    cases = ET.fromstring(members["focused-tests.xml"]).findall(".//testcase")
+    xml = ET.fromstring(members["focused-tests.xml"])
+    cases = xml.findall(".//testcase")
     require(any(c.attrib["name"] == "test_fresh_proposed_contract_consumes_production" for c in cases)
-            and any(c.attrib["name"] == "test_actual_successor_v6_owner_and_source_bindings"
+            and any(c.attrib["name"] == "test_isolated_value_successor_owner_and_source_bindings"
                     for c in cases)
             and all(any(c.attrib["name"] == (
                 "test_preseal_verdict_matches_real_runtime_classification[" + status + "]")
-                for c in cases) for status in ("continue", "replan_requested")),
+                for c in cases) for status in ("continue", "replan_requested"))
+            and all(any(c.attrib["name"] == "test_prepared_release_resolution[" + defect + "]"
+                        for c in cases)
+                    for defect in ("none", "done", "failed", "root", "symlink", "overlap"))
+            and all(any(c.attrib["name"] == "test_prepared_release_binding_splices[" + key + "]"
+                        for c in cases)
+                    for key in ("mission_id", "authorized_root", "validation_root"))
+            and all(any(c.attrib["name"] == (
+                "test_reviewed_repair_allows_only_stage_certification_reconciliation["
+                + defect + "-" + certification + "]") for c in cases)
+                for certification in ("deferred", "not_certified")
+                for defect in ("none", "pin", "certified", "missing-certification", "attempt",
+                               "status", "review-status", "execution-status", "resumable",
+                               "last-error", "extra-field")),
             "required release-binding validation coverage missing")
-    summary = evidence["commands"][1]["test_summary"]
-    require(same(summary, {"tests": len(cases), "failures": 0, "errors": 0, "skipped": 0}),
+    summary = {key: sum(int(s.attrib[key]) for s in xml.findall(".//testsuite"))
+               for key in ("tests", "failures", "errors", "skipped")}
+    require(same(evidence["commands"][1]["test_summary"], summary),
             "validation test summary differs")
     previous = document(proposal["accepted_construction"]["contract"])
     require(preserved_trees(proposal, previous) == evidence["preserved_trees"],
@@ -1777,6 +2181,7 @@ def build(prevalidation_pin):
     require(Path.cwd() == REPOSITORY and sys.dont_write_bytecode
             and not sys.flags.optimize, "wrong workdir or interpreter flags")
     proposal_pin, proposal, previous, owner, terminal = successor_inputs()
+    binding = ACTIVE_BINDING
     source_pins = implementation_pins()
     root = REPOSITORY / ROOT
     require(root.resolve() == root and not root.exists() and not root.is_symlink(),
@@ -1835,7 +2240,7 @@ def build(prevalidation_pin):
         **{name: members[name] for _, _, name in SOURCE_LAYOUT},
         **{"validation/" + name: raw for name, raw in retained.items()},
     }
-    successor_inputs()
+    successor_inputs(binding)
     for record in source_pins:
         authenticate(record)
     root.mkdir()
@@ -1893,7 +2298,9 @@ def build(prevalidation_pin):
     })
     require(preserved_trees(proposal, previous) == prevalidation["preserved_trees"],
             "immutable predecessor drift")
-    successor_inputs()
+    successor_inputs(binding)
+    for record in source_pins:
+        authenticate(record)
     require(same(observe_runtime(), contract["runtime"]), "runtime drift during construction")
     write_json(root / "audit-disclosure.json", {
         "scope": "Python builder audit hooks and prevalidation test guards; command receipts and member census",

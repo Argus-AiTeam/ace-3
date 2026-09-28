@@ -1,0 +1,64 @@
+{
+  "schema": "ace-public-progress/v2",
+  "project": "ACE3",
+  "observed_utc": "2026-09-28T06:32:01.707468+00:00",
+  "live_state_may_advance": true,
+  "public_summary_is_authoritative_receipt": false,
+  "campaign_complete": false,
+  "scientific_method_supported": false,
+  "scope": "CPU-only width896/L23/P0/pair[34319,13], G128 INT4, FP16 operators/KV, native S16 RTZ, wider Q24 residual; non-admission",
+  "latest_measured_comparator": "../results/STAGE16_REJECTED_20260927.json",
+  "new_mechanism": "Exact-integer G128 Stage11 self_attn.o_proj reduction on the same retained Stage10 FP16 inputs, then recompute S12-S18 and the final two-row suffix.",
+  "software_owner": {
+    "mission_id": "d12e372181f0",
+    "review_status": "done",
+    "native_status": "done",
+    "review_evidence": {
+      "relative_host_path": "handoffs/d12e372181f0/round-0001.json",
+      "bytes": 690,
+      "sha256": "04e3df5d4f27ad344199a3d1d05c1cbc5373463e41b4c5650bbfb303d4bf693b",
+      "raw_published": false
+    }
+  },
+  "initial_science_owner": {
+    "mission_id": "7a2022cef21c",
+    "review_status": "replan_requested",
+    "native_status": "failed",
+    "review_evidence": {
+      "relative_host_path": "handoffs/7a2022cef21c/round-0001.json",
+      "bytes": 1323,
+      "sha256": "717281e21435b30bf6270927a5434edb4c9d48699b29fdc71a0e9aa47c8524db",
+      "raw_published": false
+    },
+    "scientific_status": "UNMEASURED",
+    "science_invocations": 0,
+    "claim_acquisitions": 0,
+    "attempt_root_present": false,
+    "blockers": [
+      "Wrapper node-key/empty-dependency requirement conflicts with the immutable native science mission.",
+      "Fresh wrapper-first import gives 63 evaluator source members where 62 are required.",
+      "Mission-specific Manager handoff has not been issued."
+    ]
+  },
+  "active_at_snapshot": [
+    {
+      "id": "aba2b6c0f3d0",
+      "title": "Repairing Stage11 exact-integer o-projection execution wrapper schema",
+      "status": "running"
+    }
+  ],
+  "runtime": {
+    "release_id": "0.1.2+e69764dbdb9bd222",
+    "empty_plan_hold_fix_deployed": true,
+    "normal_daemon_recovery_observed": true,
+    "continuous_enabled": true,
+    "launch_instruction": false
+  },
+  "source_snapshot_manifest": "source-manifest-2026-09-28.json",
+  "continuation_rule": "Keep 7a2022cef21c and all prior results immutable. Let the active software-repair owner finish with independent review, then issue a coherent fresh science owner. Do not replay old wrappers or treat passing synthetic tests as successful science.",
+  "equal_mirrors": [
+    "https://github.com/aHappend/ace-3",
+    "https://github.com/Argus-AiTeam/ace-3"
+  ],
+  "checkpoint_ref": "refs/tags/checkpoint-2026-09-28-source"
+}

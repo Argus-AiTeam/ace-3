@@ -1,5 +1,6 @@
 import copy
 import io
+import importlib.util
 import json
 import os
 from pathlib import Path
@@ -7,16 +8,48 @@ import socket
 import subprocess
 import sys
 import time
+import unittest
 import zipfile
 
 import pytest
 
 from ace3.model import stage11_current_runtime_release as release
+from ace3.model.candidates import q24_s16_l23_p0_value_content_sufficiency_v1 as value_candidate
+
+
+@pytest.fixture(scope="session", autouse=True)
+def retained_release_context():
+    """Historical protocol fixtures use live imports, not immutable review pins."""
+    path = (release.REPOSITORY / ".argus/live/manager-authority"
+            / release.HISTORICAL_AUTHORITY / "build-authorization.json")
+    binding = release.prepared_release_binding(path)
+    with pytest.MonkeyPatch.context() as patch:
+        patch.setattr(release, "ACTIVE_BINDING", binding)
+        for name, value in binding.items():
+            if name.isupper():
+                patch.setattr(release, name, value)
+        proposal_context = release.proposal_context
+
+        def fixture_context():
+            context = proposal_context()
+            if "candidate_binding" not in context:
+                context["expected_runtime_sources"].update({
+                    value_candidate.__name__: release.pin(value_candidate.SOURCE),
+                    "value_sufficiency_source": release.pin(value_candidate.SOURCE),
+                    "value_sufficiency_test": release.pin(value_candidate.TEST),
+                })
+            return context
+
+        patch.setattr(release, "proposal_context", fixture_context)
+        yield binding
 
 
 @pytest.fixture(autouse=True)
 def no_execution(monkeypatch):
+    import numpy.testing  # Initialize lazy platform probes before the dispatch guard.
+
     before = {name for name in sys.modules if ".candidates." in name}
+    popen = subprocess.Popen
 
     def forbidden(*args, **kwargs):
         raise AssertionError("emitter, science, service, or subprocess dispatch is forbidden")
@@ -25,7 +58,7 @@ def no_execution(monkeypatch):
     monkeypatch.setattr(subprocess, "Popen", forbidden)
     monkeypatch.setattr(os, "system", forbidden)
     monkeypatch.setattr(socket, "socket", forbidden)
-    yield
+    yield popen
     assert {name for name in sys.modules if ".candidates." in name} == before
 
 
@@ -97,7 +130,43 @@ def test_actual_authenticated_33_file_production_lineage(production):
     assert release.document(run["launcher_capture"])["success"] is True
 
 
-def test_fresh_proposed_contract_consumes_production(production, tmp_path):
+def test_historical_fixture_keeps_reviewed_baseline_separate(production):
+    baseline = release.document(release.CONSUMPTION_INPUT)
+    contract = copy.deepcopy(production[1])
+    sources = contract["runtime_sources"]
+    candidate = release.pin(value_candidate.SOURCE)
+    assert sources[value_candidate.__name__] == sources["value_sufficiency_source"] == candidate
+    assert sources["value_sufficiency_test"] == release.pin(value_candidate.TEST)
+    retained = baseline["expected_runtime_sources"][value_candidate.__name__]
+    assert retained != candidate
+    release.validate_preparation_contract(contract)
+    sources[value_candidate.__name__] = retained
+    with pytest.raises(ValueError, match="runtime_sources"):
+        release.validate_preparation_contract(contract)
+    assert release.document(release.CONSUMPTION_INPUT) == baseline
+
+
+@pytest.mark.parametrize("role", [
+    value_candidate.__name__, "value_sufficiency_source", "value_sufficiency_test",
+])
+@pytest.mark.parametrize("defect", ["splice", "drift"])
+def test_historical_fixture_rejects_changed_value_sources(production, monkeypatch, role, defect):
+    contract = copy.deepcopy(production[1])
+    sources = contract["runtime_sources"]
+    if defect == "splice":
+        sources[role] = sources[
+            "value_sufficiency_source" if role == "value_sufficiency_test"
+            else "value_sufficiency_test"]
+    else:
+        path = Path(sources[role]["path"])
+        read_bytes = Path.read_bytes
+        monkeypatch.setattr(Path, "read_bytes",
+                            lambda self: b"changed\n" if self == path else read_bytes(self))
+    with pytest.raises(ValueError, match="runtime_sources"):
+        release.validate_preparation_contract(contract)
+
+
+def test_fresh_proposed_contract_consumes_production(production, tmp_path, value_case):
     proposal = release.CONSUMPTION_INPUT
     accepted = release.proposal_context()["accepted_construction"]
     for (_, _, name), source in zip(release.SOURCE_LAYOUT, release.implementation_pins(), strict=True):
@@ -109,16 +178,17 @@ def test_fresh_proposed_contract_consumes_production(production, tmp_path):
     assert contract["scientific_run_budget"] == 0
     assert contract["mission_id"] == release.MISSION
     assert contract["inherits_operational_admission"] is False
-    assert contract["current_sources"] == production[1]["current_sources"]
+    assert contract["current_sources"] == release.current_source_pins()
     assert contract["implementation_sources"] == release.implementation_pins()
     assert len(contract["implementation_sources"]) == 6
     for key in ("capture_helper", "capture_tests"):
         assert release.authenticate(contract["capture_snapshots"][key]) == release.authenticate(
             contract["current_sources"][key])
     previous = release.document(accepted["contract"])
-    for key in ("identity", "launch", "launch_constraints", "accepted_lineage",
+    for key in ("identity", "launch_constraints", "accepted_lineage",
                 "original_scientific_lineage", "operational_provenance"):
         assert contract[key] == previous[key]
+    assert contract["launch"] == release.proposed_launch(previous, release.proposal_context())
     execution = copy.deepcopy(previous["execution_contract"])
     execution["sources"]["current_diagnostic"] = contract["current_sources"]["candidate"]
     execution["sources"]["current_tests"] = contract["current_sources"]["tests"]
@@ -136,6 +206,9 @@ def test_fresh_proposed_contract_consumes_production(production, tmp_path):
            + '</testsuite></testsuites>').encode()
     assert len(release.test_summary(raw, b"293 passed in 1.00s\n")) == len(release.ZERO_KINDS)
     assert len(release.test_summary(raw, b"293 passed in 61.00s (0:01:01)\n")) == len(release.ZERO_KINDS)
+    assert len(release.test_summary(
+        raw.replace(b'tests="293"', b'tests="295"'),
+        b"293 passed, 2 subtests passed in 61.00s (0:01:01)\n")) == len(release.ZERO_KINDS)
     for before, after in (
         (b'tests="293"', b'tests="292"'), (b'tests="293"', b'tests="294"'),
         (b'failures="0"', b'failures="1"'), (b'errors="0"', b'errors="1"'),
@@ -146,6 +219,14 @@ def test_fresh_proposed_contract_consumes_production(production, tmp_path):
             release.test_summary(raw.replace(before, after), b"293 passed in 1.00s\n")
     with pytest.raises(ValueError):
         release.test_summary(raw, b"293 passed, 1 error in 1.00s\n")
+    for stdout in (
+        b"293 passed, 2 subtests passed in 1.00s\n",
+        b"291 passed, 2 subtests passed in 1.00s\n",
+        b"290 passed, 2 subtests passed in 1.00s\n",
+        b"291 passed, 2 subtests failed in 1.00s\n",
+    ):
+        with pytest.raises(ValueError):
+            release.test_summary(raw, stdout)
 
 
 @pytest.fixture
@@ -153,7 +234,8 @@ def case(production, tmp_path, monkeypatch):
     run, original, provenance_native_bytes = production
     contract = copy.deepcopy(original)
     now = round(time.time(), 6)
-    mission = "abcdef123456"
+    mission = release.proposal_context().get("candidate_binding", {}).get(
+        "future_science_mission", "abcdef123456")
     row = {"id": mission, "status": "running", "running_owner": "primary", "attempt": 1,
            "started_ts": now - 20, "authorization_id": "", "authorization_action": "",
            "notes": "Host diagnostic", "custom_binding": {"budget": 1}}
@@ -536,8 +618,13 @@ def clone(production, tmp_path):
         raw = release.authenticate(record)
         templates[relative] = json.loads(raw) if relative.endswith(".json") else raw
 
-    def materialize(edit=None):
+    def materialize(edit=None, *, extra_records=None):
         values = copy.deepcopy(templates)
+        locations = {str(old_root / relative): relative for relative in values}
+        for relative, record in (extra_records or {}).items():
+            assert relative not in values
+            values[relative] = release.document(record)
+            locations[record["path"]] = relative
         if edit:
             edit(values)
         pins = {}
@@ -546,11 +633,8 @@ def clone(production, tmp_path):
         def relocate(value):
             if isinstance(value, dict):
                 if set(value) == {"path", "bytes", "sha256"}:
-                    path = Path(value["path"])
-                    if path.is_relative_to(old_root):
-                        relative = str(path.relative_to(old_root))
-                        if relative in values:
-                            return write(relative)
+                    if value["path"] in locations:
+                        return write(locations[value["path"]])
                 return {k: relocate(v) for k, v in value.items()}
             if isinstance(value, list):
                 return [relocate(v) for v in value]
@@ -583,6 +667,8 @@ def clone(production, tmp_path):
             accepted_files=release.document(copied_run["receipt_index"])["files"])
         copied_contract["original_scientific_lineage"].update(
             proposal=copied_run["proposal"], accepted_terminal=copied_run["terminal_receipt"])
+        copied_contract["original_scientific_lineage"] = relocate(
+            copied_contract["original_scientific_lineage"])
         return copied_run, copied_contract
 
     return materialize
@@ -733,7 +819,8 @@ def test_actual_pinned_native_review_consumption():
     ("review", ["mission_context"], "/wrong/mission.json"),
     ("review", ["checkpoint", "path"], "/wrong/CHECKPOINT.md"),
     ("review", ["review", "status"], "replan_requested"),
-    ("review", ["review", "reason"], "done"),
+    ("review", ["review", "reason"], ""),
+    ("review", ["review", "reason"], 1),
     ("review", ["review", "operator_question"], "approve?"),
     ("review", ["review", "next_action"], "science"),
     ("latest", ["handoff", "path"], "/wrong/round-0001.json"),
@@ -753,6 +840,31 @@ def test_repinned_native_review_schema_rejected(case, target, keys, value):
     case["bind_consumption"]()
     with pytest.raises(ValueError):
         check(case)
+
+
+def test_native_acceptance_allows_authentic_done_reason_variation(case):
+    bundle = case["request"]["contract_review"]
+    review = release.document(bundle["review"])
+    review["review"]["reason"] = (
+        "sole zero-science release is sealed from reviewed live bytes; "
+        "six-source compilation and validation passed"
+    )
+    bundle["review"] = case["put"](bundle["review"]["path"], review)
+    case["bind_consumption"]()
+    check(case)
+
+
+def test_selection_document_can_be_fully_prevalidated_before_write(case):
+    selected = case["selection"]["selected"]
+    review, checked = release.validate_operational_release_selection(
+        copy.deepcopy(case["selection"]),
+        case["selection_path"],
+        case["request"]["contract_review"],
+        selected["contract"],
+        selected["seal"],
+    )
+    assert review["producer_role"] == "reviewer"
+    assert checked["selected"]["mission_id"] == release.MISSION
 
 
 @pytest.fixture
@@ -795,7 +907,7 @@ def test_later_native_done_after_round_one_continue(later_review_case):
     ("review", ["mission_id"], "b38bfad5e968"),
     ("review", ["mission_context"], "/wrong/mission.json"),
     ("latest", ["handoff", "path"],
-     str(release.LIFE / "handoffs" / release.MISSION / "round-0001.json")),
+     str(release.LIFE / "handoffs" / release.HISTORICAL_MISSION / "round-0001.json")),
     ("latest", ["mission", "path"], "/wrong/mission.json"),
 ])
 def test_later_native_done_rejects_rebound_handoff(later_review_case, target, keys, value):
@@ -1130,24 +1242,693 @@ def test_runtime_observation_binds_handoff_source(tmp_path, monkeypatch, defect)
         assert observed["cmdline_sha256"] == release.digest(virtual[process / "cmdline"])
 
 
-def test_actual_successor_v6_owner_and_source_bindings():
+def test_isolated_value_successor_owner_and_source_bindings(value_binding_case, monkeypatch):
+    historical = (
+        release.REPOSITORY / release.HISTORICAL_ROOT,
+        release.REPOSITORY / release.HISTORICAL_VALIDATION_ROOT,
+        release.REPOSITORY / ".argus/live/manager-authority" / release.HISTORICAL_AUTHORITY,
+    )
+    before = {str(path): release.tree_state(path) for path in historical}
+    binding = value_binding_case
+    assert binding["MISSION"] != release.HISTORICAL_MISSION
+    assert binding["AUTHORITY"] != release.HISTORICAL_AUTHORITY
+    assert binding["ROOT"] != release.HISTORICAL_ROOT
+    assert binding["VALIDATION_ROOT"] != release.HISTORICAL_VALIDATION_ROOT
+    assert binding["CONSUMPTION_INPUT"] != release.HISTORICAL_INPUT
+    assert binding["CONSUMPTION_DECISION"] != release.HISTORICAL_DECISION
+    monkeypatch.setattr(release, "ACTIVE_BINDING", None)
+    for name in binding:
+        if name.isupper():
+            monkeypatch.setattr(release, name, None)
     proposal_pin, proposal, _, owner, _ = release.successor_inputs()
-    assert release.MISSION == "287d994f2fe4"
-    assert release.AUTHORITY == "s11-reviewed-interface-release-20260926-287d994f2fe4-r1"
-    assert str(release.ROOT) == "build/argus-stage11-reviewed-interface-release-287d994f2fe4-attempt001"
-    assert str(release.VALIDATION_ROOT) == (
-        ".argus/live/manager-validation/stage11-reviewed-interface-release-287d994f2fe4")
     assert release.PROVENANCE_MISSION == "f1c261d97727"
     assert proposal_pin == release.CONSUMPTION_INPUT
-    assert owner["schema"] == "argus.manager-stage11-reviewed-interface-release-owner.v6"
-    assert owner["accepted_release_mission"] == "d15533af5bdf"
-    assert owner["accepted_repository_repair_mission"] == "ed9ef3afb3ad"
-    assert owner["reviewed_proposed_bytes"] == proposal["repository_repair"]["proposed_bytes"]
-    assert owner["failed_science_mission"] == "b7d95bd6e7f2"
+    assert owner["schema"] == "argus.manager-stage11-value-content-release-owner.v7"
+    assert owner["accepted_release_mission"] == release.HISTORICAL_MISSION
+    assert owner["candidate_review_mission"] == proposal["candidate_review"]["mission_id"]
+    assert owner["candidate_review_mission"] == "3362da556040"
+    assert owner["candidate_binding"] == proposal["candidate_binding"]
+    assert owner["prior_science_mission"] == "b4978b898600"
     assert release.source_edit_bindings(proposal, owner) == {
-        role: "POSTCLAIM_EDIT" if role in ("release_builder", "release_tests")
+        role: "POSTCLAIM_EDIT" if role in (
+            "release_builder", "release_tests", "candidate", "candidate_tests")
         else "UNCHANGED_MANAGER_BASELINE" for role, _, _ in release.SOURCE_LAYOUT
     }
+    assert {str(path): release.tree_state(path) for path in historical} == before
+
+
+@pytest.fixture
+def value_binding_case(prepared_binding_case, production, monkeypatch):
+    """Resolve disposable v7 authority/native/runtime state against retained provenance."""
+    path, authority, row = prepared_binding_case
+    repository = Path(release.__file__).resolve().parents[2]
+    donor_path = repository / (
+        ".argus/live/manager-authority/"
+        "s11-value-content-release-compatibility-20260926-6ef353b3fc6d-r1/"
+        "build-authorization.json")
+    donor = release.document(release.pin(donor_path))
+    life = Path(donor["life_dir"])
+    proposal = release.document(donor["manager_inputs"]["source_input"])
+    decision = release.document(donor["manager_inputs"]["consumption_decision"])
+    owner = release.document(release.pin(donor_path.with_name("manager-owner-claim.json")))
+    target = proposal["candidate_binding"]
+    target.update(
+        future_science_mission="8ee0b3aaeecb",
+        output=str(repository / "build" / (target["name"] + "-8ee0b3aaeecb-attempt001")),
+        capture_root="build/stage11-value-content-authorized-8ee0b3aaeecb-attempt001",
+    )
+    launch = target["launch"]
+    launch["argv"] = [
+        sys.executable, "-B", "-m", target["module"], "--check", "--output", target["output"],
+    ]
+    launch["command"] = release.shlex.join([
+        *(f"{key}={value}" for key, value in sorted(launch["environment"].items())),
+        *launch["argv"],
+    ])
+    decision.update(
+        future_science_mission=target["future_science_mission"],
+        future_candidate_output=str(Path(target["output"]).relative_to(repository)),
+        future_capture_root=target["capture_root"],
+    )
+    owner["candidate_binding"] = copy.deepcopy(target)
+    authority.update(mission_id="012345abcdef",
+                     authority_id="s11-value-content-forward-release-isolated",
+                     workspace=str(repository), life_dir=str(life),
+                     expected_objective="isolated value release")
+    row["id"] = authority["mission_id"]
+    proposal["mission_id"] = decision["mission_id"] = row["id"]
+    for key in ("authorized_root", "validation_root"):
+        proposal["repair"][key] = decision[key] = authority[key]
+    owner.update(mission_id=row["id"], authority_id=authority["authority_id"],
+                 authorized_root=authority["authorized_root"])
+    published = min(time.time(), *(Path(record["path"]).stat().st_mtime
+                                  for record in proposal["source_baseline"].values())) - 10
+    row.update(running_owner="primary", attempt=1, started_ts=published - 2,
+               objective=authority["expected_objective"], tags=["stage_transition:skip"])
+    event = {
+        "type": "life.mission.started", "item_id": row["id"], "attempt": 1,
+        "independent_review_required": True, "usage_attempt_id": row["id"] + ":attempt:1",
+        "ts": published - 1,
+    }
+    row_raw, event_raw = release.encoded(row), release.encoded(event)
+    owner.update(published_at=published, native_claim={
+        "attempt": 1, "backlog_row_sha256": release.digest(row_raw),
+        "mission_started_event_sha256": release.digest(event_raw),
+        "mission_started_ts": event["ts"], "owner": "primary",
+        "started_ts": row["started_ts"], "usage_attempt_id": event["usage_attempt_id"],
+    })
+    virtual = {
+        life / "backlog.jsonl": (life / "backlog.jsonl").read_bytes() + b"\n" + row_raw + b"\n",
+        life / "events.jsonl": (life / "events.jsonl").read_bytes() + b"\n" + event_raw + b"\n",
+    }
+    read_bytes, is_file, glob = Path.read_bytes, Path.is_file, Path.glob
+    monkeypatch.setattr(Path, "read_bytes",
+                        lambda self: virtual[self] if self in virtual else read_bytes(self))
+    monkeypatch.setattr(Path, "is_file",
+                        lambda self: self in virtual or is_file(self))
+
+    def put(target, value):
+        virtual[target] = release.json_bytes(value)
+        return release.pin(target)
+
+    expected = proposal["expected_runtime"]
+    runtime = copy.deepcopy(production[1]["runtime"])
+    runtime.update(
+        pid=expected["pid"], source_root=expected["argus_source_root"],
+        source_fingerprint=expected["source_fingerprint"],
+        continuous_enabled=True, continuous_generation=expected["continuous_generation"],
+        source_record=put(life / "daemon.source.json", {
+            "pid": expected["pid"], "source_root": expected["argus_source_root"],
+            "source_fingerprint": expected["source_fingerprint"],
+            "source_file_count": expected["source_file_count"],
+        }),
+    )
+    put(life / "daemon.status.json", {
+        "pid": expected["pid"], "started_at_iso": owner["runtime"]["started_at_iso"],
+        "runtime": {
+            "release_id": expected["release_id"], "source_root": expected["source_root"],
+            "runtime_source_digest": expected["source_digest"],
+            "manifest_source_digest": expected["source_digest"], "release_matches_source": True,
+        },
+    })
+    put(life / "continuous.json", {
+        "enabled": True, "generation": expected["continuous_generation"],
+        "open_ended": True, "objective": expected["continuous_objective"],
+    })
+    directory = repository / ".argus/live/manager-authority"
+    authority_path = directory / authority["authority_id"] / path.name
+    authority["manager_inputs"] = {
+        "source_input": put(repository / ".argus/live/manager-inputs"
+                            / f"stage11-reviewed-interface-release-{row['id']}.json", proposal),
+        "consumption_decision": put(
+            authority_path.with_name("manager-consumption-decision.json"), decision),
+        "claim_binder": release.pin(Path(donor["manager_inputs"]["claim_binder"]["path"])),
+    }
+    put(authority_path.with_name("manager-owner-claim.json"), owner)
+    put(authority_path, authority)
+    monkeypatch.setattr(Path, "glob", lambda self, pattern, **kwargs: (
+        iter([authority_path] if pattern == "s11-value-content-forward-release-*/build-authorization.json"
+             else []) if self == directory else glob(self, pattern, **kwargs)))
+    monkeypatch.setattr(release, "REPOSITORY", repository)
+    monkeypatch.setattr(release, "LIFE", life)
+    monkeypatch.setattr(release, "observe_runtime", lambda: copy.deepcopy(runtime))
+    binding = release.resolve_release_binding()
+    assert binding["MISSION"] == row["id"]
+    return binding
+
+
+@pytest.mark.parametrize("status", ["done", "failed"])
+def test_isolated_value_binding_rejects_terminal_owner(value_binding_case, monkeypatch, status):
+    path = release.LIFE / "backlog.jsonl"
+    rows = [json.loads(raw) for raw in path.read_bytes().splitlines() if raw.strip()]
+    for row in rows:
+        if row["id"] == value_binding_case["MISSION"]:
+            row["status"] = status
+    changed = b"\n".join(release.encoded(row) for row in rows) + b"\n"
+    read_bytes = Path.read_bytes
+    monkeypatch.setattr(Path, "read_bytes",
+                        lambda self: changed if self == path else read_bytes(self))
+    with pytest.raises(ValueError, match="completed-or-terminal-owner"):
+        release.resolve_release_binding()
+
+
+@pytest.fixture
+def prepared_binding_case(tmp_path, monkeypatch, retained_release_context, request):
+    """Synthetic Manager preparation; no native claim or publisher is invoked."""
+    repository = tmp_path / "repository"
+    life = tmp_path / "life"
+    life.mkdir()
+    historical_path = Path(retained_release_context["authority"]["path"])
+    authority = release.document(retained_release_context["authority"])
+    proposal = release.document(release.HISTORICAL_INPUT)
+    decision = release.document(release.HISTORICAL_DECISION)
+    mission = "test-unfinished-release"
+    family = getattr(request, "param", "s11-reviewed-interface-release")
+    authority.update(mission_id=mission, authority_id=family + "-test",
+                     workspace=str(repository), life_dir=str(life),
+                     authorized_root="build/test-unfinished-release",
+                     validation_root=".argus/live/manager-validation/test-unfinished-release")
+    proposal["mission_id"] = decision["mission_id"] = mission
+    for key in ("authorized_root", "validation_root"):
+        proposal["repair"][key] = decision[key] = authority[key]
+    path = (repository / ".argus/live/manager-authority"
+            / authority["authority_id"] / "build-authorization.json")
+    path.parent.mkdir(parents=True)
+    input_path = (repository / ".argus/live/manager-inputs"
+                  / f"stage11-reviewed-interface-release-{mission}.json")
+    input_path.parent.mkdir(parents=True)
+    binder = repository / ".argus/live/manager-tools/publisher.py"
+    binder.parent.mkdir(parents=True)
+    binder.write_bytes(b"test-only, never executed\n")
+    release.write_json(input_path, proposal)
+    release.write_json(path.with_name("manager-consumption-decision.json"), decision)
+    path.with_name("manager-owner-claim.json").write_bytes(
+        historical_path.with_name("manager-owner-claim.json").read_bytes())
+    authority["manager_inputs"] = {
+        "source_input": release.pin(input_path),
+        "consumption_decision": release.pin(path.with_name("manager-consumption-decision.json")),
+        "claim_binder": release.pin(binder),
+    }
+    release.write_json(path, authority)
+    row = {"id": mission, "status": "running"}
+    (life / "backlog.jsonl").write_bytes(release.encoded(row) + b"\n")
+    monkeypatch.setattr(release, "REPOSITORY", repository)
+    monkeypatch.setattr(release, "LIFE", life)
+    return path, authority, row
+
+
+@pytest.mark.parametrize("defect", [
+    "none", "pending", "done", "failed", "superseded", "root", "symlink", "overlap",
+])
+def test_prepared_release_resolution(prepared_binding_case, defect, monkeypatch):
+    path, authority, row = prepared_binding_case
+    if defect in ("pending", "done", "failed", "superseded"):
+        row["status"] = defect
+        (release.LIFE / "backlog.jsonl").write_bytes(release.encoded(row) + b"\n")
+    root = release.REPOSITORY / authority["authorized_root"]
+    if defect in ("root", "symlink"):
+        root.parent.mkdir(parents=True)
+        if defect == "root":
+            root.mkdir()
+        else:
+            root.symlink_to(root.with_name("absent"))
+    if defect == "overlap":
+        other = path.parent.with_name("s11-reviewed-interface-release-other") / path.name
+        other.parent.mkdir()
+        release.write_json(other, authority)
+    if defect in ("none", "pending"):
+        binding = release.resolve_release_binding()
+        assert binding["MISSION"] == row["id"] != release.HISTORICAL_MISSION
+        assert binding["ROOT"] == Path(authority["authorized_root"])
+        assert binding["CONSUMPTION_INPUT"] == authority["manager_inputs"]["source_input"]
+        assert binding["CONSUMPTION_DECISION"] == authority["manager_inputs"]["consumption_decision"]
+        assert binding["VALIDATION_ROOT"] == Path(authority["validation_root"])
+    else:
+        monkeypatch.setattr(release, "prepared_release_binding",
+                            lambda *args: pytest.fail("rejected owner reached claim consumption"))
+        expected = "ambiguous_objective" if defect == "overlap" else (
+            "existing-final-root" if defect in ("root", "symlink") else "completed-or-terminal-owner")
+        with pytest.raises(ValueError, match=expected):
+            release.successor_inputs()
+
+
+@pytest.mark.parametrize("key", ["mission_id", "authorized_root", "validation_root"])
+def test_prepared_release_binding_splices(prepared_binding_case, key):
+    path, authority, _ = prepared_binding_case
+    decision_path = path.with_name("manager-consumption-decision.json")
+    decision = release.document(authority["manager_inputs"]["consumption_decision"])
+    decision[key] = "spliced"
+    decision_path.write_bytes(release.json_bytes(decision))
+    authority["manager_inputs"]["consumption_decision"] = release.pin(decision_path)
+    path.write_bytes(release.json_bytes(authority))
+    with pytest.raises(ValueError, match="Manager input/authority/decision/validation binding differs"):
+        release.resolve_release_binding()
+
+
+@pytest.mark.parametrize("prepared_binding_case", [
+    "s11-value-content-forward-release", "s11-value-content-selftest-release",
+    "s11-value-content-current-census-release",
+], indirect=True)
+@pytest.mark.parametrize("defect", [
+    "none", "pending", "done", "failed", "superseded", "root", "symlink", "overlap",
+])
+def test_forward_release_resolution(prepared_binding_case, defect, monkeypatch):
+    test_prepared_release_resolution(prepared_binding_case, defect, monkeypatch)
+
+
+@pytest.mark.parametrize("prepared_binding_case", [
+    "s11-value-content-forward-release", "s11-value-content-selftest-release",
+    "s11-value-content-current-census-release",
+], indirect=True)
+@pytest.mark.parametrize("key", ["mission_id", "authorized_root", "validation_root"])
+def test_forward_release_binding_splices(prepared_binding_case, key):
+    test_prepared_release_binding_splices(prepared_binding_case, key)
+
+
+@pytest.mark.parametrize("prepared_binding_case", [
+    "s11-value-content-forward-release", "s11-value-content-selftest-release",
+    "s11-value-content-current-census-release",
+], indirect=True)
+@pytest.mark.parametrize("defect", [
+    "duplicate-row", "duplicate-owner", "authorized_root", "validation_root",
+    "missing-historical-owner", "duplicate-historical-row", "historical-distinct",
+    "superseded-owner",
+])
+def test_forward_release_rejects_duplicate_or_overlapping_history(prepared_binding_case, defect):
+    path, authority, row = prepared_binding_case
+    rows = [row]
+    if defect == "duplicate-row":
+        rows.append(row)
+        message = "missing or duplicate prepared release owner"
+    else:
+        other = copy.deepcopy(authority)
+        other["authority_id"] = "s11-value-content-selftest-release-historical"
+        if defect == "duplicate-owner":
+            root = release.REPOSITORY / authority["authorized_root"]
+            root.mkdir(parents=True)
+            other["authorized_root"] = "build/other-release"
+            message = "duplicate release owner authorities"
+        else:
+            other["mission_id"] = (
+                "f1a28e051c63" if defect == "superseded-owner" else "historical-owner")
+            historical = {"id": other["mission_id"],
+                          "status": "superseded" if defect == "superseded-owner" else "failed"}
+            if defect == "superseded-owner":
+                other["authority_id"] = "s11-value-content-current-census-release-historical"
+            if defect != "missing-historical-owner":
+                rows.append(historical)
+            if defect == "duplicate-historical-row":
+                rows.append(historical)
+            other["authorized_root"] = "build/historical-owner"
+            other["validation_root"] = ".argus/live/manager-validation/historical-owner"
+            if defect in ("authorized_root", "validation_root"):
+                other[defect] = str(Path(authority[defect]) / "nested")
+                message = "prepared release overlaps historical " + defect
+            else:
+                message = "missing or duplicate prepared release owner"
+        other_path = path.parent.with_name(other["authority_id"]) / path.name
+        other_path.parent.mkdir()
+        release.write_json(other_path, other)
+    (release.LIFE / "backlog.jsonl").write_bytes(
+        b"".join(release.encoded(item) + b"\n" for item in rows))
+    if defect in ("historical-distinct", "superseded-owner"):
+        assert release.resolve_release_binding()["MISSION"] == row["id"]
+        return
+    with pytest.raises(ValueError, match=message):
+        release.resolve_release_binding()
+
+
+@pytest.mark.parametrize("defect", ["none", "path", "drift"])
+def test_value_publication_focused_command_preserves_complete_suites(tmp_path, monkeypatch, defect):
+    monkeypatch.setattr(release, "REPOSITORY", tmp_path)
+    monkeypatch.setattr(release, "resolve_release_binding",
+                        lambda: pytest.fail("synthetic command must not resolve a live owner"))
+    publication = tmp_path / "tests/test_stage11_publication_compatibility.py"
+    publication.parent.mkdir()
+    publication.write_bytes(b"# isolated reviewed compatibility source\n")
+    record = release.pin(publication)
+    proposal = {"candidate_binding": {}, "publication_repair": {},
+                "candidate_review": {"publication_tests": record}}
+    monkeypatch.setattr(release, "proposal_context", lambda: proposal)
+    if defect == "path":
+        record["path"] = str(publication.with_name("other.py"))
+    elif defect == "drift":
+        publication.write_bytes(b"# changed after review\n")
+    if defect != "none":
+        with pytest.raises(ValueError, match="test path differs|authenticated bytes changed"):
+            release.focused_command(tmp_path, {})
+        return
+    argv = release.focused_command(tmp_path, {})
+    assert argv[7:10] == [
+        str(release.TEST), str(release.SOURCE_LAYOUT[3][1]),
+        "tests/test_stage11_publication_compatibility.py",
+    ]
+    assert not any("::" in arg for arg in argv)
+    proposal.pop("publication_repair")
+    assert release.focused_command(tmp_path, {})[7:9] == [
+        str(release.TEST), str(release.SOURCE_LAYOUT[3][1])]
+
+
+@pytest.mark.parametrize("defect", [
+    "none", "path", "test-drift", "contract-drift", "proposal-drift",
+    "contract-identity", "proposal-identity", "missing", "cycle",
+])
+def test_value_publication_focused_command_authenticates_ancestry(tmp_path, monkeypatch, defect):
+    monkeypatch.setattr(release, "REPOSITORY", tmp_path)
+    monkeypatch.setattr(release, "resolve_release_binding",
+                        lambda: pytest.fail("isolated ancestry must not resolve a live owner"))
+    publication = tmp_path / "tests/test_stage11_publication_compatibility.py"
+    publication.parent.mkdir()
+    publication.write_bytes(b"# isolated accepted compatibility suite\n")
+    record = release.pin(publication)
+    if defect == "path":
+        record["path"] = str(publication.with_name("other.py"))
+    ancestor = {"mission_id": "accepted", "candidate_review": {"publication_tests": record}}
+    if defect in ("missing", "cycle"):
+        ancestor["candidate_review"].clear()
+    if defect == "proposal-identity":
+        ancestor["mission_id"] = "spliced"
+    ancestor_path, contract_path = tmp_path / "proposal.json", tmp_path / "contract.json"
+    release.write_json(ancestor_path, ancestor)
+    contract = {"mission_id": "spliced" if defect == "contract-identity" else "accepted",
+                "manager_proposal": release.pin(ancestor_path)}
+    release.write_json(contract_path, contract)
+    proposal = {"candidate_binding": {}, "publication_repair": {}, "candidate_review": {},
+                "accepted_release": {"mission_id": "accepted",
+                                     "contract": release.pin(contract_path)}}
+    if defect == "cycle":
+        ancestor["accepted_release"] = proposal["accepted_release"]
+        document = release.document
+        monkeypatch.setattr(release, "document",
+                            lambda pin: ancestor if pin == contract["manager_proposal"]
+                            else document(pin))
+    monkeypatch.setattr(release, "proposal_context", lambda: proposal)
+    for name, path in (("test-drift", publication), ("contract-drift", contract_path),
+                       ("proposal-drift", ancestor_path)):
+        if defect == name:
+            path.write_bytes(path.read_bytes() + b"\n")
+    if defect != "none":
+        with pytest.raises(ValueError, match=(
+                "test path differs|authenticated bytes changed|ancestor identity differs"
+                "|test ancestry missing|cyclic publication")):
+            release.focused_command(tmp_path, {})
+        return
+    argv = release.focused_command(tmp_path, {})
+    assert argv[7:10] == [
+        str(release.TEST), str(release.SOURCE_LAYOUT[3][1]),
+        "tests/test_stage11_publication_compatibility.py",
+    ]
+    assert "publication_tests" not in proposal["candidate_review"]
+    assert not any("::" in arg for arg in argv)
+
+
+def test_legacy_focused_command_selects_isolated_owner_coverage(tmp_path, monkeypatch):
+    monkeypatch.setattr(release, "proposal_context", lambda: {})
+    monkeypatch.setattr(release, "resolve_release_binding",
+                        lambda: pytest.fail("synthetic command must not resolve a live owner"))
+    argv = release.focused_command(tmp_path, {})
+    assert str(release.TEST) + "::test_isolated_value_successor_owner_and_source_bindings" in argv
+    assert not any("test_actual_successor_v6_owner_and_source_bindings" in arg for arg in argv)
+
+
+@pytest.fixture
+def construction_case(prepared_binding_case, retained_release_context, monkeypatch):
+    """Run the builder lifecycle on synthetic data, not on a live release root."""
+    authority_path, authority, row = prepared_binding_case
+    donor = release.document(retained_release_context["authority"])
+    donor_life = Path(donor["life_dir"])
+    proposal_path = Path(authority["manager_inputs"]["source_input"]["path"])
+    proposal = release.document(release.pin(proposal_path))
+    previous = release.document(proposal["accepted_release"]["contract"])
+    now = time.time()
+    row.update(running_owner="primary", attempt=1, started_ts=now - 20,
+               objective=authority["expected_objective"], tags=["stage_transition:skip"])
+    event = {
+        "type": "life.mission.started", "item_id": row["id"], "attempt": 1,
+        "independent_review_required": True, "usage_attempt_id": row["id"] + ":attempt:1",
+        "ts": now - 19,
+    }
+    row_raw, event_raw = release.encoded(row), release.encoded(event)
+    failed = previous["terminal_successor_lineage"]["failed_terminal_successor"]
+    history = [
+        raw for raw in (donor_life / "backlog.jsonl").read_bytes().splitlines()
+        if raw.strip() and json.loads(raw).get("id") in (
+            release.FAILED_PREDECESSOR_MISSION, failed["mission_id"])
+    ]
+    (release.LIFE / "backlog.jsonl").write_bytes(b"\n".join([*history, row_raw]) + b"\n")
+    (release.LIFE / "events.jsonl").write_bytes(event_raw + b"\n")
+    for name in ("daemon.status.json", "continuous.json"):
+        (release.LIFE / name).write_bytes((donor_life / name).read_bytes())
+    expected = proposal["expected_runtime"]
+    runtime = {
+        "pid": expected["pid"], "source_root": expected["argus_source_root"],
+        "source_fingerprint": expected["source_fingerprint"],
+        "source_record": release.pin(donor_life / "daemon.source.json"),
+        "continuous_enabled": True, "continuous_generation": expected["continuous_generation"],
+    }
+    for role, path, _ in release.HISTORICAL_SOURCE_LAYOUT:
+        source = release.REPOSITORY / path
+        source.parent.mkdir(parents=True, exist_ok=True)
+        source.write_bytes(("# synthetic " + role + "\n").encode())
+        os.utime(source, (now - 6, now - 6))
+        proposal["source_baseline"][role] = release.pin(source)
+    proposal_path.write_bytes(release.json_bytes(proposal))
+    authority["manager_inputs"]["source_input"] = release.pin(proposal_path)
+    authority_path.write_bytes(release.json_bytes(authority))
+    owner_path = authority_path.with_name("manager-owner-claim.json")
+    owner = release.document(release.pin(owner_path))
+    owner.update(
+        mission_id=row["id"], authority_id=authority["authority_id"],
+        authorized_root=authority["authorized_root"], published_at=now - 10,
+        native_claim={
+            "attempt": 1, "backlog_row_sha256": release.digest(row_raw),
+            "mission_started_event_sha256": release.digest(event_raw),
+            "mission_started_ts": event["ts"], "owner": "primary",
+            "started_ts": row["started_ts"], "usage_attempt_id": row["id"] + ":attempt:1",
+        })
+    owner_path.write_bytes(release.json_bytes(owner))
+    binding = release.prepared_release_binding(authority_path)
+    monkeypatch.setattr(release, "ACTIVE_BINDING", None)
+    for name in binding:
+        if name.isupper():
+            monkeypatch.setattr(release, name, getattr(release, name))
+    monkeypatch.chdir(release.REPOSITORY)
+    monkeypatch.setattr(release, "proposal_context", lambda: release.document(
+        authority["manager_inputs"]["source_input"]))
+    monkeypatch.setattr(release, "observe_runtime", lambda: copy.deepcopy(runtime))
+    # Retained ancestor acceptance is covered separately; lifecycle authentication
+    # below uses the real resolver, successor_inputs, source and native validators.
+    monkeypatch.setattr(release, "reviewed_repair_evidence", lambda proposal: {})
+    monkeypatch.setattr(release, "continuation_provenance", lambda proposal: {})
+    monkeypatch.setattr(release, "native_acceptance", lambda *args, **kwargs: None)
+    monkeypatch.setattr(release, "construction_input", lambda proposal: {
+        "failed_science_terminal": {},
+        "accepted_operational_release_selection": proposal["accepted_release"]["selection"],
+    })
+    monkeypatch.setattr(release, "accepted_lineage", lambda *args: None)
+    monkeypatch.setattr(release, "preserved_trees", lambda *args: {})
+    sources = [proposal["source_baseline"][role] for role, _, _ in binding["SOURCE_LAYOUT"]]
+    scratch = release.REPOSITORY / binding["VALIDATION_ROOT"] / "attempt-001"
+    scratch.mkdir(parents=True)
+    members = {name: release.authenticate(source) for (_, _, name), source in zip(
+        binding["SOURCE_LAYOUT"], sources, strict=True)}
+    contract = {
+        "created_at": now - 4, "runtime": runtime, "accepted_lineage": {},
+        "source_snapshots": {}, "capture_snapshots": {}, "historical_state": {},
+        "boundary": "synthetic zero-science lifecycle only",
+    }
+    members["current-runtime-contract.json"] = release.json_bytes(contract)
+    for name, raw in members.items():
+        (scratch / name).write_bytes(raw)
+    receipt = {
+        "mission_id": row["id"], "owner_sha256": binding["CLAIM_SHA256"],
+        "manager_proposal": binding["CONSUMPTION_INPUT"],
+        "started_at": now - 4, "finished_at": now - 2, "preserved_trees": {},
+        "members": [release.pin(path) for path in sorted(scratch.iterdir())],
+    }
+    release.write_json(scratch / "prevalidation.json", receipt)
+    receipt_pin = release.pin(scratch / "prevalidation.json")
+    monkeypatch.setattr(release, "authenticate_prevalidation",
+                        lambda *args: (copy.deepcopy(receipt), dict(members), {}))
+    monkeypatch.setattr(release, "proposed_contract", lambda *args: copy.deepcopy(contract))
+    base = release.LIFE / "handoffs" / row["id"]
+    base.mkdir(parents=True)
+    review_path = base / "round-0001.json"
+    release.write_json(review_path, {
+        "kind": "round_reviewed_handoff", "schema_version": 3,
+        "mission_id": row["id"], "producer_role": "reviewer", "round": 1,
+        "created_at": now - 1, "mission_context": str(base / "mission.json"),
+        "review": {"status": "continue", "next_action": "BUILD_FINAL_FROM_REVIEWED_BYTES"},
+    })
+    release.write_json(base / "latest.json", {
+        "kind": "handoff_ref", "mission": {"path": str(base / "mission.json")},
+        "handoff": {"path": str(review_path)},
+    })
+    root = release.REPOSITORY / binding["ROOT"]
+    root.parent.mkdir()
+    selections = []
+    resolve = release.resolve_release_binding
+
+    def select():
+        selections.append(root.exists())
+        return resolve()
+
+    monkeypatch.setattr(release, "resolve_release_binding", select)
+    # Scope the otherwise permanent process audit hook to this test's real opens.
+    hooks = []
+    open_path = Path.open
+    monkeypatch.setattr(sys, "addaudithook", hooks.append)
+
+    def audited_open(path, mode="r", *args, **kwargs):
+        for hook in hooks:
+            hook("open", (path, mode, 0))
+        return open_path(path, mode, *args, **kwargs)
+
+    monkeypatch.setattr(Path, "open", audited_open)
+    virtual = {}
+    read_bytes = Path.read_bytes
+    monkeypatch.setattr(Path, "read_bytes",
+                        lambda path: virtual[path] if path in virtual else read_bytes(path))
+    return {
+        "root": root, "receipt": receipt_pin, "sources": sources, "selections": selections,
+        "virtual": virtual, "row": row, "event": event, "history": history,
+        "authority": authority_path, "owner": owner_path, "proposal": proposal_path,
+    }
+
+
+def test_build_completes_through_termination_and_seal(construction_case):
+    case = construction_case
+    release.build(case["receipt"])
+    root = case["root"]
+    assert case["selections"] == [False]
+    seal = release.document(release.pin(root / "seal.json"))
+    assert seal["mission_id"] == release.MISSION
+    assert seal["status"] == "PROPOSED_PENDING_INDEPENDENT_REVIEW"
+    assert seal["scientific_run_budget"] == 0
+    assert seal["excludes"] == ["seal.json"]
+    assert {member["path"] for member in seal["members"]} == {
+        str(path.relative_to(root)) for path in root.rglob("*")
+        if path.is_file() and path.name != "seal.json"
+    }
+    for member in seal["members"]:
+        release.authenticate(dict(member, path=str(root / member["path"])))
+    termination = release.document(release.pin(root / "termination-receipt.json"))
+    assert termination["scientific_invocations"] == termination["stage_transitions"] == 0
+    assert termination["release_consumption_authorized"] is False
+    construction = release.document(release.pin(root / "construction-receipt.json"))
+    assert construction["sources"] == case["sources"]
+    assert construction["builder_invocations"] == 1
+    assert construction["prevalidation_completed_before_root"] is True
+    audit = release.document(release.pin(root / "audit-disclosure.json"))["builder_audit"]
+    assert audit["writes"] and audit["blocked"] == []
+    assert all(Path(path).is_relative_to(root) for path in audit["writes"])
+    before = release.tree_state(root)
+    with pytest.raises(ValueError, match="existing-final-root"):
+        release.build(case["receipt"])
+    assert release.tree_state(root) == before
+
+
+@pytest.mark.parametrize("kind", ["directory", "symlink"])
+def test_build_rejects_occupied_root(construction_case, kind):
+    root = construction_case["root"]
+    if kind == "directory":
+        root.mkdir()
+        (root / "sentinel").write_bytes(b"preserve occupied root\n")
+    else:
+        root.symlink_to(root.with_name("absent"))
+    before = release.tree_state(root)
+    with pytest.raises(ValueError, match="existing-final-root"):
+        release.build(construction_case["receipt"])
+    assert release.tree_state(root) == before
+    assert not (root / "seal.json").exists()
+
+
+@pytest.mark.parametrize("phase", ["before-root", "after-root"])
+@pytest.mark.parametrize("defect", [
+    "claim", "event", "other-owner", "source", "candidate", "candidate-tests",
+    "authority", "owner", "proposal",
+])
+def test_build_rejects_construction_drift(construction_case, monkeypatch, phase, defect):
+    case = construction_case
+    root = case["root"]
+
+    def change():
+        if defect in ("claim", "other-owner"):
+            row = dict(case["row"])
+            row["objective" if defect == "claim" else "running_owner"] = "changed"
+            case["virtual"][release.LIFE / "backlog.jsonl"] = b"\n".join(
+                [*case["history"], release.encoded(row)]) + b"\n"
+        elif defect == "event":
+            event = dict(case["event"], ts=case["event"]["ts"] + 0.5)
+            case["virtual"][release.LIFE / "events.jsonl"] = release.encoded(event) + b"\n"
+        else:
+            if defect in ("source", "candidate", "candidate-tests"):
+                index = {"source": 0, "candidate": 2, "candidate-tests": 3}[defect]
+                path = Path(case["sources"][index]["path"])
+            else:
+                path = case[defect]
+            case["virtual"][path] = path.read_bytes() + b"\n"
+
+    if phase == "before-root":
+        propose = release.proposed_contract
+
+        def changed_proposal(*args):
+            result = propose(*args)
+            change()
+            return result
+
+        monkeypatch.setattr(release, "proposed_contract", changed_proposal)
+    else:
+        exclusive = release.exclusive
+
+        def changed_write(path, raw):
+            exclusive(path, raw)
+            if path == root / "zero-invocations.json":
+                change()
+
+        monkeypatch.setattr(release, "exclusive", changed_write)
+    with pytest.raises(ValueError, match=(
+            "authenticated bytes changed|native owner claim differs|"
+            "normal running claim required|reviewed ed9 candidate/capture drift")):
+        release.build(case["receipt"])
+    assert case["selections"] == [False]
+    assert root.exists() is (phase == "after-root")
+    assert not (root / "termination-receipt.json").exists()
+    assert not (root / "seal.json").exists()
+
+
+@pytest.mark.parametrize("schema", [
+    "argus.manager-stage11-continuous-release-owner.v4",
+    "argus.manager-stage11-execution-contract-repair-owner.v5",
+])
+def test_prepared_release_rejects_obsolete_owner_schema(prepared_binding_case, schema):
+    path, _, _ = prepared_binding_case
+    owner_path = path.with_name("manager-owner-claim.json")
+    owner = release.document(release.pin(owner_path))
+    owner["schema"] = schema
+    owner_path.write_bytes(release.json_bytes(owner))
+    with pytest.raises(ValueError, match="prepared release requires v6 owner schema"):
+        release.resolve_release_binding()
 
 
 @pytest.mark.parametrize("schema", [
@@ -1156,7 +1937,8 @@ def test_actual_successor_v6_owner_and_source_bindings():
     "argus.manager-stage11-continuous-release-owner.v4",
     "argus.manager-stage11-execution-contract-repair-owner.v5",
 ])
-def test_successor_rejects_obsolete_owner_schema(monkeypatch, schema):
+def test_successor_rejects_obsolete_owner_schema(monkeypatch, schema, retained_release_context):
+    monkeypatch.setattr(release, "resolve_release_binding", lambda: retained_release_context)
     original = release.document
 
     def obsolete_owner(record):
@@ -1178,7 +1960,8 @@ def test_successor_rejects_obsolete_owner_schema(monkeypatch, schema):
     ("continuous_generation", 50), ("continuous_open_ended", False),
     ("continuous_objective_sha256", "0" * 64),
 ])
-def test_successor_rejects_owner_runtime_drift(monkeypatch, key, value):
+def test_successor_rejects_owner_runtime_drift(monkeypatch, key, value, retained_release_context):
+    monkeypatch.setattr(release, "resolve_release_binding", lambda: retained_release_context)
     original = release.document
 
     def changed_owner(record):
@@ -1207,7 +1990,9 @@ def test_successor_rejects_owner_runtime_drift(monkeypatch, key, value):
     ("continuous.json", ("open_ended",), False),
     ("continuous.json", ("objective",), "obsolete"),
 ])
-def test_successor_rejects_live_runtime_drift(monkeypatch, filename, keys, value):
+def test_successor_rejects_live_runtime_drift(
+        monkeypatch, filename, keys, value, retained_release_context):
+    monkeypatch.setattr(release, "resolve_release_binding", lambda: retained_release_context)
     path = release.LIFE / filename
     changed = json.loads(path.read_bytes())
     target = changed
@@ -1268,6 +2053,57 @@ def test_reviewed_repair_rejects_changed_evidence(key):
         repair[key]["sha256"] = "0" * 64
     with pytest.raises(ValueError, match="authenticated bytes changed|immutable native completion"):
         release.reviewed_repair_evidence(proposal)
+
+
+@pytest.mark.parametrize("certification", ["deferred", "not_certified"])
+@pytest.mark.parametrize("defect", [
+    "none", "pin", "certified", "missing-certification", "attempt", "status",
+    "review-status", "execution-status", "resumable", "last-error", "extra-field",
+])
+def test_reviewed_repair_allows_only_stage_certification_reconciliation(
+        monkeypatch, certification, defect):
+    proposal = release.proposal_context()
+    path = release.LIFE / "backlog.jsonl"
+    original = Path.read_bytes
+    lines = []
+    for raw in original(path).splitlines():
+        if not raw.strip():
+            lines.append(raw)
+            continue
+        row = json.loads(raw)
+        if row.get("id") == "ed9ef3afb3ad":
+            row["outcome"]["stage_certification"] = certification
+            if defect == "certified":
+                row["outcome"]["stage_certification"] = "certified"
+            elif defect == "missing-certification":
+                del row["outcome"]["stage_certification"]
+            elif defect == "attempt":
+                row["attempt"] = 2
+            elif defect == "status":
+                row["status"] = "running"
+            elif defect == "review-status":
+                row["outcome"]["review_status"] = "continue"
+            elif defect == "execution-status":
+                row["outcome"]["execution_status"] = "ended"
+            elif defect == "resumable":
+                row["outcome"]["resumable"] = True
+            elif defect == "last-error":
+                row["last_error"] = "changed"
+            elif defect == "extra-field":
+                row["unexpected"] = True
+            raw = json.dumps(row, sort_keys=True, ensure_ascii=False).encode()
+        lines.append(raw)
+    changed = b"\n".join(lines) + b"\n"
+    monkeypatch.setattr(Path, "read_bytes",
+                        lambda self: changed if self == path else original(self))
+    if defect == "pin":
+        proposal["repository_repair"]["backlog_row_sha256"] = "0" * 64
+    if defect == "none":
+        release.reviewed_repair_evidence(proposal)
+    else:
+        with pytest.raises(ValueError, match="ed9 backlog differs beyond stage-certification"):
+            release.reviewed_repair_evidence(proposal)
+    assert path.read_bytes() == changed
 
 
 @pytest.fixture
@@ -1372,11 +2208,25 @@ def test_preseal_rejects_rebound_review(preseal_case, defect):
 @pytest.mark.parametrize("failing_command", ["py_compile", "focused-tests"])
 def test_failed_validation_is_retained_without_delivery(production, tmp_path, monkeypatch,
                                                        failing_command):
-    inputs = release.proposal_context()
+    inputs = copy.deepcopy(release.proposal_context())
     previous = release.document(inputs["accepted_construction"]["contract"])
+    baseline = tmp_path / "source-baseline"
+    baseline.mkdir()
+    sources = release.implementation_pins()
+    inputs["source_baseline"] = {}
+    for (role, _, name), source in zip(release.SOURCE_LAYOUT, sources, strict=True):
+        (baseline / name).write_bytes(release.authenticate(source))
+        inputs["source_baseline"][role] = source
+    inputs["repository_repair"]["proposed_bytes"] = release.pin(
+        baseline / release.SOURCE_LAYOUT[0][2])
+    proposal_path = tmp_path / "proposal.json"
+    release.write_json(proposal_path, inputs)
+    proposal = release.pin(proposal_path)
+    monkeypatch.setattr(release, "CONSUMPTION_INPUT", proposal)
+    monkeypatch.setattr(release, "proposal_context", lambda: copy.deepcopy(inputs))
     owner = {"published_at": time.time() - 10}
     monkeypatch.setattr(release, "successor_inputs",
-                        lambda: (release.CONSUMPTION_INPUT, inputs, previous, owner, {}))
+                        lambda: (proposal, inputs, previous, owner, {}))
     monkeypatch.setattr(release, "preserved_trees", lambda *args: {})
     monkeypatch.setattr(release, "observe_runtime", lambda: production[1]["runtime"])
     monkeypatch.setattr(release, "ROOT", tmp_path / "delivery")
@@ -1422,15 +2272,27 @@ def validation_case(production, tmp_path, monkeypatch):
     for i, ((_, _, name), source) in enumerate(zip(release.SOURCE_LAYOUT, sources, strict=True)):
         (scratch / name).write_bytes(release.authenticate(source))
         (scratch / f"compile-{i}.pyc").write_bytes(b"test-only compile placeholder")
+    binding_cases = "".join(
+        f'<testcase classname="release" name="{name}[{value}]"/>'
+        for name, values in (
+            ("test_prepared_release_resolution", ("none", "done", "failed", "root", "symlink", "overlap")),
+            ("test_prepared_release_binding_splices", ("mission_id", "authorized_root", "validation_root")),
+            ("test_reviewed_repair_allows_only_stage_certification_reconciliation", tuple(
+                f"{defect}-{certification}"
+                for certification in ("deferred", "not_certified")
+                for defect in ("none", "pin", "certified", "missing-certification", "attempt",
+                               "status", "review-status", "execution-status", "resumable",
+                               "last-error", "extra-field"))),
+        ) for value in values)
     xml = (
-        '<testsuites><testsuite tests="4" failures="0" errors="0" skipped="0">'
+        '<testsuites><testsuite tests="35" failures="0" errors="0" skipped="0">'
         '<testcase classname="release" name="test_fresh_proposed_contract_consumes_production"/>'
-        '<testcase classname="release" name="test_actual_successor_v6_owner_and_source_bindings"/>'
+        '<testcase classname="release" name="test_isolated_value_successor_owner_and_source_bindings"/>'
         '<testcase classname="release" '
         'name="test_preseal_verdict_matches_real_runtime_classification[continue]"/>'
         '<testcase classname="release" '
         'name="test_preseal_verdict_matches_real_runtime_classification[replan_requested]"/>'
-        '</testsuite></testsuites>')
+        + binding_cases + '</testsuite></testsuites>')
     (scratch / "focused-tests.xml").write_text(xml)
     now = time.time()
     commands = []
@@ -1439,14 +2301,14 @@ def validation_case(production, tmp_path, monkeypatch):
         (scratch / (name + ".command.txt")).write_text(release.shlex.join(argv) + "\n")
         release.write_json(scratch / (name + ".argv.json"), argv)
         release.write_json(scratch / (name + ".environment.json"), environment)
-        (scratch / (name + ".stdout")).write_bytes(b"4 passed in 1.00s\n" if name == "focused-tests" else b"")
+        (scratch / (name + ".stdout")).write_bytes(b"35 passed in 1.00s\n" if name == "focused-tests" else b"")
         (scratch / (name + ".stderr")).write_bytes(b"")
         result = {
             "name": name, "argv": argv, "environment": environment, "cwd": str(release.REPOSITORY),
             "exit_code": 0, "timed_out": False, "started_at": now - 2, "finished_at": now - 1,
             "stdout": release.pin(scratch / (name + ".stdout")),
             "stderr": release.pin(scratch / (name + ".stderr")),
-            "test_summary": {"tests": 4, "failures": 0, "errors": 0, "skipped": 0}
+            "test_summary": {"tests": 35, "failures": 0, "errors": 0, "skipped": 0}
             if name == "focused-tests" else None,
         }
         release.write_json(scratch / (name + ".receipt.json"), result)
@@ -1473,13 +2335,61 @@ def test_authenticated_validation_receipt_requires_exact_evidence(validation_cas
     assert check_evidence()[0] == evidence
 
 
-def test_validation_receipt_requires_release_binding_coverage(validation_case):
+@pytest.mark.parametrize("summary_total", [35, 36, 37, 38])
+def test_validation_receipt_authenticates_subtest_totals(validation_case, summary_total):
+    evidence, check_evidence = validation_case
+    command = evidence["commands"][1]
+    scratch = Path(command["stdout"]["path"]).parent
+    xml = scratch / "focused-tests.xml"
+    xml.write_bytes(xml.read_bytes().replace(b'tests="35"', b'tests="37"'))
+    stdout = scratch / "focused-tests.stdout"
+    stdout.write_bytes(b"35 passed, 2 subtests passed in 1.00s\n")
+    command["stdout"] = release.pin(stdout)
+    command["test_summary"]["tests"] = summary_total
+    (scratch / "focused-tests.receipt.json").write_bytes(release.json_bytes(command))
+    for member in evidence["members"]:
+        path = Path(member["path"])
+        if path.name in ("focused-tests.xml", "focused-tests.stdout", "focused-tests.receipt.json"):
+            member.update(release.pin(path))
+    if summary_total == 37:
+        assert check_evidence()[0] == evidence
+    else:
+        with pytest.raises(ValueError, match="validation test summary differs"):
+            check_evidence()
+
+
+@pytest.mark.parametrize("missing_test", [
+    "test_isolated_value_successor_owner_and_source_bindings",
+    "test_preseal_verdict_matches_real_runtime_classification[continue]",
+    *[
+        "test_reviewed_repair_allows_only_stage_certification_reconciliation"
+        f"[{defect}-{certification}]"
+        for certification in ("deferred", "not_certified")
+        for defect in ("none", "pin", "certified", "missing-certification", "attempt",
+                       "status", "review-status", "execution-status", "resumable",
+                       "last-error", "extra-field")
+    ],
+])
+def test_validation_receipt_requires_release_binding_coverage(validation_case, missing_test):
     evidence, check_evidence = validation_case
     member = next(record for record in evidence["members"]
                   if Path(record["path"]).name == "focused-tests.xml")
     path = Path(member["path"])
     path.write_bytes(path.read_bytes().replace(
-        b"test_preseal_verdict_matches_real_runtime_classification[continue]", b"unrelated_test"))
+        missing_test.encode(), b"unrelated_test"))
+    member.update(release.pin(path))
+    with pytest.raises(ValueError, match="required release-binding validation coverage missing"):
+        check_evidence()
+
+
+def test_validation_receipt_rejects_obsolete_owner_coverage(validation_case):
+    evidence, check_evidence = validation_case
+    member = next(record for record in evidence["members"]
+                  if Path(record["path"]).name == "focused-tests.xml")
+    path = Path(member["path"])
+    path.write_bytes(path.read_bytes().replace(
+        b"test_isolated_value_successor_owner_and_source_bindings",
+        b"test_actual_successor_v6_owner_and_source_bindings"))
     member.update(release.pin(path))
     with pytest.raises(ValueError, match="required release-binding validation coverage missing"):
         check_evidence()
@@ -1646,8 +2556,8 @@ def test_continuation_preserves_scientific_contract(case, key):
     "missing-members", "extra-member", "wrong-member", "missing-reference",
     "npy-member", "npz-type", "npy-type", "missing-stage11", "duplicate-stage11",
 ])
-def test_preparation_reference_formats_and_census(production, tmp_path, defect):
-    contract = copy.deepcopy(production[1])
+def test_preparation_reference_formats_and_census(value_case, tmp_path, defect):
+    contract = copy.deepcopy(value_case["contract"])
     references = contract["execution_contract"]["references"]
     if defect == "missing-members":
         del contract["reference_members"]
@@ -1684,10 +2594,13 @@ def test_preparation_reference_formats_and_census(production, tmp_path, defect):
 @pytest.mark.parametrize("defect", ["missing", "extra", "path", "bytes", "sha256", "drift"])
 @pytest.mark.parametrize("role", [
     "ace3.model.awq_bit_oracle", "ace3.model.stage11_current_runtime_release",
-    "ace3.model.candidates." + release.CANDIDATE_NAME, "stage13_suffix", "stage13_tests",
+    "candidate", "stage13_suffix", "stage13_tests",
+    "value_sufficiency_source", "value_sufficiency_test",
 ])
-def test_preparation_runtime_pin_authentication(production, monkeypatch, defect, role):
-    contract = copy.deepcopy(production[1])
+def test_preparation_runtime_pin_authentication(value_case, monkeypatch, defect, role):
+    contract = copy.deepcopy(value_case["contract"])
+    if role == "candidate":
+        role = "ace3.model.candidates." + release.CANDIDATE_NAME
     sources = contract["runtime_sources"]
     if defect == "missing":
         del sources[role]
@@ -1702,3 +2615,651 @@ def test_preparation_runtime_pin_authentication(production, monkeypatch, defect,
                             lambda self: b"drift" if self == path else original(self))
     with pytest.raises(ValueError, match="runtime_sources"):
         release.validate_preparation_contract(contract)
+
+
+@pytest.fixture
+def value_case(production, tmp_path, monkeypatch, value_binding_case):
+    binding = value_binding_case
+    monkeypatch.setattr(release, "ACTIVE_BINDING", binding)
+    for name, value in binding.items():
+        if name.isupper():
+            monkeypatch.setattr(release, name, value)
+    proposal = release.proposal_context()
+    for (_, _, name), source in zip(release.SOURCE_LAYOUT, release.implementation_pins(), strict=True):
+        (tmp_path / name).write_bytes(release.authenticate(source))
+    contract = release.proposed_contract(
+        release.document(proposal["accepted_release"]["contract"]),
+        release.CONSUMPTION_INPUT, tmp_path, time.time() - 30, production[1]["runtime"])
+    fixture = case.__wrapped__((production[0], contract, production[2]), tmp_path, monkeypatch)
+    fixture["proposal"] = proposal
+    return fixture
+
+
+@pytest.mark.parametrize("defect", [
+    "none", "software-review", "superseded-owner", "superseded-status",
+    "superseded-by", "missing-owner", "duplicate-owner", "conflicting-owner",
+    "unrelated-superseded-owner", "missing-field", "inherited-recovery",
+])
+def test_current_census_consumption_decision(value_case, monkeypatch, defect):
+    inputs = copy.deepcopy(value_case["consumption_input"])
+    inputs["current_runtime_sources"] = value_case["contract"]["runtime_sources"]
+    inputs["software_review"] = {"mission_id": "5ddff6694c9d"}
+    inputs["recovery_context"] = {
+        "failed_assignment": "850677a64813", "runtime_failure_canary": "7d79a6ef428a",
+    }
+    decision = copy.deepcopy(value_case["consumption_decision"])
+    decision.update(software_review="5ddff6694c9d",
+                    supersedes_preclaim_release="f1a28e051c63")
+    row = {"id": "f1a28e051c63", "status": "superseded",
+           "superseded_by_plan_id": release.MISSION}
+    if defect == "software-review":
+        decision["software_review"] = "wrong"
+    elif defect == "superseded-owner":
+        decision["supersedes_preclaim_release"] = "wrong"
+    elif defect == "superseded-status":
+        row["status"] = "running"
+    elif defect == "superseded-by":
+        row["superseded_by_plan_id"] = "other-mission"
+    elif defect == "missing-field":
+        del decision["software_review"]
+    elif defect == "inherited-recovery":
+        decision.update(inputs["recovery_context"])
+    path = release.LIFE / "backlog.jsonl"
+    rows = [raw for raw in path.read_bytes().splitlines()
+            if raw.strip() and json.loads(raw).get("id") != row["id"]]
+    if defect != "missing-owner":
+        rows.append(release.encoded(row))
+    if defect == "duplicate-owner":
+        rows.append(release.encoded(row))
+    elif defect == "conflicting-owner":
+        rows.append(release.encoded(dict(row, superseded_by_plan_id="other-mission")))
+    elif defect == "unrelated-superseded-owner":
+        rows.append(release.encoded(dict(row, id="unrelated-superseded-owner")))
+    raw = b"\n".join(rows) + b"\n"
+    read_bytes = Path.read_bytes
+    monkeypatch.setattr(Path, "read_bytes", lambda self: raw if self == path else read_bytes(self))
+    monkeypatch.setattr(release, "proposal_context", lambda: inputs)
+    monkeypatch.setattr(release, "CONSUMPTION_DECISION", value_case["put"](
+        release.CONSUMPTION_DECISION["path"], decision))
+    accepted = release.construction_input(inputs)["accepted_provenance"]
+    bundle = dict(mission_id=release.PROVENANCE_MISSION, **{
+        key: accepted[key] for key in ("latest", "review", "checkpoint")})
+    if defect in ("none", "unrelated-superseded-owner"):
+        release.native_review_consumption(bundle, accepted["contract"], accepted["seal"])
+    else:
+        with pytest.raises(ValueError, match="consumption decision|superseded owner"):
+            release.native_review_consumption(bundle, accepted["contract"], accepted["seal"])
+
+
+@pytest.mark.parametrize("defect", [
+    "none", "failed-assignment", "canary", "relative-output", "wrong-output",
+    "missing-assignment", "missing-canary", "extra-field",
+])
+def test_value_selftest_consumption_decision(value_case, monkeypatch, defect):
+    inputs = copy.deepcopy(value_case["consumption_input"])
+    inputs["recovery_context"] = {
+        "failed_assignment": "111111111111",
+        "runtime_failure_canary": "222222222222",
+        "skipped_continuation": "333333333333",
+        "native_authorization_fields": "EMPTY_FOR_ORDINARY_ARTIFACT_TASK",
+    }
+    decision = copy.deepcopy(value_case["consumption_decision"])
+    decision.update(
+        failed_assignment="111111111111",
+        runtime_failure_canary="222222222222",
+        future_candidate_output=str(
+            release.REPOSITORY / "build"
+            / "q24_s16_l23_p0_value_content_sufficiency_v1-8ee0b3aaeecb-attempt001"),
+    )
+    if defect == "failed-assignment":
+        decision["failed_assignment"] = "444444444444"
+    elif defect == "canary":
+        decision["runtime_failure_canary"] = "444444444444"
+    elif defect == "relative-output":
+        decision["future_candidate_output"] = str(
+            Path(decision["future_candidate_output"]).relative_to(release.REPOSITORY))
+    elif defect == "wrong-output":
+        decision["future_candidate_output"] = str(release.REPOSITORY / "build/wrong")
+    elif defect == "missing-assignment":
+        del decision["failed_assignment"]
+    elif defect == "missing-canary":
+        del decision["runtime_failure_canary"]
+    elif defect == "extra-field":
+        decision["extra"] = True
+    monkeypatch.setattr(release, "proposal_context", lambda: inputs)
+    monkeypatch.setattr(release, "CONSUMPTION_DECISION", value_case["put"](
+        release.CONSUMPTION_DECISION["path"], decision))
+    accepted = release.construction_input(inputs)["accepted_provenance"]
+    bundle = {key: accepted[key] for key in ("mission_id", "latest", "review", "checkpoint")}
+    if defect == "none":
+        release.native_review_consumption(bundle, accepted["contract"], accepted["seal"])
+    else:
+        with pytest.raises(ValueError, match="exact Manager consumption decision differs"):
+            release.native_review_consumption(bundle, accepted["contract"], accepted["seal"])
+
+
+@pytest.mark.parametrize("defect", [
+    "none", "wrong-source", "wrong-output", "historical-output", "missing-argv",
+    "extra-argv", "spliced-candidate", "spliced-test", "live-candidate", "live-test",
+])
+def test_value_target_contract_to_generic_envelope(value_case, monkeypatch, defect):
+    """Real proposal/issuer/consumer; only future native transport is virtual."""
+    fixture = value_case
+    target = fixture["proposal"]["candidate_binding"]
+    contract = fixture["contract"]
+    assert contract["reference_members"] == release.REFERENCE_MEMBERS
+    assert contract["launch"]["argv"] == target["launch"]["argv"]
+    assert contract["runtime_sources"]["value_sufficiency_source"] == release.pin(value_candidate.SOURCE)
+    assert contract["runtime_sources"]["value_sufficiency_test"] == release.pin(value_candidate.TEST)
+    put, virtual = fixture["put"], fixture["virtual"]
+    issuer_path = release.REPOSITORY / ".argus/live/manager-tools/publish-stage11-science-issuance-v1.py"
+    spec = importlib.util.spec_from_file_location("test_generic_science_issuer", issuer_path)
+    issuer = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(issuer)
+    authority_dir = value_candidate.AUTHORITY
+    request = fixture["request"]
+    review = fixture["proposal"]["candidate_review"]
+    selected = fixture["selection"]["selected"]
+    inputs = {
+        "mission_id": value_candidate.MISSION, "authority_id": "test-only-future-science",
+        "scientific_run_budget": 1, "attempt": 1,
+        "capture_root": target["capture_root"],
+        "candidate": contract["current_sources"]["candidate"],
+        "candidate_tests": contract["current_sources"]["tests"],
+        "runner": release.pin(release.REPOSITORY / ".argus/live/manager-tools/run-stage11-science-once-v1.py"),
+        "capture_implementation": value_candidate.capture.implementation_pins(),
+        "release_source": release.pin(Path(release.__file__)),
+        "contract": request["contract"], "seal": request["seal"],
+        "operational_release_selection": request["operational_release_selection"],
+        "selected_release_mission": release.MISSION,
+        "contract_review": dict(request["contract_review"], mission=selected["mission"]),
+        "runner_review": {key: review[key] for key in ("mission_id", "latest", "review", "checkpoint", "mission")},
+        "accepted_review": request["accepted_review"], "accepted_identity": request["accepted_identity"],
+    }
+    authority = {
+        "mission_id": inputs["mission_id"], "authority_id": inputs["authority_id"],
+        "life_dir": str(release.LIFE), "issuer": "manager", "expected_attempt": 1,
+        "authorized_science": True, "scientific_run_budget": 1,
+        "authorized_root": inputs["capture_root"], "expected_objective": "test-only science",
+        "manager_inputs": {"issuer": release.pin(issuer_path),
+                          "science_input": put(authority_dir / "test-input.json", inputs)},
+    }
+    authority_pin = put(authority_dir / "build-authorization.json", authority)
+    put(authority_dir / "manager-owner-prepared.json", {
+        "authority_id": authority["authority_id"], "mission_id": inputs["mission_id"],
+        "state": "PREPARED_BEFORE_NATIVE_HANDOFF", "build_authorization": authority_pin})
+    row = request["native_record"]
+    assert row["id"] == request["mission_id"] == value_candidate.MISSION == "8ee0b3aaeecb"
+    assert request["mission_started_event"]["item_id"] == "8ee0b3aaeecb"
+    assert request["mission_started_event"]["usage_attempt_id"] == "8ee0b3aaeecb:attempt:1"
+    row["objective"] = authority["expected_objective"]
+    (fixture["native"] / "backlog.jsonl").write_bytes(release.encoded(row) + b"\n")
+    read_bytes = Path.read_bytes
+    monkeypatch.setattr(Path, "read_bytes",
+                        lambda path: virtual[str(path)] if str(path) in virtual else read_bytes(path))
+    isolated_roots = (
+        authority_dir, Path(target["output"]),
+        release.REPOSITORY / target["capture_root"],
+    )
+    exists, is_file, is_symlink = Path.exists, Path.is_file, Path.is_symlink
+
+    def isolated(path):
+        return any(path == root or root in path.parents for root in isolated_roots)
+
+    monkeypatch.setattr(Path, "exists", lambda path: (
+        any(path == Path(name) or path in Path(name).parents for name in virtual)
+        if isolated(path) else exists(path)))
+    monkeypatch.setattr(Path, "is_file", lambda path: (
+        str(path) in virtual if isolated(path) else is_file(path)))
+    monkeypatch.setattr(Path, "is_symlink", lambda path: (
+        False if isolated(path) else is_symlink(path)))
+    monkeypatch.setattr(issuer, "pinned_bytes", release.authenticate)
+    monkeypatch.setattr(issuer, "exclusive_json", put)
+    monkeypatch.setattr(issuer, "jsonl_matches", lambda path, predicate: [
+        (item, release.encoded(item)) for item in (
+            [row] if path.name == "backlog.jsonl" else [request["mission_started_event"]])
+        if predicate(item)])
+
+    def emit(record):
+        output, documents, unchanged = release.validate_after_claim(record)
+        unchanged()
+        return {name: put(output / name, json.loads(raw))
+                for name, raw in zip(release.OUTPUTS, documents, strict=True)}
+
+    monkeypatch.setattr(release, "emit_after_claim", emit)
+    if defect in ("wrong-source", "wrong-output", "historical-output", "missing-argv", "extra-argv"):
+        argv = contract["launch"]["argv"]
+        if defect == "wrong-source":
+            argv[3] = "ace3.model.candidates.wrong"
+        elif defect in ("wrong-output", "historical-output"):
+            argv[-1] = (str(value_candidate.OUTPUT.with_name(
+                value_candidate.NAME + "-650940c1b279-attempt001")) if defect == "historical-output"
+                        else str(release.REPOSITORY / "build/wrong"))
+        elif defect == "missing-argv":
+            del argv[-2:]
+        else:
+            argv.append("--extra")
+        fixture["rebind_contract"](contract)
+        inputs.update(contract=request["contract"], seal=request["seal"],
+                      operational_release_selection=request["operational_release_selection"])
+    elif defect.startswith("spliced-"):
+        key = "candidate" if defect == "spliced-candidate" else "candidate_tests"
+        inputs[key] = inputs["candidate_tests" if key == "candidate" else "candidate"]
+    elif defect.startswith("live-"):
+        path = value_candidate.SOURCE if defect == "live-candidate" else value_candidate.TEST
+        virtual[str(path)] = b"unreviewed changed source\n"
+    authority["manager_inputs"]["science_input"] = put(authority_dir / "test-input.json", inputs)
+    authority_pin = put(authority_dir / "build-authorization.json", authority)
+    put(authority_dir / "manager-owner-prepared.json", {
+        "authority_id": authority["authority_id"], "mission_id": inputs["mission_id"],
+        "state": "PREPARED_BEFORE_NATIVE_HANDOFF", "build_authorization": authority_pin})
+    if defect != "none":
+        with pytest.raises((ValueError, RuntimeError)):
+            issuer.publish(authority_dir)
+        assert not (authority_dir / "issued").exists()
+        return
+    result = issuer.publish(authority_dir)
+    assert result["scientific_invocations"] == 0
+    bound = value_candidate.manager_binding(Path(target["output"]))
+    assert bound["output"] == Path(target["output"])
+    assert value_candidate.manager_binding(live=False)["declaration"] == bound["declaration"]
+    release.validate_preparation_contract(contract)
+    assert not bound["output"].exists()
+    assert not bound["capture_root"].exists()
+
+
+@pytest.mark.parametrize("defect", [
+    "none", "missing", "empty", "stale", "spliced", "editable-baseline", "historical-surplus",
+])
+def test_explicit_current_runtime_census(value_case, monkeypatch, defect):
+    """A new Manager declaration replaces membership, never immutable input bytes."""
+    proposal = release.document(release.CONSUMPTION_INPUT)
+    current = copy.deepcopy(value_case["contract"]["runtime_sources"])
+    declared = copy.deepcopy(current)
+    for role, source_role in (
+        ("ace3.model.stage11_current_runtime_release", "release_builder"),
+        ("ace3.model.candidates." + release.CANDIDATE_NAME, "candidate"),
+        ("value_sufficiency_source", "candidate"),
+        ("value_sufficiency_test", "candidate_tests"),
+    ):
+        declared[role] = proposal["source_baseline"][source_role]
+    proposal["current_runtime_sources"] = declared
+    proposal["expected_runtime_sources"]["historical_surplus"] = declared["focused_test"]
+    if defect == "missing":
+        del declared["stage13_tests"]
+    elif defect == "empty":
+        declared.clear()
+    elif defect == "stale":
+        declared["stage13_tests"]["sha256"] = "0" * 64
+    elif defect == "spliced":
+        declared["stage13_tests"]["path"] = declared["stage13_suffix"]["path"]
+    elif defect == "editable-baseline":
+        declared["value_sufficiency_test"] = declared["value_sufficiency_source"]
+    document = release.document
+    monkeypatch.setattr(release, "document", lambda record: (
+        copy.deepcopy(proposal) if record == release.CONSUMPTION_INPUT else document(record)))
+    contract = copy.deepcopy(value_case["contract"])
+    if defect == "historical-surplus":
+        contract["runtime_sources"]["historical_surplus"] = current["focused_test"]
+    if defect != "none":
+        with pytest.raises(ValueError, match="runtime_sources"):
+            release.validate_preparation_contract(contract)
+        return
+    assert release.proposal_context()["expected_runtime_sources"] == current
+    assert "historical_surplus" not in current
+    release.validate_preparation_contract(contract)
+    assert "current_runtime_sources" not in document(release.CONSUMPTION_INPUT)
+
+
+@pytest.mark.parametrize("status,action", [
+    ("continue", "BUILD_FINAL_FROM_REVIEWED_BYTES"),
+    ("replan_requested", "BUILD_FINAL_FROM_REVIEWED_BYTES"),
+    ("done", "BUILD_FINAL_FROM_REVIEWED_BYTES"),
+    ("continue", "not approved"),
+])
+def test_value_target_preseal_continue(preseal_case, monkeypatch, status, action):
+    original = release.proposal_context()
+    monkeypatch.setattr(release, "proposal_context",
+                        lambda: dict(original, candidate_binding={"test_only": True}))
+    review, _, _, check_review, review_path = preseal_case
+    review["review"]["status"] = status
+    review["review"]["next_action"] = action
+    if status == "continue" and action == "BUILD_FINAL_FROM_REVIEWED_BYTES":
+        assert check_review() == release.pin(review_path)
+    else:
+        with pytest.raises(ValueError, match="independent preseal review"):
+            check_review()
+
+
+@pytest.fixture
+def isolated_value_selftests(tmp_path, monkeypatch):
+    def install(body):
+        path = tmp_path / "isolated_value_selftests.py"
+        path.write_text("import unittest\n" + body)
+        monkeypatch.setattr(value_candidate, "TEST", path)
+        return path
+
+    return install
+
+
+@pytest.mark.parametrize("count", [1, 3])
+def test_value_selftests_use_loaded_count(isolated_value_selftests, count):
+    isolated_value_selftests(
+        "class Passing(unittest.TestCase):\n" + "".join(
+            f"    def test_{i}(self):\n        self.assertTrue(True)\n" for i in range(count)))
+    report = value_candidate.focused_tests()
+    assert report["loaded"] == report["executed"] == count
+    assert all(report[key] == 0 for key in (
+        "failures", "errors", "skipped", "unexpected_successes"))
+    assert f"Ran {count} test" in report["raw_output"]
+
+
+@pytest.mark.parametrize("defect,body,counts", [
+    ("empty", "", (0, 0, 0, 0, 0, 0)),
+    ("partial", """
+class StopAfterPass(unittest.TestCase):
+    def test_pass(self):
+        self.assertTrue(True)
+    def run(self, result):
+        super().run(result)
+        result.stop()
+        return result
+class NotReached(unittest.TestCase):
+    def test_not_reached(self):
+        self.fail("partial suite reached its second test")
+def load_tests(loader, tests, pattern):
+    return unittest.TestSuite([
+        StopAfterPass("test_pass"), NotReached("test_not_reached")])
+""", (2, 1, 0, 0, 0, 0)),
+    ("skipped", """
+class Skipped(unittest.TestCase):
+    @unittest.skip("isolated skip")
+    def test_skip(self):
+        pass
+""", (1, 1, 0, 0, 1, 0)),
+    ("failure", """
+class Failure(unittest.TestCase):
+    def test_failure(self):
+        self.fail("isolated failure")
+""", (1, 1, 1, 0, 0, 0)),
+    ("error", """
+class Error(unittest.TestCase):
+    def test_error(self):
+        raise RuntimeError("isolated error")
+""", (1, 1, 0, 1, 0, 0)),
+    ("unexpected-success", """
+class UnexpectedSuccess(unittest.TestCase):
+    @unittest.expectedFailure
+    def test_unexpected_success(self):
+        self.assertTrue(True)
+""", (1, 1, 0, 0, 0, 1)),
+])
+def test_value_selftests_reject_real_incomplete_or_unsuccessful_runs(
+        isolated_value_selftests, monkeypatch, defect, body, counts):
+    isolated_value_selftests(body)
+    observed = []
+
+    class RecordingRunner(unittest.TextTestRunner):
+        def run(self, suite):
+            loaded = suite.countTestCases()
+            result = super().run(suite)
+            observed.append((loaded, result, self.stream.getvalue()))
+            return result
+
+    monkeypatch.setattr(value_candidate.unittest, "TextTestRunner", RecordingRunner)
+    with pytest.raises((RuntimeError, ValueError), match="focused tests") as caught:
+        value_candidate.focused_tests()
+    if defect == "empty":
+        assert not observed
+        assert "empty suite" in str(caught.value)
+        return
+    assert len(observed) == 1
+    loaded, result, raw = observed[0]
+    report = json.loads(str(caught.value).split("focused tests failed:\n", 1)[1])
+    assert tuple(report[key] for key in (
+        "loaded", "executed", "failures", "errors", "skipped", "unexpected_successes")) == counts
+    assert loaded == counts[0]
+    assert (result.testsRun, len(result.failures), len(result.errors),
+            len(result.skipped), len(result.unexpectedSuccesses)) == counts[1:]
+    assert report["raw_output"] == raw
+    if defect in ("partial", "skipped"):
+        assert result.wasSuccessful()
+
+
+def test_value_selftests_real_current_suite(record_property):
+    report = value_candidate.focused_tests()
+    assert report["loaded"] == report["executed"] == 35
+    assert all(report[key] == 0 for key in (
+        "failures", "errors", "skipped", "unexpected_successes"))
+    assert "Ran 35 tests" in report["raw_output"]
+    assert report["raw_output"].endswith("\nOK\n")
+    record_property("value_focused_tests", json.dumps(report, sort_keys=True))
+
+
+@pytest.fixture
+def current_value_runtime_sources():
+    """Declare the value target independently of inherited or imported surplus."""
+    modules = (
+        "ace3.model.awq_bit_oracle",
+        "ace3.model.candidates.binary64_fp16_excess_v1",
+        "ace3.model.candidates.capture_harness_v3",
+        "ace3.model.candidates.decoder_gate_policy",
+        "ace3.model.candidates.decoder_gate_policy_v3",
+        "ace3.model.candidates.diagnose_q24_s16_final_head_impact_census_v1",
+        "ace3.model.candidates.diagnose_q24_s16_l12_coordinate62_producer_cone_v1",
+        "ace3.model.candidates.diagnose_q24_s16_l12_coordinate62_producer_cone_v2",
+        "ace3.model.candidates.diagnose_q24_s16_l12_coordinate62_producer_cone_v3",
+        "ace3.model.candidates.diagnose_q24_s16_l13_l12_parent_coordinate_cut_v1",
+        "ace3.model.candidates.diagnose_q24_s16_l13_l12_parent_coordinate_cut_v2",
+        "ace3.model.candidates.diagnose_q24_s16_l13_l12_parent_coordinate_cut_v3",
+        "ace3.model.candidates.diagnose_q24_s16_l13_native_paired_intervention_v1",
+        "ace3.model.candidates.diagnose_q24_s16_l13_original_intermediate_drift_v1",
+        "ace3.model.candidates.diagnose_q24_s16_l13_s18_first_failure_v1",
+        "ace3.model.candidates.diagnose_q24_s16_l13_upstream_parent_cut_v1",
+        "ace3.model.candidates.diagnose_q24_s16_l21_from_l20_s18_failure_census_v1",
+        "ace3.model.candidates.diagnose_q24_s16_l21_sparse_cut_localization_matrix_v1",
+        "ace3.model.candidates.diagnose_q24_s16_l22_from_l21_coordinate62_suffix_execution_v1",
+        "ace3.model.candidates.diagnose_q24_s16_l22_from_l21_coordinate62_suffix_preflight_v1",
+        "ace3.model.candidates.diagnose_q24_s16_l23_from_l22_coordinate62_suffix_preflight_v1",
+        "ace3.model.candidates.diagnostic_capture_v1",
+        "ace3.model.candidates.host_capture_v3",
+        "ace3.model.candidates.local_operator_reference_v3",
+        "ace3.model.candidates.prepare_l6_l8_continuation_v3",
+        "ace3.model.candidates.q24_s16_final_head_from_l23_coordinate62_suffix_execution_v1",
+        "ace3.model.candidates.q24_s16_final_head_from_l23_coordinate62_suffix_preflight_v1",
+        "ace3.model.candidates.q24_s16_l23_from_l22_coordinate62_suffix_execution_v1",
+        "ace3.model.candidates.q24_s16_l23_p0_value_content_sufficiency_v1",
+        "ace3.model.candidates.q24_s16_toward_zero_native_v1",
+        "ace3.model.candidates.q24_software_candidate_v1",
+        "ace3.model.candidates.q24_software_root_v3",
+        "ace3.model.candidates.remaining_decoder_gate_policy_v3",
+        "ace3.model.candidates.remaining_layers_v3",
+        "ace3.model.candidates.residual_exact_grid_q24_reference_v1",
+        "ace3.model.candidates.run_q24_s16_toward_zero_l3_l8_v1",
+        "ace3.model.candidates.run_q24_s16_toward_zero_l9_l23_v1",
+        "ace3.model.candidates.run_q24_s16_toward_zero_native_v1",
+        "ace3.model.candidates.run_single_round_residual_rtl",
+        "ace3.model.candidates.runtime_admission_v3",
+        "ace3.model.fp16_adaptation_oracle",
+        "ace3.model.stage11_current_runtime_release",
+        "ace3.model.streaming_lm_head_reference",
+    )
+    sources = {
+        name: release.pin(release.REPOSITORY / (name.replace(".", "/") + ".py"))
+        for name in modules
+    }
+    sources.update(
+        focused_test=release.pin(value_candidate.final.TEST),
+        stage13_suffix=release.pin(value_candidate.layer.SOURCE),
+        stage13_tests=release.pin(value_candidate.layer.TEST),
+        value_sufficiency_source=release.pin(value_candidate.SOURCE),
+        value_sufficiency_test=release.pin(value_candidate.TEST),
+    )
+    assert len(sources) == 48
+    return sources
+
+
+def test_value_real_loading_exact_runtime_census(
+        no_execution, record_property, tmp_path, current_value_runtime_sources):
+    """Load real tests against the isolated value-candidate source declaration."""
+    expected = copy.deepcopy(current_value_runtime_sources)
+    assert len(expected) == 48
+    script = r'''
+import copy
+import json
+import os
+import sys
+from unittest.mock import patch
+from ace3.model.candidates import q24_s16_l23_p0_value_content_sufficiency_v1 as d
+
+tests = d.focused_tests()
+assert tests["loaded"] == tests["executed"] == 35
+assert all(tests[key] == 0 for key in (
+    "failures", "errors", "skipped", "unexpected_successes"))
+assert tests["raw_output"].endswith("\nOK\n")
+fixture = json.load(sys.stdin)
+expected = fixture["current_runtime_sources"]
+assert len(expected) == 48
+for pin in expected.values():
+    d.read_bound(pin)
+output = d.Path(fixture["output"])
+capture = d.Path(fixture["capture"])
+assert not any(path.exists() or path.is_symlink() for path in (output, capture))
+blocked = []
+
+def audit(event, args):
+    if event == "os.mkdir" or (event == "open" and (
+            isinstance(args[1], str) and any(flag in args[1] for flag in "wax+")
+            or isinstance(args[2], int) and args[2] & (
+                os.O_WRONLY | os.O_RDWR | os.O_CREAT | os.O_TRUNC | os.O_APPEND))):
+        blocked.append(event)
+        raise AssertionError("runtime census attempted output creation")
+
+def forbidden(*args, **kwargs):
+    blocked.append("numerical dispatch")
+    raise AssertionError("runtime census attempted numerical dispatch")
+
+sys.addaudithook(audit)
+rejections = []
+with patch.object(d, "suffix_stages", forbidden), patch.object(d, "pair_logits", forbidden), \
+        patch.object(d.retained, "authenticate", forbidden):
+    actual = d.runtime_sources({"runtime_sources": expected})
+    assert actual == expected and len(actual) == 48
+    for role in expected:
+        for defect in ("missing", "stale"):
+            changed = copy.deepcopy(expected)
+            if defect == "missing":
+                del changed[role]
+            else:
+                changed[role]["sha256"] = "0" * 64
+            try:
+                d.runtime_sources({"runtime_sources": changed})
+            except (KeyError, RuntimeError, ValueError):
+                rejections.append([role, defect])
+            else:
+                raise AssertionError("runtime census accepted " + role + ": " + defect)
+    changed = dict(expected, unexpected_member=expected["value_sufficiency_source"])
+    try:
+        d.runtime_sources({"runtime_sources": changed})
+    except (RuntimeError, ValueError):
+        rejections.append(["unexpected_member", "extra"])
+    else:
+        raise AssertionError("runtime census accepted an extra member")
+assert len(rejections) == 97 and not blocked
+assert not any(path.exists() or path.is_symlink() for path in (output, capture))
+print(json.dumps({"tests": tests, "runtime_sources": actual, "rejections": rejections,
+                  "scientific_invocations": 0, "output_creations": 0}))
+'''
+    with no_execution(
+            [sys.executable, "-B", "-c", script], cwd=release.REPOSITORY,
+            env={**os.environ, "PYTHONPATH": str(release.REPOSITORY),
+                 "PYTHONDONTWRITEBYTECODE": "1", "PYTEST_DISABLE_PLUGIN_AUTOLOAD": "1"},
+            stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True) as child:
+        stdout, stderr = child.communicate(input=json.dumps({
+            "current_runtime_sources": expected,
+            "output": str(tmp_path / "output"),
+            "capture": str(tmp_path / "capture"),
+        }), timeout=120)
+    assert child.returncode == 0, stdout + stderr
+    report = json.loads(stdout)
+    assert len(stdout.splitlines()) == 1
+    assert report["runtime_sources"] == expected
+    assert len(report["rejections"]) == 97
+    assert report["scientific_invocations"] == report["output_creations"] == 0
+    record_property("value_runtime_census", json.dumps(report, sort_keys=True))
+
+
+@pytest.mark.parametrize("entry,defect", [
+    ("check", "none"), ("main", "none"),
+    ("main", "stale-source"), ("main", "wrong-mission"),
+    ("main", "wrong-output"), ("main", "wrong-argv"), ("main", "consumed302"),
+    ("main", "consumed650"), ("main", "old650-output"), ("main", "old650-argv"),
+])
+def test_value_selftest_preflight_to_execute_sentinel(
+        isolated_value_selftests, monkeypatch, capsys, record_property, entry, defect):
+    spec = importlib.util.spec_from_file_location("isolated_value_binding_tests", value_candidate.TEST)
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+    fixture = module.ValueSufficiencyTests()
+    isolated_value_selftests(
+        "class Passing(unittest.TestCase):\n"
+        "    def test_pass(self):\n"
+        "        self.assertTrue(True)\n")
+    dispatches = []
+
+    def execute_sentinel(tests=None, output=None):
+        bound = value_candidate.manager_binding(output)
+        assert tests["loaded"] == tests["executed"] == 1
+        dispatches.append((tests, bound["output"]))
+        print(json.dumps({"status": "TEST_ONLY_EXECUTE_SENTINEL", "scientific_invocations": 0}))
+
+    try:
+        authority, inputs, declaration, output, _ = fixture.binding_fixture()
+        if defect == "stale-source":
+            inputs["candidate"] = dict(inputs["candidate"], sha256="0" * 64)
+        elif defect in ("wrong-mission", "consumed302"):
+            authority["mission_id"] = "wrong-mission" if defect == "wrong-mission" else "302ad994e84f"
+        elif defect == "consumed650":
+            authority["mission_id"] = "650940c1b279"
+        elif defect in ("old650-output", "old650-argv"):
+            old_output = output.with_name(value_candidate.NAME + "-650940c1b279-attempt001")
+            if defect == "old650-output":
+                output = old_output
+            else:
+                declaration["launch"]["argv"][-1] = str(old_output)
+        elif defect == "wrong-output":
+            output = output.with_name("isolated-wrong-output")
+        elif defect == "wrong-argv":
+            declaration["launch"]["argv"][3] = "ace3.model.candidates.wrong"
+        monkeypatch.setattr(value_candidate, "execute", execute_sentinel)
+        monkeypatch.setattr(sys, "argv", [str(value_candidate.SOURCE), "--check", "--output", str(output)])
+        if entry == "check":
+            value_candidate.check(output)
+        elif defect == "none":
+            value_candidate.main()
+        else:
+            with pytest.raises(SystemExit) as caught:
+                value_candidate.main()
+            assert caught.value.code == 1
+        stdout = capsys.readouterr().out
+        if entry == "main":
+            document = json.loads(stdout)
+            assert len(stdout.splitlines()) == 1
+            events = document["events"]
+            assert document["status"] == (
+                "TEST_ONLY_EXECUTE_SENTINEL" if defect == "none" else "UNKNOWN")
+            if defect != "none":
+                assert document["automatic_replay_authorized"] is False
+        else:
+            events = [json.loads(line) for line in stdout.splitlines()]
+            assert events.pop()["status"] == "TEST_ONLY_EXECUTE_SENTINEL"
+        assert len(events) == 1
+        assert events[0]["phase"] == "compile_tests"
+        assert events[0]["loaded"] == events[0]["executed"] == 1
+        assert len(events[0]["compiled"]) == 2
+        assert len(dispatches) == (1 if defect == "none" else 0)
+        assert not output.exists()
+        assert value_candidate.MISSION == "8ee0b3aaeecb"
+        record_property("value_preflight_output", stdout)
+    finally:
+        fixture.doCleanups()

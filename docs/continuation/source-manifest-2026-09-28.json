@@ -1,0 +1,516 @@
+{
+  "schema": "ace-incremental-source-manifest/v1",
+  "project": "ACE3",
+  "snapshot_utc": "2026-09-28T06:32:01.707468+00:00",
+  "base_main_commit": "925b9f9a00003f1e771d660df1bc87e3c7439738",
+  "files": [
+    {
+      "path": "ace3/model/awq_bit_oracle.py",
+      "bytes": 4502,
+      "sha256": "485f5a55a7372b280f45d62721fbf5d13a77121bddc73a818b74337b40d5a89b",
+      "changed_from_previous_publication": false,
+      "role": "source_census_dependency"
+    },
+    {
+      "path": "ace3/model/candidates/binary64_fp16_excess_v1.py",
+      "bytes": 5117,
+      "sha256": "2888ec1c6813d7fd16ab5cf2718eeb28aface41e7d1ee14a99b26a228ed039a3",
+      "changed_from_previous_publication": false,
+      "role": "source_census_dependency"
+    },
+    {
+      "path": "ace3/model/candidates/capture_harness_v3.py",
+      "bytes": 2226,
+      "sha256": "d91c054d57240e203cb9f4d618f28182377724f332ff392e3c32be984217197e",
+      "changed_from_previous_publication": false,
+      "role": "source_census_dependency"
+    },
+    {
+      "path": "ace3/model/candidates/decoder_gate_policy.py",
+      "bytes": 3898,
+      "sha256": "e1d0e036de8d4841ff1debede9619e8d757c43f6b2446271019eb72e310659c7",
+      "changed_from_previous_publication": false,
+      "role": "source_census_dependency"
+    },
+    {
+      "path": "ace3/model/candidates/decoder_gate_policy_v3.py",
+      "bytes": 5254,
+      "sha256": "1b68a7c1dd09223cc8274a41e8835241c0472132c7dd6cbf1c48d2f4e5fd6b09",
+      "changed_from_previous_publication": false,
+      "role": "source_census_dependency"
+    },
+    {
+      "path": "ace3/model/candidates/diagnose_q24_s16_final_head_impact_census_v1.py",
+      "bytes": 19580,
+      "sha256": "035da1e497d0bbec6a56d0c1c461928e86cd8d2888ac4d93aaff011dd26d6adb",
+      "changed_from_previous_publication": false,
+      "role": "source_census_dependency"
+    },
+    {
+      "path": "ace3/model/candidates/diagnose_q24_s16_l12_coordinate62_producer_cone_v1.py",
+      "bytes": 27251,
+      "sha256": "cd5ab1a02301c2477b3ca860962a9f35bc68ed21ff4323c75d94c9774e5c02d7",
+      "changed_from_previous_publication": false,
+      "role": "source_census_dependency"
+    },
+    {
+      "path": "ace3/model/candidates/diagnose_q24_s16_l12_coordinate62_producer_cone_v2.py",
+      "bytes": 14182,
+      "sha256": "c1569932cc3784d069a0329c707975fda00b18b6166a40aeceb0c0e5c7a38a4c",
+      "changed_from_previous_publication": false,
+      "role": "source_census_dependency"
+    },
+    {
+      "path": "ace3/model/candidates/diagnose_q24_s16_l12_coordinate62_producer_cone_v3.py",
+      "bytes": 21408,
+      "sha256": "5d6a197cfd703a0f7b9baa7ddec20b2724182d6d41e0ec4ebaf39ed5bc7f4a98",
+      "changed_from_previous_publication": false,
+      "role": "source_census_dependency"
+    },
+    {
+      "path": "ace3/model/candidates/diagnose_q24_s16_l13_l12_parent_coordinate_cut_v1.py",
+      "bytes": 20998,
+      "sha256": "d736d5a2ff7324ed0a103c27a2a9a8fdb0b78c6f057d7c35c19804b171200d6e",
+      "changed_from_previous_publication": false,
+      "role": "source_census_dependency"
+    },
+    {
+      "path": "ace3/model/candidates/diagnose_q24_s16_l13_l12_parent_coordinate_cut_v2.py",
+      "bytes": 12094,
+      "sha256": "8ceccf15cea6f571b28cc81d9ce8db9df2ae7a21d40c4ddaf663d675fe72ea67",
+      "changed_from_previous_publication": false,
+      "role": "source_census_dependency"
+    },
+    {
+      "path": "ace3/model/candidates/diagnose_q24_s16_l13_l12_parent_coordinate_cut_v3.py",
+      "bytes": 22764,
+      "sha256": "0bacc55442237f30d2a99580508ee5301e1ac09d9b697218db4b4620e6522a58",
+      "changed_from_previous_publication": false,
+      "role": "source_census_dependency"
+    },
+    {
+      "path": "ace3/model/candidates/diagnose_q24_s16_l13_native_paired_intervention_v1.py",
+      "bytes": 21739,
+      "sha256": "c5261dca237089e770c4b0a1a59a46a22adec6cfbf711bc0eef4d6241f738413",
+      "changed_from_previous_publication": false,
+      "role": "source_census_dependency"
+    },
+    {
+      "path": "ace3/model/candidates/diagnose_q24_s16_l13_original_intermediate_drift_v1.py",
+      "bytes": 18894,
+      "sha256": "8f78eb610254d55a73e53449001b7a0eaa1e7c62dbde466fd735eb374f8d4d58",
+      "changed_from_previous_publication": false,
+      "role": "source_census_dependency"
+    },
+    {
+      "path": "ace3/model/candidates/diagnose_q24_s16_l13_s18_first_failure_v1.py",
+      "bytes": 23698,
+      "sha256": "68b4aeb4762e2ca191bd1f007fc8157ddb3e5b9ac070873bf118c7fca093863a",
+      "changed_from_previous_publication": false,
+      "role": "source_census_dependency"
+    },
+    {
+      "path": "ace3/model/candidates/diagnose_q24_s16_l13_upstream_parent_cut_v1.py",
+      "bytes": 23093,
+      "sha256": "09d28c145a2a41b32420849b8c476f2af8b44fdff7b7a96ba5648ef0512fe6f4",
+      "changed_from_previous_publication": false,
+      "role": "source_census_dependency"
+    },
+    {
+      "path": "ace3/model/candidates/diagnose_q24_s16_l21_from_l20_s18_failure_census_v1.py",
+      "bytes": 19092,
+      "sha256": "a8faef5d1deb15803357bc952b0bc4c177b23e044a6a30299d5f29d79599c2f7",
+      "changed_from_previous_publication": false,
+      "role": "source_census_dependency"
+    },
+    {
+      "path": "ace3/model/candidates/diagnose_q24_s16_l21_sparse_cut_localization_matrix_v1.py",
+      "bytes": 21779,
+      "sha256": "8b9823ca0453b793d26e0641636241eaebeb88e09b148baa82f658a0f76d0eb3",
+      "changed_from_previous_publication": false,
+      "role": "source_census_dependency"
+    },
+    {
+      "path": "ace3/model/candidates/diagnose_q24_s16_l22_from_l21_coordinate62_suffix_execution_v1.py",
+      "bytes": 25079,
+      "sha256": "f5ad737d5069461caff44ff9e2edca4985f61982adc8d26c9c5f9e84a0cd5b02",
+      "changed_from_previous_publication": false,
+      "role": "source_census_dependency"
+    },
+    {
+      "path": "ace3/model/candidates/diagnose_q24_s16_l22_from_l21_coordinate62_suffix_preflight_v1.py",
+      "bytes": 15762,
+      "sha256": "46d8ea4e6df531886e1c98ef9d7fe8440b8487500ed3beb7485f7ac4912994e4",
+      "changed_from_previous_publication": false,
+      "role": "source_census_dependency"
+    },
+    {
+      "path": "ace3/model/candidates/diagnose_q24_s16_l23_from_l22_coordinate62_suffix_preflight_v1.py",
+      "bytes": 24859,
+      "sha256": "ff6b4fd49241cdfa4f0215ec1c76b946a8309bb3d09d64b4faf4162ba58d00f6",
+      "changed_from_previous_publication": false,
+      "role": "source_census_dependency"
+    },
+    {
+      "path": "ace3/model/candidates/diagnostic_capture_v1.py",
+      "bytes": 36275,
+      "sha256": "de4166eab3a36c2045808c7b89a19a74066a7fe62f884599bf1e82723fe305b7",
+      "changed_from_previous_publication": false,
+      "role": "source_census_dependency"
+    },
+    {
+      "path": "ace3/model/candidates/host_capture_v3.py",
+      "bytes": 39758,
+      "sha256": "f12994c41c589af7a10e185c1902303e5216e7ccb862d98275f375943bb20e5b",
+      "changed_from_previous_publication": false,
+      "role": "source_census_dependency"
+    },
+    {
+      "path": "ace3/model/candidates/local_operator_reference_v3.py",
+      "bytes": 7308,
+      "sha256": "243f85fc89a3a8034baa1cdd3f53a45e0542c6ded356156ba672949986116155",
+      "changed_from_previous_publication": false,
+      "role": "source_census_dependency"
+    },
+    {
+      "path": "ace3/model/candidates/prepare_l6_l8_continuation_v3.py",
+      "bytes": 13081,
+      "sha256": "571c1c8ba46f177eeb30ab0a748f2f9cabf80f1e6beb31f9cb885602d0c32ece",
+      "changed_from_previous_publication": false,
+      "role": "source_census_dependency"
+    },
+    {
+      "path": "ace3/model/candidates/q24_s16_final_head_from_l23_coordinate62_suffix_execution_v1.py",
+      "bytes": 23207,
+      "sha256": "b406b5f3bc89eebadc89156c3a09ad5b7d3a25d3bf1da55f3c81186835e915e1",
+      "changed_from_previous_publication": false,
+      "role": "source_census_dependency"
+    },
+    {
+      "path": "ace3/model/candidates/q24_s16_final_head_from_l23_coordinate62_suffix_preflight_v1.py",
+      "bytes": 25579,
+      "sha256": "61a26c08f7bece930618e9e53cda4035444b0f840b9d6297a93dd0a5cbb2a7b7",
+      "changed_from_previous_publication": false,
+      "role": "source_census_dependency"
+    },
+    {
+      "path": "ace3/model/candidates/q24_s16_l23_from_l22_coordinate62_suffix_execution_v1.py",
+      "bytes": 25087,
+      "sha256": "532b32c441cf2b09fa9b53bafa796888e6ce9709b414533b5cd74d479d8f6702",
+      "changed_from_previous_publication": false,
+      "role": "source_census_dependency"
+    },
+    {
+      "path": "ace3/model/candidates/q24_s16_l23_p0_value_content_s18_family_counterfactual_v1.py",
+      "bytes": 20643,
+      "sha256": "fc7643faebed07b0a7543f5e84f02c131b1ee6a5a42c855892ff14f43b0e237a",
+      "changed_from_previous_publication": true,
+      "role": "source_census_dependency"
+    },
+    {
+      "path": "ace3/model/candidates/q24_s16_l23_p0_value_content_s18_obstruction_bridge_v1.py",
+      "bytes": 18461,
+      "sha256": "0d1406387e105faf422180a07a3581dafc27aaf1e11be481ef72228e8ea2bea6",
+      "changed_from_previous_publication": true,
+      "role": "source_census_dependency"
+    },
+    {
+      "path": "ace3/model/candidates/q24_s16_l23_p0_value_content_s18_rtz_rounding_contrast_v1.py",
+      "bytes": 19559,
+      "sha256": "cc15544466348697425a56f4ecd101e8e171e2ec6d2ae74c23fdc3b5460da12c",
+      "changed_from_previous_publication": true,
+      "role": "source_census_dependency"
+    },
+    {
+      "path": "ace3/model/candidates/q24_s16_l23_p0_value_content_stage13_rmsnorm_integer_contrast_v1.py",
+      "bytes": 21864,
+      "sha256": "22a8887eb0f9995df36f408a18432b9fb8daaa1b4e933f0437bbaa5feceddd7f",
+      "changed_from_previous_publication": true,
+      "role": "source_census_dependency"
+    },
+    {
+      "path": "ace3/model/candidates/q24_s16_l23_p0_value_content_sufficiency_v1.py",
+      "bytes": 39270,
+      "sha256": "4841ba38bf053dcc3b20deb78648d7d7428d506227b578bf923cff6d86b5f0c2",
+      "changed_from_previous_publication": true,
+      "role": "source_census_dependency"
+    },
+    {
+      "path": "ace3/model/candidates/q24_s16_toward_zero_native_v1.py",
+      "bytes": 6289,
+      "sha256": "921b448c251af69dedbb0009c605f262339769a64295b45b3bc020c45716f3d2",
+      "changed_from_previous_publication": false,
+      "role": "source_census_dependency"
+    },
+    {
+      "path": "ace3/model/candidates/q24_software_candidate_v1.py",
+      "bytes": 7180,
+      "sha256": "7286d1dae5066ff27c3a7147f44a604e2ae3af8e110cf4f3c71bca9b4b7d6612",
+      "changed_from_previous_publication": false,
+      "role": "source_census_dependency"
+    },
+    {
+      "path": "ace3/model/candidates/q24_software_root_v3.py",
+      "bytes": 22048,
+      "sha256": "e8ae14eb2180f2603d5ffc92c76de8286bb747ee2de67862295f562daf2cef8b",
+      "changed_from_previous_publication": false,
+      "role": "source_census_dependency"
+    },
+    {
+      "path": "ace3/model/candidates/remaining_decoder_gate_policy_v3.py",
+      "bytes": 4274,
+      "sha256": "a6bf3873188d64d205486c00575fbaa992d85ea8283416785879d4ca0599757b",
+      "changed_from_previous_publication": false,
+      "role": "source_census_dependency"
+    },
+    {
+      "path": "ace3/model/candidates/remaining_layers_v3.py",
+      "bytes": 26602,
+      "sha256": "11433d37b4c82f216887c0a77ce62b0641619aff241e755706d2c3ee89f16801",
+      "changed_from_previous_publication": false,
+      "role": "source_census_dependency"
+    },
+    {
+      "path": "ace3/model/candidates/residual_exact_grid_q24_reference_v1.py",
+      "bytes": 2697,
+      "sha256": "dbbe2ac57bf8f6dd0cdc6cece202eeb52f0643bfa07ed542dca0d8c4b58a81e5",
+      "changed_from_previous_publication": false,
+      "role": "source_census_dependency"
+    },
+    {
+      "path": "ace3/model/candidates/residual_exact_grid_q24_runtime_v1.py",
+      "bytes": 7796,
+      "sha256": "c3437fcd79d126b7bfa808388f68b6d6dd3104d5670f43e41e4107b5f76153e6",
+      "changed_from_previous_publication": false,
+      "role": "source_census_dependency"
+    },
+    {
+      "path": "ace3/model/candidates/run_q24_s16_toward_zero_l3_l8_v1.py",
+      "bytes": 7956,
+      "sha256": "11e2a36be469b4af41c8a3b4a130728958c7691088d76b91a412d3451db939c4",
+      "changed_from_previous_publication": false,
+      "role": "source_census_dependency"
+    },
+    {
+      "path": "ace3/model/candidates/run_q24_s16_toward_zero_l9_l23_v1.py",
+      "bytes": 26065,
+      "sha256": "08e19ca69e8db6b3875478188d6febada9c18f231b13ba089af023ac7fcddaa6",
+      "changed_from_previous_publication": false,
+      "role": "source_census_dependency"
+    },
+    {
+      "path": "ace3/model/candidates/run_q24_s16_toward_zero_native_v1.py",
+      "bytes": 21407,
+      "sha256": "75533d8c8283f9ea896aacc9468eeeb605dc00a69ddc70e002329b4b40942f57",
+      "changed_from_previous_publication": false,
+      "role": "source_census_dependency"
+    },
+    {
+      "path": "ace3/model/candidates/run_single_round_residual_rtl.py",
+      "bytes": 95815,
+      "sha256": "ec6811f87906861823f6f74d9ddacacea72a822157c07d0b9e5d1256156c7b29",
+      "changed_from_previous_publication": false,
+      "role": "source_census_dependency"
+    },
+    {
+      "path": "ace3/model/candidates/runtime_admission_v3.py",
+      "bytes": 27382,
+      "sha256": "f519861be9b57400f0f4515f7da4c97462262002281a207de9d46a2ce2548c11",
+      "changed_from_previous_publication": false,
+      "role": "source_census_dependency"
+    },
+    {
+      "path": "ace3/model/candidates/stage11_exact_integer_o_projection_contrast_v1.py",
+      "bytes": 17158,
+      "sha256": "abf37d9ced04381729a7720b1498e487a15984080d02485ec3a49c05807ab90f",
+      "changed_from_previous_publication": true,
+      "role": "reviewed_implementation_with_known_preclaim_defects"
+    },
+    {
+      "path": "ace3/model/candidates/stage11_exact_integer_o_projection_execution_v1.py",
+      "bytes": 11567,
+      "sha256": "b54540e1aef0d167c68ae4d7ff722bf87443714ee24a70b332c186527991015b",
+      "changed_from_previous_publication": true,
+      "role": "reviewed_implementation_with_known_preclaim_defects"
+    },
+    {
+      "path": "ace3/model/candidates/stage11_s18_boundary_localizer_v1.py",
+      "bytes": 15490,
+      "sha256": "9153c7b0501433095b98da2a3d34a6788295b2c589b378965675961220071754",
+      "changed_from_previous_publication": false,
+      "role": "source_census_dependency"
+    },
+    {
+      "path": "ace3/model/candidates/stage11_s18_boundary_localizer_v2.py",
+      "bytes": 11397,
+      "sha256": "71806b98261fbb5cbc1e93d33b385d29aafc194775d548a0e735dde92f6be6b1",
+      "changed_from_previous_publication": false,
+      "role": "source_census_dependency"
+    },
+    {
+      "path": "ace3/model/candidates/stage13_q24_state_rmsnorm_contrast_v1.py",
+      "bytes": 17286,
+      "sha256": "ec2ed5aec3a6c3a495f1dd024527b1365303d2a494e74e2b17d32b12c2fc0494",
+      "changed_from_previous_publication": true,
+      "role": "source_census_dependency"
+    },
+    {
+      "path": "ace3/model/candidates/stage14_stage15_q24_gate_up_projection_contrast_v1.py",
+      "bytes": 18654,
+      "sha256": "725101946d8ab2398cf4f7edf264ea36440defadf71af611ecf4d8822f4c0241",
+      "changed_from_previous_publication": true,
+      "role": "source_census_dependency"
+    },
+    {
+      "path": "ace3/model/candidates/stage16_silu_product_contrast_v1.py",
+      "bytes": 14620,
+      "sha256": "3e10ae3102cb491787d9d165a9b5c7d4faf75db89ca958f5168883f52f60f7ed",
+      "changed_from_previous_publication": true,
+      "role": "source_census_dependency"
+    },
+    {
+      "path": "ace3/model/candidates/stage17_q24_down_projection_contrast_v1.py",
+      "bytes": 16035,
+      "sha256": "07f34b841cba73b40142d67b1e07c246c09708c3046ea63413d319fc8ce5b783",
+      "changed_from_previous_publication": true,
+      "role": "source_census_dependency"
+    },
+    {
+      "path": "ace3/model/fp16_adaptation_oracle.py",
+      "bytes": 6944,
+      "sha256": "46cca463299196915a52d09419d26e8bf826f5c8840ed37407335e337a163b81",
+      "changed_from_previous_publication": false,
+      "role": "source_census_dependency"
+    },
+    {
+      "path": "ace3/model/stage11_current_runtime_release.py",
+      "bytes": 130703,
+      "sha256": "9ebada3249cf7a2c8cae164675ef31b47f7eb50bbd9a99c76ed9fb6cd2ab7920",
+      "changed_from_previous_publication": true,
+      "role": "source_census_dependency"
+    },
+    {
+      "path": "ace3/model/streaming_lm_head_reference.py",
+      "bytes": 13833,
+      "sha256": "4449d713882bd64aae02ff23a9cb4c9496bcee7a439229ae2ee1f6b62bb7c43d",
+      "changed_from_previous_publication": false,
+      "role": "source_census_dependency"
+    },
+    {
+      "path": "tests/test_q24_s16_l23_p0_value_content_s18_family_counterfactual_v1.py",
+      "bytes": 8128,
+      "sha256": "9fc6923e53ab3b5f02d3cf27678e27389b5b96c33f9efde618e6092650d3dc68",
+      "changed_from_previous_publication": true,
+      "role": "dependency_test"
+    },
+    {
+      "path": "tests/test_q24_s16_l23_p0_value_content_s18_obstruction_bridge_v1.py",
+      "bytes": 12435,
+      "sha256": "2933028248422132288f6ec264d2661319a38d91e8be0fcde375efe4b6852b05",
+      "changed_from_previous_publication": true,
+      "role": "dependency_test"
+    },
+    {
+      "path": "tests/test_q24_s16_l23_p0_value_content_s18_rtz_rounding_contrast_v1.py",
+      "bytes": 8488,
+      "sha256": "590cd4bef9e2b82254b43510ba5e3a8fd8e31f3e0f825d3c45eea077623b01ad",
+      "changed_from_previous_publication": true,
+      "role": "dependency_test"
+    },
+    {
+      "path": "tests/test_q24_s16_l23_p0_value_content_stage13_rmsnorm_integer_contrast_v1.py",
+      "bytes": 12945,
+      "sha256": "f1378e772279a14563c4b30c0b79adc250033ffa8eb5f2b0026f49cee16fc948",
+      "changed_from_previous_publication": true,
+      "role": "source_census_dependency"
+    },
+    {
+      "path": "tests/test_q24_s16_l23_p0_value_content_sufficiency_v1.py",
+      "bytes": 26987,
+      "sha256": "66c5f2b6113ec29214d378188e40a7835d1f564c41cadd8b316c57e3454e0799",
+      "changed_from_previous_publication": true,
+      "role": "dependency_test"
+    },
+    {
+      "path": "tests/test_stage11_current_runtime_release.py",
+      "bytes": 157323,
+      "sha256": "9a2a940d6b572e23e5933723f7e8a1582830e45c72722f663088dae4e41bbcfc",
+      "changed_from_previous_publication": true,
+      "role": "dependency_test"
+    },
+    {
+      "path": "tests/test_stage11_exact_integer_o_projection_contrast_v1.py",
+      "bytes": 16101,
+      "sha256": "8cece347d95d2bb2bcffcfc895a4bd171a056116cc108ecbf54889f620bdece2",
+      "changed_from_previous_publication": true,
+      "role": "reviewed_implementation_with_known_preclaim_defects"
+    },
+    {
+      "path": "tests/test_stage11_exact_integer_o_projection_execution_v1.py",
+      "bytes": 9896,
+      "sha256": "c2f65034bb5cb9e5024a0d32e2ea0322cb96a904499a23fe9c11158a090aafd9",
+      "changed_from_previous_publication": true,
+      "role": "reviewed_implementation_with_known_preclaim_defects"
+    },
+    {
+      "path": "tests/test_stage11_s18_boundary_localizer_v2.py",
+      "bytes": 8121,
+      "sha256": "b266b63d5d3e18885f45169b15ddd9f16b217d2a6f3dcb8bc52a9decd536d657",
+      "changed_from_previous_publication": false,
+      "role": "source_census_dependency"
+    },
+    {
+      "path": "tests/test_stage13_q24_state_rmsnorm_contrast_v1.py",
+      "bytes": 8519,
+      "sha256": "8c10f33b66ce1aec8c852169832d5a6d51ff69dd4f6478e82e74df5770f56a9a",
+      "changed_from_previous_publication": true,
+      "role": "source_census_dependency"
+    },
+    {
+      "path": "tests/test_stage14_stage15_q24_gate_up_projection_contrast_v1.py",
+      "bytes": 12033,
+      "sha256": "4f684723851820ee0dc8a2926627a89355f0ae71c909e5aba330dc90c57162a4",
+      "changed_from_previous_publication": true,
+      "role": "source_census_dependency"
+    },
+    {
+      "path": "tests/test_stage16_silu_product_contrast_v1.py",
+      "bytes": 9601,
+      "sha256": "c252835460bf4f4e363e6224ebeb93b42cea08c810312bd8656a2fd3f906393c",
+      "changed_from_previous_publication": true,
+      "role": "source_census_dependency"
+    },
+    {
+      "path": "tests/test_stage17_q24_down_projection_contrast_v1.py",
+      "bytes": 14586,
+      "sha256": "9c65bfe4285214a4bd2fb2541027099e962ef15772b203f6ede127ae3acca4a2",
+      "changed_from_previous_publication": true,
+      "role": "source_census_dependency"
+    }
+  ],
+  "reviewed_software": {
+    "mission_id": "d12e372181f0",
+    "review_status": "done",
+    "native_status": "done",
+    "review_evidence": {
+      "relative_host_path": "handoffs/d12e372181f0/round-0001.json",
+      "bytes": 690,
+      "sha256": "04e3df5d4f27ad344199a3d1d05c1cbc5373463e41b4c5650bbfb303d4bf693b",
+      "raw_published": false
+    }
+  },
+  "known_subsequent_preclaim_failure": {
+    "mission_id": "7a2022cef21c",
+    "review_status": "replan_requested",
+    "native_status": "failed",
+    "review_evidence": {
+      "relative_host_path": "handoffs/7a2022cef21c/round-0001.json",
+      "bytes": 1323,
+      "sha256": "717281e21435b30bf6270927a5434edb4c9d48699b29fdc71a0e9aa47c8524db",
+      "raw_published": false
+    }
+  },
+  "policy": "Historical reviewed source checkpoint with subsequently discovered entry defects, not an executable release. Repair work in progress is excluded. Original September 26 basis remains at its unchanged tag.",
+  "source_copy_hashes_verified": true,
+  "live_git_unchanged_at_capture": true
+}
