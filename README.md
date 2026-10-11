@@ -24,6 +24,18 @@ ACE-3 MP is an evidence-first mixed-precision accelerator project for
 transformer inference. Its first implementation profile targets the official
 Qwen2.5-0.5B-Instruct AWQ checkpoint with W4A16 execution.
 
+ACE-3 MP is designed and iterated by **[Vulcan](https://ahappend.github.io/vulcan/)
+(formerly Argus for Chips)** under human-defined objectives and approval gates.
+Vulcan is an independently developed, AI-native hardware engineering system
+compatible with **[Argus](https://argusbot.cn/)**. This attribution does not
+expand the verification or hardware claims below; historical runtime commands
+and evidence identifiers retain their original names.
+
+[Vulcan website](https://ahappend.github.io/vulcan/) ·
+[Vulcan source](https://github.com/aHappend/vulcan) ·
+[Argus website](https://argusbot.cn/) ·
+[Argus official source](https://github.com/microsoft/ArgusAgent)
+
 > **Public development snapshot:** this repository does not claim a complete
 > accelerator, synthesized design, FPGA bitstream, measured hardware
 > performance, or fabricated chip.
