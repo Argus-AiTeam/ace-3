@@ -2,12 +2,17 @@
 
 [English](README.md) | [简体中文](README.zh-CN.md)
 
+> **October 11 source increment:** the independently reviewed
+> [SiLU WIDTH repair](docs/continuation/progress-2026-10-11.json) is now included.
+> Its bounded development check passed; V1 full-regression acceptance remains open.
+
 > **Continue or recover this work:** start with [AGENTS.md](AGENTS.md) and the
 > [Chinese continuation handoff](docs/continuation/HANDOFF.zh-CN.md). The dated
 > [September 28 progress snapshot](docs/continuation/progress-2026-09-28.json)
 > records the reviewed **REJECTED** Stage16 composition and the new exact-integer
 > Stage11 o_proj implementation. Its first science owner stopped **before any
-> numerical run** because of entry-contract defects; a software repair is active.
+> numerical run** because of entry-contract defects; a software repair was active
+> at that historical snapshot.
 > See the [current result and publication boundary](docs/results/STAGE11_EXACT_O_PROJ_20260928.md).
 
 ACE-3 MP is an evidence-first mixed-precision accelerator project for

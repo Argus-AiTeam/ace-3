@@ -2,6 +2,11 @@
 
 This repository is a curated source snapshot, not a full host image.
 
+The [October 11 increment](progress-2026-10-11.json) publishes one reviewed
+SiLU RTL repair and original evidence hashes. Its authoritative review, raw
+development logs and live execution archives remain host-only. The table below
+retains the dated September inventory; discover current runtime state separately.
+
 | Dependency | Location / provenance (updated September 28) | Published here | Recovery consequence |
 | --- | --- | --- | --- |
 | Live Argus state, backlog, handoffs, native events, registry and claims | `/home/argustest/.argus-skill-ace3/projects/s-62150b05` | No | Same-host continuation can inspect it. Disk loss removes lifecycle and authoritative receipts not separately archived. |

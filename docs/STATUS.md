@@ -1,7 +1,12 @@
 # ACE-3 Current Status
 
-Technical status reflects the implementation accepted through source revision
+The historical technical baseline reflects source revision
 `f8270fa1a2601fb57e4c50e08372bcbce09d862d`.
+The [October 11 increment](continuation/progress-2026-10-11.json) adds the
+independently reviewed SiLU WIDTH repair, with an explicit one-bit enable,
+exponent truncation and sized division/rounding intermediates. Its retained
+Icarus/Verilator geometry development check passed. This is not a completed
+V1 full regression, new end-to-end numerical result or runtime deployment.
 
 This page distinguishes accepted source-level evidence from active operational
 work. Active work is not promoted to an accepted claim until its artifacts are

@@ -1,0 +1,54 @@
+{
+  "schema": "ace-public-incremental-source/v1",
+  "project": "ACE3",
+  "observed_beijing": "2026-10-11T21:36:47+08:00",
+  "public_summary_is_authoritative_receipt": false,
+  "scope": "Independently reviewed SiLU WIDTH source repair only",
+  "evidence_scope": "development",
+  "stage_certification": "not_certified",
+  "campaign_complete": false,
+  "v1_full_regression_accepted": false,
+  "base_commit": "aad9515ae9f9ca552d7eb7c47d10731ff668f89c",
+  "source_files": [
+    {
+      "path": "ace3/rtl/ace3_fp16_silu_gate_core.sv",
+      "before_sha256": "c5f26b50ba2396852e966a430719a6170df9adf5546903ec018049e9e084cf43",
+      "sha256": "6cd6c802307f9904c235f54227d3c83e65bef949304e67f0c6b9d24cf003fc94",
+      "bytes": 10824
+    }
+  ],
+  "source_origin": {
+    "implementation_owner": "6251472feb4b",
+    "native_status": "done",
+    "independent_review_status": "done",
+    "independent_review_sha256": "083877f3eae0420b33e75c464016fb52f7ea93a13e7a9c01a4a5edef29a65faf",
+    "native_patch_sha256": "846ba45161f0114c3d0fbef084995ccb4cb11f75bcd2d34d307b5cf82d45aefe",
+    "publication_method": "Apply the exact reviewed patch to the isolated publication base and verify the resulting source bytes."
+  },
+  "retained_development_evidence": {
+    "log_sha256": "1ba4b840f968aa363ed38bb981413e47dffede60475d98644e6610d3bbf060e6",
+    "result": "FP16_ADAPTATION_GEOMETRY_PASS",
+    "simulators": ["iverilog", "verilator"],
+    "width_warning_check_sha256": "f29738d6b45a746f65418f76aaa25561d0555387141124de595ac17f89e50626",
+    "width_warning_result": "NO_VERILATOR_WIDTH_WARNINGS_FOR_SILU_GEOMETRY",
+    "raw_logs_published": false,
+    "rerun_for_publication": false
+  },
+  "changes": [
+    "Use a one-bit accurate-sigmoid enable.",
+    "Make the existing exponent truncation explicit.",
+    "Use explicitly sized division, remainder and rounding intermediates."
+  ],
+  "non_claims": [
+    "No V1 full-regression acceptance or new end-to-end numerical result.",
+    "No acceptance of complete model dialogue, FPGA deployment or PPA.",
+    "No runtime deployment or overwrite of an active scientific workspace.",
+    "No publication of other unreviewed working changes, raw state or model weights."
+  ],
+  "continuation_rule": "Retain the reviewed source bytes when constructing subsequent execution archives. Preserve old failed attempts; use the normal native Manager and independent Reviewer path for any new execution. The September 28 records remain historical, not live status.",
+  "equal_mirrors": [
+    "https://github.com/aHappend/ace-3",
+    "https://github.com/Argus-AiTeam/ace-3"
+  ],
+  "checkpoint_ref": "refs/tags/checkpoint-2026-10-11-silu-width"
+}

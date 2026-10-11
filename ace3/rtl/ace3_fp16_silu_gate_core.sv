@@ -29,6 +29,7 @@ module ace3_fp16_silu_gate_core #(
 );
     localparam [40:0] ONE_Q24 = 41'd16777216;
     localparam [24:0] HALF_Q24 = 25'd8388608;
+    localparam [0:0] ACCURATE_SIGMOID_EN = (ACCURATE_SIGMOID != 0);
 
     reg active_q;
     reg [12:0] remaining_q;
@@ -77,7 +78,7 @@ module ace3_fp16_silu_gate_core #(
     wire signed [81:0] gate_up_product_w = gate_q24_w * up_q24_w;
     wire signed [107:0] gated_product_w =
         gate_up_product_w * $signed(
-            {1'b0, ACCURATE_SIGMOID ? accurate_sigmoid_q24_w : sigmoid_q24_w}
+            {1'b0, ACCURATE_SIGMOID_EN ? accurate_sigmoid_q24_w : sigmoid_q24_w}
         );
     wire signed [63:0] gated_q24_w;
     wire invalid_w = !gate_finite_w || !up_finite_w;
@@ -141,13 +142,15 @@ module ace3_fp16_silu_gate_core #(
         reg signed [63:0] exponential;
         reg signed [63:0] shifted_exponential;
         reg signed [63:0] discarded_exponential;
+        reg [88:0] division_denominator;
         reg [88:0] division_numerator;
         reg [88:0] quotient;
-        reg [64:0] division_remainder;
+        reg [88:0] division_remainder_full;
+        reg [88:0] division_remainder_doubled;
         reg [24:0] negative_sigmoid;
         begin
             magnitude = gate[40] ? (~gate + 41'd1) : gate;
-            exponent = magnitude / 41'd11629080;
+            exponent = 17'(magnitude / 41'd11629080);
             remainder = magnitude % 41'd11629080;
             polynomial = -64'sd3329;
             product = $signed({1'b0, remainder}) * polynomial;
@@ -179,15 +182,15 @@ module ace3_fp16_silu_gate_core #(
                     shifted_exponential = shifted_exponential + 64'sd1;
                 exponential = shifted_exponential;
             end
-            division_numerator = {1'b0, exponential[63:0]} << 24;
-            quotient = division_numerator /
-                (65'd16777216 + {1'b0, exponential[63:0]});
-            division_remainder = division_numerator %
-                (65'd16777216 + {1'b0, exponential[63:0]});
-            if ((division_remainder << 1) >
-                    (65'd16777216 + {1'b0, exponential[63:0]}) ||
-                (((division_remainder << 1) ==
-                    (65'd16777216 + {1'b0, exponential[63:0]})) &&
+            division_denominator =
+                {24'd0, 65'd16777216 + {1'b0, exponential[63:0]}};
+            division_numerator = {1'b0, exponential[63:0], 24'd0};
+            quotient = division_numerator / division_denominator;
+            division_remainder_full =
+                division_numerator % division_denominator;
+            division_remainder_doubled = division_remainder_full << 1;
+            if (division_remainder_doubled > division_denominator ||
+                ((division_remainder_doubled == division_denominator) &&
                  quotient[0]))
                 quotient = quotient + 89'd1;
             negative_sigmoid = quotient[24:0];
