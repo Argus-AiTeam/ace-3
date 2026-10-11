@@ -1,7 +1,8 @@
 # ACE-3 continuation entry
 
 Read `docs/continuation/HANDOFF.zh-CN.md` and
-`docs/continuation/progress-2026-10-12.json` before changing anything.
+`docs/continuation/progress-2026-10-12-file-gates.json` before changing anything.
+Keep `docs/continuation/progress-2026-10-12.json` as the earlier path/PASS repair record.
 Keep the October 11 SiLU source record as an accepted development increment.
 Keep `docs/continuation/progress-2026-09-28.json` as the historical baseline.
 
@@ -10,6 +11,11 @@ testbench path and PASS-sentinel repairs, retaining the October 11 SiLU repair.
 These are development-level source increments, not V1 full-regression acceptance.
 Keep these repaired bytes when assembling new execution archives; do not silently
 restore the pre-repair file from an older checkout.
+
+The subsequent October 12 file-gate increment preserves those repairs and adds
+the reviewed fail-closed checks for unreadable vector files and unwritable VCD
+paths in the same two testbenches. Copy these exact bytes into future archives;
+source publication does not certify the full V1 regression or authorize replay.
 
 At the September 28 snapshot, S13-S17 composition `92e4223ef310` was reviewed REJECTED.
 The new exact-integer Stage11 o_proj software `d12e372181f0` received review,
@@ -22,9 +28,10 @@ fresh science owner. Do not duplicate a running repair or replay consumed work.
 
 Published sources are the historical reviewed implementation and its dependency
 snapshot, including the subsequently discovered defects, plus the one RTL file
-identified by the October 11 source manifest and the three files identified by
-the October 12 source manifest. Other later repair edits are not
-included. The original September 26 source basis remains at its dated tag.
+identified by the October 11 source manifest, the three files identified by
+the October 12 path/PASS manifest, and the subsequent two-file file-gate manifest.
+Other later repair edits are not included. The original September 26 source
+basis remains at its dated tag.
 Never copy this snapshot over a running workspace.
 
 On the original host, run `python tools/argus_continuation.py inspect` first.

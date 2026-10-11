@@ -80,11 +80,30 @@ module ace3_fp16_adaptation_tb;
     integer xz_checks;
     integer invalid_outputs;
     integer saturation_outputs;
+    integer file_handle;
     reg [15:0] held_output;
     reg [12:0] held_index;
     reg held_last;
     reg held_invalid;
     reg held_saturation;
+
+    task automatic require_readable_file(input string path);
+        begin
+            file_handle = $fopen(path, "r");
+            if (file_handle == 0)
+                $fatal(1, "ACE3_FP16_ADAPTATION_IVERILOG_FAIL open_failed path=%s", path);
+            $fclose(file_handle);
+        end
+    endtask
+
+    task automatic require_writable_file(input string path);
+        begin
+            file_handle = $fopen(path, "w");
+            if (file_handle == 0)
+                $fatal(1, "ACE3_FP16_ADAPTATION_IVERILOG_FAIL vcd_open_failed path=%s", path);
+            $fclose(file_handle);
+        end
+    endtask
 
     ace3_fp16_residual_add_core #(
         .VECTOR_SIZE(896)
@@ -230,15 +249,21 @@ module ace3_fp16_adaptation_tb;
         if (!$value$plusargs("VCD_PATH=%s", vcd_path))
             vcd_path = {vector_dir, "/ace3_fp16_adaptation.vcd"};
         vector_path = {vector_dir, "/residual_cases.hex"};
+        require_readable_file(vector_path);
         $readmemh(vector_path, residual_cases);
         vector_path = {vector_dir, "/silu_cases.hex"};
+        require_readable_file(vector_path);
         $readmemh(vector_path, silu_cases);
         vector_path = {vector_dir, "/rms_inputs.hex"};
+        require_readable_file(vector_path);
         $readmemh(vector_path, rms_inputs);
         vector_path = {vector_dir, "/rms_expected.hex"};
+        require_readable_file(vector_path);
         $readmemh(vector_path, rms_expected);
         vector_path = {vector_dir, "/rms_meta.hex"};
+        require_readable_file(vector_path);
         $readmemh(vector_path, rms_meta);
+        require_writable_file(vcd_path);
         $dumpfile(vcd_path);
         $dumpvars(0, ace3_fp16_adaptation_tb);
 

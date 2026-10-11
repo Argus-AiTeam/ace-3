@@ -10,6 +10,11 @@
 > [FP16/QKV 路径与 PASS 标记检查修复](docs/continuation/progress-2026-10-12.json)。
 > 这是开发级源码发布，不是新全量回归通过或运行时部署。
 
+> **10 月 12 日后续增量：** 已原样纳入独立审核的
+> [Icarus 文件打开门控](docs/continuation/progress-2026-10-12-file-gates.json)，
+> 向量输入不可读或 VCD 路径不可写时明确失败。范围仍为 development/not_certified，
+> 不代表 V1 已验收。
+
 > **继续工作或恢复现场：** 请先阅读 [AGENTS.md](AGENTS.md) 和
 > [中文接续说明](docs/continuation/HANDOFF.zh-CN.md)。带日期的
 > [9 月 28 日进度快照](docs/continuation/progress-2026-09-28.json) 记录了已审核的

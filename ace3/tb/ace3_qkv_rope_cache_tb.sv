@@ -72,6 +72,25 @@ module ace3_qkv_rope_cache_tb;
     string vcd_path;
     string rope_path;
     string cache_path;
+    integer file_handle;
+
+    task automatic require_readable_file(input string path);
+        begin
+            file_handle = $fopen(path, "r");
+            if (file_handle == 0)
+                $fatal(1, "ACE3_QKV_ROPE_CACHE_IVERILOG_FAIL open_failed path=%s", path);
+            $fclose(file_handle);
+        end
+    endtask
+
+    task automatic require_writable_file(input string path);
+        begin
+            file_handle = $fopen(path, "w");
+            if (file_handle == 0)
+                $fatal(1, "ACE3_QKV_ROPE_CACHE_IVERILOG_FAIL vcd_open_failed path=%s", path);
+            $fclose(file_handle);
+        end
+    endtask
 
     ace3_qwen2_rope_pair rope_dut (
         .clk_i(clk),
@@ -359,8 +378,11 @@ module ace3_qkv_rope_cache_tb;
             vcd_path = {vector_dir, "/ace3_qkv_rope_cache.vcd"};
         rope_path = {vector_dir, "/rope_cases.hex"};
         cache_path = {vector_dir, "/cache_cases.hex"};
+        require_readable_file(rope_path);
         $readmemh(rope_path, rope_mem);
+        require_readable_file(cache_path);
         $readmemh(cache_path, cache_mem);
+        require_writable_file(vcd_path);
         $dumpfile(vcd_path);
         $dumpvars(0, ace3_qkv_rope_cache_tb);
 

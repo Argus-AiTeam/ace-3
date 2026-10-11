@@ -1,0 +1,67 @@
+{
+  "schema": "ace-public-incremental-source/v1",
+  "project": "ACE3",
+  "observed_beijing": "2026-10-12T04:11:09.115034+08:00",
+  "public_summary_is_authoritative_receipt": false,
+  "scope": "Exact reviewed FP16/QKV testbench input-read and VCD-write file-open gates",
+  "evidence_scope": "development",
+  "stage_certification": "not_certified",
+  "campaign_complete": false,
+  "v1_full_regression_accepted": false,
+  "base_commit": "80edfea5d7b3d76a7b2669c25cda39a5c6dc7d85",
+  "source_files": [
+    {
+      "path": "ace3/tb/ace3_fp16_adaptation_tb.sv",
+      "before_sha256": "3396d849268bed357f5db02fcb1c694bd21e3a1b4bc0ed0745a69614f7476900",
+      "sha256": "a21d1da4f163450f597f04376247b1c8450dcb16611d1f8100ea4d5b6c0ea0bc",
+      "bytes": 18878
+    },
+    {
+      "path": "ace3/tb/ace3_qkv_rope_cache_tb.sv",
+      "before_sha256": "d8476910d0aaab3bb8f0ffbf401be7bcdfe45407d82b7cc06afdd8c3aff35893",
+      "sha256": "ec8765b149c2ac36c33558a807b2dd7665ac846783560c7909ad045caea8d714",
+      "bytes": 20227
+    }
+  ],
+  "retained_source_sha256": {
+    "Makefile": "dcd915f050e9eb5a0e8a5245c25b447c7b8503e9d81aa4f4ff591c20f43cba0c",
+    "ace3/rtl/ace3_fp16_silu_gate_core.sv": "6cd6c802307f9904c235f54227d3c83e65bef949304e67f0c6b9d24cf003fc94"
+  },
+  "source_origin": {
+    "archive_owner": "9709d7b52e06",
+    "archive_review_sha256": "665bd29f3ae5ad432539db752b7bcd51a99d14b345a8a02969b1ae49d85c17b6",
+    "binding_review_sha256": "b8d6bb3a5a41ded29ca85eda9fadfdcf2b501a8881dffe41363a878520393b24",
+    "execution_review_sha256": "cab554d51ccd89717aa9d32fefe53295ca82c55803eb7088c257199144331cf9",
+    "proposal_sha256": "9e09d52f378a442c620c9ca0151c054c117a8865c69ad492cf5ebade1f025ccd",
+    "export_owner": "168d706ea81e",
+    "export_review_sha256": "b89afe7a716a6cc49ae1677afe1e8b85730f4216f6ae487f1847b331de98b19b",
+    "export_manifest_sha256": "bfae34d5da0304269bff771d3722a0f6140b1b743038d5a281490b94b8d6e8f7",
+    "publication_method": "Two-stage SHA-pinned native export, exact byte copy, full hashes before and after copying."
+  },
+  "validation_boundary": {
+    "original_source_independently_reviewed": true,
+    "export_independently_reviewed": true,
+    "published_bytes_match_reviewed_archive": true,
+    "rerun_for_publication": false,
+    "new_simulation_result_claimed": false,
+    "raw_logs_published": false,
+    "prior_execution_boundary": "A prior durable exit0 and Reviewer done did not override its native settlement rejection; V1 remains unaccepted."
+  },
+  "changes": [
+    "Check each required vector file can be opened before readmemh.",
+    "Check the selected waveform path can be opened before dumpfile.",
+    "Fail explicitly with a testbench-specific fatal diagnostic on an open failure."
+  ],
+  "non_claims": [
+    "No full V1, model, FPGA, PPA or silicon acceptance.",
+    "No runtime deployment, execution authority or overwrite of an active workspace.",
+    "No publisher edits to implementation, oracle, vectors or expected values.",
+    "No raw model data, provider transcripts, credentials or active state published."
+  ],
+  "continuation_rule": "Preserve these reviewed bytes and previous path/PASS/SiLU fixes in future archives; use normal Manager and independent review for any future execution.",
+  "equal_mirrors": [
+    "https://github.com/aHappend/ace-3",
+    "https://github.com/Argus-AiTeam/ace-3"
+  ],
+  "checkpoint_ref": "refs/tags/checkpoint-2026-10-12-icarus-file-gates"
+}

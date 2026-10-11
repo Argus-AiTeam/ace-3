@@ -12,6 +12,11 @@ Makefile/testbench source files. Original reviews, focused simulation logs,
 proposal archives and active bindings remain host-only. Publication verifies
 the copied source hashes without rerunning science or publishing raw logs.
 
+The subsequent [file-gate increment](progress-2026-10-12-file-gates.json) updates
+the same two testbenches with exact reviewed bytes. Only source and sanitized
+provenance are published; original export reviews, proposals, runtime state and
+execution receipts remain on the host. It does not certify the full regression.
+
 | Dependency | Location / provenance (updated September 28) | Published here | Recovery consequence |
 | --- | --- | --- | --- |
 | Live Argus state, backlog, handoffs, native events, registry and claims | `/home/argustest/.argus-skill-ace3/projects/s-62150b05` | No | Same-host continuation can inspect it. Disk loss removes lifecycle and authoritative receipts not separately archived. |

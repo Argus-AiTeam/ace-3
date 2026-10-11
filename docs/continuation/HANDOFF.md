@@ -1,5 +1,13 @@
 # ACE-3 continuation handoff
 
+**October 12 source follow-up:** the independently reviewed
+[Icarus file-open gates](progress-2026-10-12-file-gates.json) are copied exactly
+into the FP16 adaptation and QKV testbenches, retaining the prior path, PASS
+sentinel, Makefile and SiLU fixes. Missing vector inputs or unwritable waveform
+paths now fail explicitly. This is development/not-certified source publication,
+not V1 acceptance, execution authority or an overwrite of a running workspace.
+The new checkpoint is `checkpoint-2026-10-12-icarus-file-gates`; old tags stay fixed.
+
 Snapshot date: **2026-09-28**. Exact observation time and live work are in
 [progress-2026-09-28.json](progress-2026-09-28.json). Live state can advance.
 The operational guide is [HANDOFF.zh-CN.md](HANDOFF.zh-CN.md).

@@ -1,5 +1,13 @@
 # ACE-3 跨对话接续说明
 
+**2026-10-12 文件门控后续增量：** 两份 FP16 adaptation/QKV testbench 原样继承
+已审的输入文件可读性和 VCD 路径可写性检查，打开失败时明确 `$fatal`，不让工具的
+非致命文件告警冒充检查成功。精确源码和独立审核摘要见
+[文件门控源码记录](progress-2026-10-12-file-gates.json)。保留已发布的 Makefile、
+长路径、PASS 标记和 SiLU 修复。未重跑科学实验、未改变预期值或旧终态；
+先前执行的 exit0 和独立 review 不覆盖其原生结算拒绝，V1 仍未认证。
+新检查点为 `checkpoint-2026-10-12-icarus-file-gates`，历史标签保持原位。
+
 **2026-10-12 增量：** 原样同步已独立审核的 Makefile、FP16 adaptation 和 QKV
 testbench 三文件：保留长向量路径、显式 VCD 输出路径，并要求子仿真的真实 PASS
 标记。精确 SHA、审核范围及证据限制见
@@ -45,7 +53,8 @@ admission、reference 或已关闭 producer，不动 ACE2，不扩展精度、�
 ## 新对话 starter prompt
 
 ```text
-先读 AGENTS.md、HANDOFF.zh-CN.md、progress-2026-10-12.json，再读历史结果摘要。
+先读 AGENTS.md、HANDOFF.zh-CN.md、progress-2026-10-12-file-gates.json，
+再读此前 progress-2026-10-12.json 和历史结果摘要。
 在原主机运行 python tools/argus_continuation.py inspect，核对实际 runtime、
 backlog、最近独立 Reviewer 和 native terminal，不从旧对话猜当前任务。
 已经完成的恢复指令、科学尝试和旧 publisher 都不能重放。运行中的任务不要
@@ -66,7 +75,8 @@ owner 的真实 claim/执行/结果；不能把 7a2022cef21c 的零次执行叫�
 ## 本次发布的范围
 
 10 月 11 日追加一份已审核 RTL 修复；10 月 12 日追加上述摘要标识的三份已审核
-构建/测试平台源码及接续说明，不重发或重新认证下列历史科学实现。原始审核、
+构建/测试平台源码及接续说明，随后原样补入两份 testbench 的文件打开门控；
+不重发或重新认证下列历史科学实现。原始审核、
 开发日志和完整运行状态仍保存在主机，不公开上传；无关旧 admission 日志不作为
 本次 FP16/QKV 检查证据，缺少原退出侧车时明确保持未知。
 

@@ -11,6 +11,11 @@
 > are included as exact native source bytes. This is development-level publication,
 > not a new full-regression result or runtime deployment.
 
+> **October 12 follow-up:** the reviewed
+> [Icarus file-open gates](docs/continuation/progress-2026-10-12-file-gates.json)
+> now fail explicitly on unreadable vector inputs or unwritable VCD paths.
+> These exact source bytes remain development/not-certified; V1 is not accepted.
+
 > **Continue or recover this work:** start with [AGENTS.md](AGENTS.md) and the
 > [Chinese continuation handoff](docs/continuation/HANDOFF.zh-CN.md). The dated
 > [September 28 progress snapshot](docs/continuation/progress-2026-09-28.json)
