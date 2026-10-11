@@ -721,10 +721,12 @@ fp16-iverilog-compile: fp16-json-validation
 fp16-iverilog-simulation: fp16-iverilog-compile
 	@mkdir -p "$(LOG_DIR)"
 	@set -eu; log="$(LOG_DIR)/fp16-adaptation-iverilog-simulation.log"; \
-	printf '%s\n' '$ vvp build/fp16_iverilog/ace3_fp16_adaptation.vvp +VECTOR_DIR=build/fp16_adaptation_vectors' > "$$log"; \
+	printf '%s\n' '$ vvp build/fp16_iverilog/ace3_fp16_adaptation.vvp +VECTOR_DIR=build/fp16_adaptation_vectors +VCD_PATH=build/fp16_iverilog/ace3_fp16_adaptation.vcd' > "$$log"; \
 	if cd "$(ROOT)" && "$(VVP)" "$(FP16_IVERILOG_BIN)" \
-	    +VECTOR_DIR="$(FP16_VECTOR_DIR)" >> "$$log" 2>&1; then :; \
+	    +VECTOR_DIR="$(FP16_VECTOR_DIR)" \
+	    +VCD_PATH="$(FP16_IVERILOG_DIR)/ace3_fp16_adaptation.vcd" >> "$$log" 2>&1; then :; \
 	else status=$$?; cat "$$log"; exit $$status; fi; \
+	grep -Fq 'ACE3_FP16_ADAPTATION_IVERILOG_PASS' "$$log" || { cat "$$log"; exit 1; }; \
 	cat "$$log"
 
 fp16-verilator-compile: fp16-json-validation
@@ -838,8 +840,10 @@ qkv-iverilog-simulation: qkv-iverilog-compile
 	@set -eu; log="$(LOG_DIR)/qkv-rope-cache-iverilog-simulation.log"; \
 	: > "$$log"; \
 	if cd "$(ROOT)" && "$(VVP)" "$(QKV_IVERILOG_BIN)" \
-	    +VECTOR_DIR="$(QKV_VECTOR_DIR)" >> "$$log" 2>&1; then :; \
+	    +VECTOR_DIR="$(QKV_VECTOR_DIR)" \
+	    +VCD_PATH="$(QKV_IVERILOG_DIR)/ace3_qkv_rope_cache.vcd" >> "$$log" 2>&1; then :; \
 	else status=$$?; cat "$$log"; exit $$status; fi; \
+	grep -Fq 'ACE3_QKV_ROPE_CACHE_IVERILOG_PASS' "$$log" || { cat "$$log"; exit 1; }; \
 	cat "$$log"
 
 qkv-verilator-compile: qkv-json-validation

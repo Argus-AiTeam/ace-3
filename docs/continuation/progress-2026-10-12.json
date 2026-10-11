@@ -1,0 +1,74 @@
+{
+  "schema": "ace-public-incremental-source/v1",
+  "project": "ACE3",
+  "observed_beijing": "2026-10-12T00:57:28+08:00",
+  "public_summary_is_authoritative_receipt": false,
+  "scope": "Exact reviewed Makefile and FP16/QKV testbench path and PASS-sentinel repairs",
+  "evidence_scope": "development",
+  "stage_certification": "not_certified",
+  "campaign_complete": false,
+  "v1_full_regression_accepted": false,
+  "base_commit": "0a47d879c2d6305e1a22b1ced50fed0d081ae537",
+  "source_files": [
+    {
+      "path": "Makefile",
+      "before_sha256": "0ea5b260e9959eadc32d078be3d76cdc90231e2a59078963228a42ae9ffd5e97",
+      "sha256": "dcd915f050e9eb5a0e8a5245c25b447c7b8503e9d81aa4f4ff591c20f43cba0c",
+      "bytes": 155142
+    },
+    {
+      "path": "ace3/tb/ace3_fp16_adaptation_tb.sv",
+      "before_sha256": "5bd1ff86cb14dc1c66b11604aeeba7fbfff762a4cc6d7913621bd5d31d0bc43c",
+      "sha256": "3396d849268bed357f5db02fcb1c694bd21e3a1b4bc0ed0745a69614f7476900",
+      "bytes": 17980
+    },
+    {
+      "path": "ace3/tb/ace3_qkv_rope_cache_tb.sv",
+      "before_sha256": "2f6cc1c633fe7a656dab6d46ce2965088383c173555bd4d572d5ac3a18433c2d",
+      "sha256": "d8476910d0aaab3bb8f0ffbf401be7bcdfe45407d82b7cc06afdd8c3aff35893",
+      "bytes": 19466
+    }
+  ],
+  "retained_silu_sha256": "6cd6c802307f9904c235f54227d3c83e65bef949304e67f0c6b9d24cf003fc94",
+  "source_origin": {
+    "implementation_owner": "9b77f9fb9034",
+    "implementation_round": 2,
+    "repair_review_sha256": "328a8c8a95169b8d9d4850c86cfecbfe58a682fb19e4a846a3882836d7c24459",
+    "repair_review_scope": "The candidate fixes the prior Icarus contradiction; the complete execution still requires a newly bound archive.",
+    "archive_preparation_owner": "5bc75b342df6",
+    "archive_review_status": "done",
+    "archive_review_sha256": "cd876686b1dac5a85c788b01233acbb75efc86588487777323e289f8b518790c",
+    "export_mission_owner": "d8ec0e9206ca",
+    "export_artifact_owner": "aea3c4e9f6b5",
+    "export_review_status": "done",
+    "export_review_sha256": "61f6a1d8d76cfc7ea4483b2ee0e6b963e1a1bb494165786342838815ea11deef",
+    "publication_method": "Two-stage SHA-pinned native export, exact byte copy into an isolated publication worktree, and full SHA comparison before and after copying."
+  },
+  "validation_boundary": {
+    "original_candidate_repair_acknowledged_by_independent_reviewer": true,
+    "published_bytes_match_reviewed_archive": true,
+    "rerun_for_publication": false,
+    "raw_logs_published": false,
+    "new_simulation_result_claimed": false,
+    "original_focused_exit_sidecar_independently_verified": false,
+    "excluded_unrelated_log_sha256": "782b3dcc770e727955af9c70ec62ca61a6ca62f315c8118f5c93ad0eddbe2944",
+    "excluded_log_reason": "The exported focused-validation.log describes an older MODEL24 admission check, not these FP16/QKV repairs. Its seven tests are not counted as validation of this increment."
+  },
+  "changes": [
+    "Use string paths for FP16 adaptation vectors instead of fixed-width packed registers.",
+    "Pass explicit VCD_PATH values from Makefile and consume them in both testbenches.",
+    "Require the FP16 and QKV child simulation PASS sentinels before reporting target success."
+  ],
+  "non_claims": [
+    "No V1 full-regression, complete-model, FPGA, PPA or silicon acceptance.",
+    "No runtime deployment, execution authorization or overwrite of an active workspace.",
+    "No modification of RTL/oracle/vector/expected bytes by the publisher.",
+    "No publication of raw model data, provider transcripts, credentials or active state."
+  ],
+  "continuation_rule": "Retain these repaired bytes and the prior SiLU repair in future archives. Preserve historical failed/consumed executions. Preparation-only restrictions must remain separate from the accepted future execution target; normal Manager and independent runtime-pass review remain mandatory.",
+  "equal_mirrors": [
+    "https://github.com/aHappend/ace-3",
+    "https://github.com/Argus-AiTeam/ace-3"
+  ],
+  "checkpoint_ref": "refs/tags/checkpoint-2026-10-12-vcd-harness"
+}

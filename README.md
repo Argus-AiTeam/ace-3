@@ -6,6 +6,11 @@
 > [SiLU WIDTH repair](docs/continuation/progress-2026-10-11.json) is now included.
 > Its bounded development check passed; V1 full-regression acceptance remains open.
 
+> **October 12 source increment:** the reviewed
+> [FP16/QKV path and PASS-sentinel repairs](docs/continuation/progress-2026-10-12.json)
+> are included as exact native source bytes. This is development-level publication,
+> not a new full-regression result or runtime deployment.
+
 > **Continue or recover this work:** start with [AGENTS.md](AGENTS.md) and the
 > [Chinese continuation handoff](docs/continuation/HANDOFF.zh-CN.md). The dated
 > [September 28 progress snapshot](docs/continuation/progress-2026-09-28.json)

@@ -63,8 +63,9 @@ module ace3_fp16_adaptation_tb;
     reg [31:0] rms_inputs [0:FP16_RMS_CASES*FP16_RMS_SIZE-1];
     reg [17:0] rms_expected [0:FP16_RMS_CASES*FP16_RMS_SIZE-1];
     reg [46:0] rms_meta [0:FP16_RMS_CASES-1];
-    reg [1023:0] vector_dir;
-    reg [1023:0] vector_path;
+    string vector_dir;
+    string vector_path;
+    string vcd_path;
 
     integer case_index;
     integer element_index;
@@ -226,6 +227,8 @@ module ace3_fp16_adaptation_tb;
     initial begin
         if (!$value$plusargs("VECTOR_DIR=%s", vector_dir))
             $fatal(1, "VECTOR_DIR plusarg is required");
+        if (!$value$plusargs("VCD_PATH=%s", vcd_path))
+            vcd_path = {vector_dir, "/ace3_fp16_adaptation.vcd"};
         vector_path = {vector_dir, "/residual_cases.hex"};
         $readmemh(vector_path, residual_cases);
         vector_path = {vector_dir, "/silu_cases.hex"};
@@ -236,7 +239,7 @@ module ace3_fp16_adaptation_tb;
         $readmemh(vector_path, rms_expected);
         vector_path = {vector_dir, "/rms_meta.hex"};
         $readmemh(vector_path, rms_meta);
-        $dumpfile("build/iverilog/ace3_fp16_adaptation.vcd");
+        $dumpfile(vcd_path);
         $dumpvars(0, ace3_fp16_adaptation_tb);
 
         accepted_inputs = 0;

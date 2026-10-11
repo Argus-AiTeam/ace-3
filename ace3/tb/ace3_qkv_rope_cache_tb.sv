@@ -69,6 +69,7 @@ module ace3_qkv_rope_cache_tb;
     integer xz_checks;
     integer index;
     string vector_dir;
+    string vcd_path;
     string rope_path;
     string cache_path;
 
@@ -354,11 +355,13 @@ module ace3_qkv_rope_cache_tb;
     initial begin
         if (!$value$plusargs("VECTOR_DIR=%s", vector_dir))
             vector_dir = "build/qkv_rope_cache_vectors";
+        if (!$value$plusargs("VCD_PATH=%s", vcd_path))
+            vcd_path = {vector_dir, "/ace3_qkv_rope_cache.vcd"};
         rope_path = {vector_dir, "/rope_cases.hex"};
         cache_path = {vector_dir, "/cache_cases.hex"};
         $readmemh(rope_path, rope_mem);
         $readmemh(cache_path, cache_mem);
-        $dumpfile("build/iverilog/ace3_qkv_rope_cache.vcd");
+        $dumpfile(vcd_path);
         $dumpvars(0, ace3_qkv_rope_cache_tb);
 
         failures = 0;

@@ -7,6 +7,11 @@ SiLU RTL repair and original evidence hashes. Its authoritative review, raw
 development logs and live execution archives remain host-only. The table below
 retains the dated September inventory; discover current runtime state separately.
 
+The [October 12 increment](progress-2026-10-12.json) adds three reviewed
+Makefile/testbench source files. Original reviews, focused simulation logs,
+proposal archives and active bindings remain host-only. Publication verifies
+the copied source hashes without rerunning science or publishing raw logs.
+
 | Dependency | Location / provenance (updated September 28) | Published here | Recovery consequence |
 | --- | --- | --- | --- |
 | Live Argus state, backlog, handoffs, native events, registry and claims | `/home/argustest/.argus-skill-ace3/projects/s-62150b05` | No | Same-host continuation can inspect it. Disk loss removes lifecycle and authoritative receipts not separately archived. |
