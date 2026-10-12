@@ -1,12 +1,19 @@
 # ACE-3 continuation entry
 
 Read `docs/continuation/HANDOFF.zh-CN.md` and
+`docs/continuation/progress-2026-10-12-v10-evidence-adapter.json`, then
 `docs/continuation/progress-2026-10-12-bound-checkpoint-caller.json`, then
 `docs/continuation/progress-2026-10-12-decoder-failure-probe.json` before changing anything.
 Keep `docs/continuation/progress-2026-10-12-file-gates.json` as the earlier file-open gate record.
 Keep `docs/continuation/progress-2026-10-12.json` as the earlier path/PASS repair record.
 Keep the October 11 SiLU source record as an accepted development increment.
 Keep `docs/continuation/progress-2026-09-28.json` as the historical baseline.
+
+The V10 evidence adapter and fixture tests are exact independently reviewed
+development bytes. They retain legacy evidence compatibility and strict V10
+model/token/layer/lineage checks. Their publication is not acceptance of a new
+V3 trajectory or resolution of the earlier V2 provenance counterevidence.
+No scientific execution or original adapter test was repeated for publication.
 
 The [checkpoint publication correction](docs/continuation/progress-2026-10-12-bound-checkpoint.json)
 withdraws the incomplete validator/test-only increment from main. The subsequent

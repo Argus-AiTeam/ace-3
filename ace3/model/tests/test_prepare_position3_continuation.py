@@ -21,7 +21,11 @@ from prepare_position3_continuation import (  # noqa: E402
     HIDDEN_SIZE,
     MODEL_REPOSITORY,
     MODEL_REVISION,
+    POSITION0_EMBEDDING_SHA256,
+    POSITION1_EMBEDDING_SHA256,
+    POSITION2_EMBEDDING_SHA256,
     PreparationError,
+    V10_POSITION2_KIND,
     canonical_json,
     file_record,
     prepare,
@@ -186,6 +190,93 @@ class Position3ContinuationPreparationTests(unittest.TestCase):
             "layers": layers,
         }
 
+    def rewrite_parent_as_v10(self, fixture: dict[str, Any]) -> None:
+        parent = json.loads(fixture["parent_path"].read_text(encoding="utf-8"))
+        v10_layers = []
+        for layer in parent["current_continuation_attempt"]["layers"]:
+            output = dict(layer["output"])
+            output["semantic_sha256"] = output["sha256"]
+            layer_index = layer["layer_index"]
+            v10_layers.append(
+                {
+                    "layer_index": layer_index,
+                    "position": 2,
+                    "input": {
+                        "dtype": "FP16",
+                        "elements": HIDDEN_SIZE,
+                        "sha256": POSITION2_EMBEDDING_SHA256,
+                    },
+                    "position01_state": layer["predecessor_state"],
+                    "fp16_kv_parentage": {
+                        "schema_version": 1,
+                        "kind": "ace3_current_worktree_position01_exact_replay",
+                        "layer_id": layer_index,
+                        "source_positions": [0, 1],
+                        "target_position": 2,
+                        "position2_state": layer["predecessor_state"],
+                        "exact_integer_oracle_match": True,
+                    },
+                    "output_state": layer["output_state"],
+                    "output": output,
+                    "independent_oracle_comparison": {
+                        "rtl_matches_exact_integer_oracle": True,
+                        "within_tolerance": True,
+                        "exact_integer_oracle_output_sha256": output[
+                            "semantic_sha256"
+                        ],
+                    },
+                }
+            )
+        parent.update(
+            {
+                "schema_version": 3,
+                "kind": V10_POSITION2_KIND,
+                "selected_token": {
+                    "token_id": 271,
+                    "source": "authenticated original checkpoint embedding",
+                    "embedding_sha256": POSITION2_EMBEDDING_SHA256,
+                },
+                "official_tied_embedding": {
+                    "checkpoint": {"sha256": CHECKPOINT_SHA256},
+                    "tensor": "model.embed_tokens.weight",
+                    "token_id": 271,
+                    "dtype": "FP16",
+                    "elements": HIDDEN_SIZE,
+                    "sha256": POSITION2_EMBEDDING_SHA256,
+                },
+            }
+        )
+        parent["current_continuation_attempt"] = {
+            "status": "COMPLETE",
+            "execution": "current-worktree compiled Verilator RTL",
+            "position": 2,
+            "selected_token_id": 271,
+            "layer_order": list(range(24)),
+            "natural_terminal_layers": 24,
+            "fresh_token_inputs": {
+                "position0": {
+                    "token_id": 151644,
+                    "embedding_sha256": POSITION0_EMBEDDING_SHA256,
+                },
+                "position1": {
+                    "token_id": 2114,
+                    "embedding_sha256": POSITION1_EMBEDDING_SHA256,
+                },
+            },
+            "layers": v10_layers,
+            "post_layer23": {
+                "hidden_sha256": v10_layers[-1]["output"]["semantic_sha256"],
+                "natural_terminal": True,
+                "independent_oracle_within_tolerance": True,
+            },
+        }
+        self.write_json(fixture["parent_path"], parent)
+        lm_head = json.loads(fixture["lm_head_path"].read_text(encoding="utf-8"))
+        lm_head["parent_traversal"]["evidence"] = file_record(
+            fixture["parent_path"]
+        )
+        self.write_json(fixture["lm_head_path"], lm_head)
+
     @staticmethod
     def embedding(_: Path, token_id: int) -> list[int]:
         return [((token_id << 8) + index) & 0xFFFF for index in range(HIDDEN_SIZE)]
@@ -252,6 +343,49 @@ class Position3ContinuationPreparationTests(unittest.TestCase):
             )
             self.assertFalse(document["launch"]["execution_performed"])
             self.assertFalse(document["launch"]["execution_authority"])
+
+    def test_v10_fresh_traversal_schema_is_accepted_for_position3_parentage(
+        self,
+    ) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            fixture = self.make_fixture(Path(directory))
+            self.rewrite_parent_as_v10(fixture)
+            document = prepare(
+                fixture["parent_path"],
+                fixture["lm_head_path"],
+                fixture["output"],
+                **self.arguments(fixture),
+            )
+            self.assertEqual(
+                document["parents"]["position2_traversal"],
+                file_record(fixture["parent_path"]),
+            )
+            self.assertEqual(
+                len(document["layer_kv_parentage"]["layers"]),
+                24,
+            )
+            self.assertEqual(
+                document["position3_input"]["prompt_token_history"],
+                [151644, 2114, 271],
+            )
+
+    def test_unaccepted_position2_identity_is_rejected(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            fixture = self.make_fixture(Path(directory))
+            parent = json.loads(
+                fixture["parent_path"].read_text(encoding="utf-8")
+            )
+            parent["schema_version"] = 3
+            parent["kind"] = "ace3_selected_token_position2_continuation_evidence"
+            self.write_json(fixture["parent_path"], parent)
+            with self.assertRaisesRegex(PreparationError, "identity mismatch"):
+                prepare(
+                    fixture["parent_path"],
+                    fixture["lm_head_path"],
+                    fixture["output"],
+                    **self.arguments(fixture),
+                )
+            self.assertFalse(fixture["output"].exists())
 
     def test_incomplete_parent_fails_without_success_artifacts(self) -> None:
         with tempfile.TemporaryDirectory() as directory:

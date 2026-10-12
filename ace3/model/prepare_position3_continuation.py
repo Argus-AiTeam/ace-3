@@ -32,10 +32,21 @@ CHECKPOINT_SHA256 = (
 POSITION0_TOKEN_ID = 151644
 POSITION1_TOKEN_ID = 2114
 POSITION2_TOKEN_ID = 271
+POSITION0_EMBEDDING_SHA256 = (
+    "4debe5d7a410d8208c773ef054454236a08ccc89710c0c06186853119815428c"
+)
+POSITION1_EMBEDDING_SHA256 = (
+    "7c6cad8e630f773207e90bcb4606c096585e5ca27a873d0089fe575089bd627f"
+)
+POSITION2_EMBEDDING_SHA256 = (
+    "50b4ddfa1a96b344436c1c099374abeb4477c7b7cb6ac1200d6a64e68b8e1edb"
+)
 POSITION3 = 3
 LAYER_COUNT = 24
 HIDDEN_SIZE = 896
 VOCAB_SIZE = 151936
+LEGACY_POSITION2_KIND = "ace3_selected_token_position2_continuation_evidence"
+V10_POSITION2_KIND = "ace3_selected_token_position2_fresh_traversal_evidence"
 SOURCE_PATHS = {
     "position3_continuation_preparer": (
         "ace3/model/prepare_position3_continuation.py"
@@ -141,6 +152,61 @@ def authenticate_record_closure(
     return authenticated
 
 
+def _position2_selected_token_id(selected: Mapping[str, Any]) -> Any:
+    if "selected_token_id" in selected:
+        return selected.get("selected_token_id")
+    return selected.get("token_id")
+
+
+def _require_accepted_v10_layer(layer: Mapping[str, Any], layer_index: int) -> None:
+    comparison = layer.get("independent_oracle_comparison")
+    output = layer.get("output")
+    parentage = layer.get("fp16_kv_parentage")
+    require(
+        isinstance(comparison, dict)
+        and comparison.get("rtl_matches_exact_integer_oracle") is True
+        and comparison.get("within_tolerance") is True,
+        f"position-2 layer {layer_index} independent oracle binding mismatch",
+    )
+    require(
+        isinstance(output, dict)
+        and output.get("semantic_sha256")
+        == comparison.get("exact_integer_oracle_output_sha256"),
+        f"position-2 layer {layer_index} semantic output binding mismatch",
+    )
+    require(
+        isinstance(parentage, dict)
+        and parentage.get("schema_version") == 1
+        and parentage.get("kind") == "ace3_current_worktree_position01_exact_replay"
+        and parentage.get("layer_id") == layer_index
+        and parentage.get("source_positions") == [0, 1]
+        and parentage.get("target_position") == 2
+        and parentage.get("exact_integer_oracle_match") is True
+        and layer.get("position01_state") == parentage.get("position2_state"),
+        f"position-2 layer {layer_index} position-0/1 KV parentage mismatch",
+    )
+
+
+def _position2_predecessor_state(
+    layer: Mapping[str, Any],
+    layer_index: int,
+    *,
+    is_v10: bool,
+) -> Any:
+    if is_v10:
+        _require_accepted_v10_layer(layer, layer_index)
+        return layer.get("position01_state")
+    predecessor = layer.get("predecessor_state")
+    replay_parent = layer.get("predecessor_replay", {}).get(
+        "position1", {}
+    ).get("output_state")
+    require(
+        predecessor == replay_parent,
+        f"position-2 layer {layer_index} predecessor-state lineage mismatch",
+    )
+    return predecessor
+
+
 def run_position2_validator(evidence_path: Path) -> None:
     completed = subprocess.run(
         [
@@ -208,10 +274,12 @@ def authenticate_position2_traversal(
     )
     evidence_record = file_record(evidence_path)
     document = load_json(evidence_path)
+    schema_version = document.get("schema_version")
+    kind = document.get("kind")
+    is_legacy = schema_version == 2 and kind == LEGACY_POSITION2_KIND
+    is_v10 = schema_version == 3 and kind == V10_POSITION2_KIND
     require(
-        document.get("schema_version") == 2
-        and document.get("kind")
-        == "ace3_selected_token_position2_continuation_evidence",
+        is_legacy or is_v10,
         "position-2 traversal evidence identity mismatch",
     )
     require(
@@ -230,9 +298,27 @@ def authenticate_position2_traversal(
     )
     require(
         isinstance(selected, dict)
-        and selected.get("selected_token_id") == POSITION2_TOKEN_ID,
+        and _position2_selected_token_id(selected) == POSITION2_TOKEN_ID,
         "position-2 selected-token binding mismatch",
     )
+    if is_v10:
+        require(
+            selected.get("source") == "authenticated original checkpoint embedding"
+            and selected.get("embedding_sha256") == POSITION2_EMBEDDING_SHA256,
+            "position-2 selected-token embedding binding mismatch",
+        )
+        tied_embedding = document.get("official_tied_embedding")
+        require(
+            isinstance(tied_embedding, dict)
+            and tied_embedding.get("token_id") == POSITION2_TOKEN_ID
+            and tied_embedding.get("sha256") == POSITION2_EMBEDDING_SHA256
+            and tied_embedding.get("dtype") == "FP16"
+            and tied_embedding.get("elements") == HIDDEN_SIZE
+            and tied_embedding.get("tensor") == "model.embed_tokens.weight"
+            and tied_embedding.get("checkpoint", {}).get("sha256")
+            == CHECKPOINT_SHA256,
+            "position-2 official embedding binding mismatch",
+        )
     require(
         isinstance(traversal, dict)
         and traversal.get("status") == "COMPLETE"
@@ -242,13 +328,43 @@ def authenticate_position2_traversal(
         and traversal.get("natural_terminal_layers") == LAYER_COUNT,
         "position-2 traversal completion binding mismatch",
     )
-    seeds = traversal.get("predecessor_seed_bindings")
-    require(
-        isinstance(seeds, dict)
-        and seeds.get("position0", {}).get("token_id") == POSITION0_TOKEN_ID
-        and seeds.get("position1", {}).get("token_id") == POSITION1_TOKEN_ID,
-        "position-2 prompt-token parentage mismatch",
-    )
+    if is_v10:
+        seeds = traversal.get("fresh_token_inputs")
+        require(
+            seeds
+            == {
+                "position0": {
+                    "token_id": POSITION0_TOKEN_ID,
+                    "embedding_sha256": POSITION0_EMBEDDING_SHA256,
+                },
+                "position1": {
+                    "token_id": POSITION1_TOKEN_ID,
+                    "embedding_sha256": POSITION1_EMBEDDING_SHA256,
+                },
+            },
+            "position-2 prompt-token parentage mismatch",
+        )
+        require(
+            traversal.get("execution") == "current-worktree compiled Verilator RTL",
+            "position-2 traversal execution binding mismatch",
+        )
+        post_layer23 = traversal.get("post_layer23")
+        require(
+            isinstance(post_layer23, dict)
+            and post_layer23.get("natural_terminal") is True
+            and post_layer23.get("independent_oracle_within_tolerance") is True
+            and isinstance(post_layer23.get("hidden_sha256"), str)
+            and len(post_layer23["hidden_sha256"]) == 64,
+            "position-2 post-layer-23 terminal binding mismatch",
+        )
+    else:
+        seeds = traversal.get("predecessor_seed_bindings")
+        require(
+            isinstance(seeds, dict)
+            and seeds.get("position0", {}).get("token_id") == POSITION0_TOKEN_ID
+            and seeds.get("position1", {}).get("token_id") == POSITION1_TOKEN_ID,
+            "position-2 prompt-token parentage mismatch",
+        )
     layers = traversal.get("layers")
     require(
         isinstance(layers, list)
@@ -262,7 +378,9 @@ def authenticate_position2_traversal(
             layer.get("position") == 2,
             f"position-2 layer {layer_index} position mismatch",
         )
-        predecessor = layer.get("predecessor_state")
+        predecessor = _position2_predecessor_state(
+            layer, layer_index, is_v10=is_v10
+        )
         output_state = layer.get("output_state")
         output_hidden = layer.get("output")
         require(
@@ -270,13 +388,6 @@ def authenticate_position2_traversal(
             and isinstance(output_state, dict)
             and isinstance(output_hidden, dict),
             f"position-2 layer {layer_index} parentage is incomplete",
-        )
-        replay_parent = layer.get("predecessor_replay", {}).get(
-            "position1", {}
-        ).get("output_state")
-        require(
-            predecessor == replay_parent,
-            f"position-2 layer {layer_index} predecessor-state lineage mismatch",
         )
         kv_parentage.append(
             {

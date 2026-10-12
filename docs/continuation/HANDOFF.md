@@ -1,5 +1,15 @@
 # ACE-3 continuation handoff
 
+**V10 evidence adapter:** the reviewed
+[position-2 schema adapter and fixture tests](progress-2026-10-12-v10-evidence-adapter.json)
+are copied without implementation changes. Legacy support and strict V10
+model/token/layer/lineage checks remain. The original independent review reports
+focused checks passed; its original adapter test log/count was not exported.
+No unrelated test log substitutes for it, and no science was rerun to publish.
+This is development/not_certified, not full V2/V3 acceptance. Preserve prior
+source increments and failures. The new checkpoint is
+`checkpoint-2026-10-12-v10-evidence-adapter`; existing tags stay fixed.
+
 **October 12 source follow-up:** the independently reviewed
 [Icarus file-open gates](progress-2026-10-12-file-gates.json) are copied exactly
 into the FP16 adaptation and QKV testbenches, retaining the prior path, PASS

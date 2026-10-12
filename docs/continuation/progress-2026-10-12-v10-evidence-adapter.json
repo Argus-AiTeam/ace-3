@@ -1,0 +1,73 @@
+{
+  "schema": "ace-public-incremental-source/v1",
+  "project": "ACE3",
+  "observed_beijing": "2026-10-12T18:51:02.393039+08:00",
+  "public_summary_is_authoritative_receipt": false,
+  "scope": "Exact independently reviewed V10 position-2 evidence adapter and fixture tests",
+  "evidence_scope": "development",
+  "stage_certification": "not_certified",
+  "campaign_complete": false,
+  "full_v2_or_v3_acceptance": false,
+  "base_commit": "9670ab967dc8ecc320cf66dc80b64e659b836c05",
+  "source_files": [
+    {
+      "path": "ace3/model/prepare_position3_continuation.py",
+      "before_sha256": "9b4297a01d610f87da57b3e485123e76fdc24b0e57aca43137f882e1901af8f8",
+      "sha256": "b2eb46a6733710c57138c4a20721f8e15685097f79e6a75aa1bc4860f7692151",
+      "bytes": 29115
+    },
+    {
+      "path": "ace3/model/tests/test_prepare_position3_continuation.py",
+      "before_sha256": "5b62e71c37916a34993dda7df76bbce0d298dc7a6de9fcfae00bcc35c7c55560",
+      "sha256": "5fe5ca5c909a4393685fb109220bad2b7bfaecfec24bf49b93ea382639acc643",
+      "bytes": 19688
+    }
+  ],
+  "retained_source_sha256": {
+    "ace3/rtl/ace3_fp16_silu_gate_core.sv": "6cd6c802307f9904c235f54227d3c83e65bef949304e67f0c6b9d24cf003fc94",
+    "ace3/tb/ace3_fp16_adaptation_tb.sv": "a21d1da4f163450f597f04376247b1c8450dcb16611d1f8100ea4d5b6c0ea0bc",
+    "ace3/tb/ace3_qkv_rope_cache_tb.sv": "ec8765b149c2ac36c33558a807b2dd7665ac846783560c7909ad045caea8d714",
+    "ace3/tb/ace3_decoder_layer0_token_engine_main.cpp": "d9104c844f816f8b35b74b42d8109869d5cfc2e3dd8fd39aecebe562f71992f0",
+    "ace3/tb/ace3_layer0_trace_capture_policy.h": "c70abe7071136c3c154dd32e27b04ccfca13d96b35f9498231e5e3f462decf26",
+    "Makefile": "2178c83ce4d1c1953e6e6c83389ee0b7d0cf579b4b0637d65f5cdd5a7d675e57",
+    "ace3/model/position3_live_lm_head.py": "3f310960d549c8ad7812916108afd4b41931f77a7b036c0263dfeb5355b3a6c6",
+    "ace3/model/tests/test_position3_live_lm_head.py": "c83a53f3c2ceefc5de79761d2ce034adcbc5b2cc5f8c69e26173080af41fdcbe"
+  },
+  "source_origin": {
+    "implementation_owner": "510e56e8e556",
+    "independent_review_round": 1,
+    "independent_review_sha256": "ea8d8d23a4b707e905248599c4fce0df552edadba2082dca130f8bdcd6da2dc2",
+    "artifact_workspace_owner": "30ba4983e093",
+    "archive_independent_review_round": 2,
+    "archive_independent_review_sha256": "04e7c679cab1044fe8603650db153923fc3928d7411417a71d75eb8fa25fa570",
+    "publication_method": "Reuse two-stage SHA-pinned source exports and freshly recheck live identities; copy bytes without implementation edits."
+  },
+  "changes": [
+    "Recognize only the retained legacy schema/kind or V10 fresh-traversal schema/kind, preserving normal validator invocation.",
+    "V10 adaptation checks official token embeddings, model checkpoint, complete layer order, independent oracle flags and KV parentage.",
+    "Fixture tests cover accepted V10 preparation and rejection of a mismatched schema/kind.",
+    "Existing public callers and CLI signatures remain unchanged; no RTL, oracle, vectors or expected values are modified by the publisher."
+  ],
+  "validation_boundary": {
+    "original_independent_review": "Reports focused checks passed and the former identity mismatch crossed without a new V3 execution.",
+    "original_adapter_test_log_exported": false,
+    "original_adapter_test_count": null,
+    "unrelated_live_lm_head_12_passed_log_reused": false,
+    "fixture_tests_are_scientific_acceptance": false,
+    "publisher_checks": "Exact source SHA/size, full diff, Python syntax, retained prior repair SHA and unchanged public caller signatures.",
+    "rerun_for_publication": false,
+    "publisher_authored_implementation_change": false,
+    "runtime_changed_by_publication": false
+  },
+  "excluded_from_publication": [
+    "Private-path proposal producers and archives",
+    "Raw model evidence, vectors, weights, sessions, credentials and live state",
+    "Native execution authority, claims and original review receipts"
+  ],
+  "continuation_rule": "Preserve the exact adapter and previous reviewed repairs. This closes only a source-format compatibility boundary, not V2 provenance or V3 trajectory/logits/oracle acceptance. Never replay consumed claims or overwrite a running workspace.",
+  "equal_mirrors": [
+    "https://github.com/aHappend/ace-3",
+    "https://github.com/Argus-AiTeam/ace-3"
+  ],
+  "checkpoint_ref": "refs/tags/checkpoint-2026-10-12-v10-evidence-adapter"
+}

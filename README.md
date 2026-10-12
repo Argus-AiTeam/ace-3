@@ -2,6 +2,11 @@
 
 [English](README.md) | [简体中文](README.zh-CN.md)
 
+> **V10 evidence compatibility:** the independently reviewed
+> [position-2 evidence adapter and fixture tests](docs/continuation/progress-2026-10-12-v10-evidence-adapter.json)
+> are published as exact development bytes. Legacy evidence support and V10
+> model/token/layer/lineage checks are retained. This is not V3 scientific acceptance.
+
 > **October 11 source increment:** the independently reviewed
 > [SiLU WIDTH repair](docs/continuation/progress-2026-10-11.json) is now included.
 > Its bounded development check passed; V1 full-regression acceptance remains open.

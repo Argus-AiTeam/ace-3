@@ -2,6 +2,11 @@
 
 [English](README.md) | [简体中文](README.zh-CN.md)
 
+> **V10 证据格式兼容：** 原样发布独审通过的
+> [position-2 证据适配器和 fixture 测试](docs/continuation/progress-2026-10-12-v10-evidence-adapter.json)，
+> 保留旧格式兼容与 V10 模型、token、层序和来源门控。
+> 这是开发级源码增量，不是 V3 科学验收。
+
 > **10 月 11 日源码增量：** 已纳入独立审核通过的
 > [SiLU WIDTH 修复](docs/continuation/progress-2026-10-11.json)。
 > 对应有界开发检查通过，但 V1 全量回归尚未验收。

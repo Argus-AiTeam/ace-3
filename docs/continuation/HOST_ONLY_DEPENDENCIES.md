@@ -2,6 +2,12 @@
 
 This repository is a curated source snapshot, not a full host image.
 
+The [V10 evidence adapter](progress-2026-10-12-v10-evidence-adapter.json) publishes
+only reviewed Python source, fixture tests and sanitized provenance. Its original
+independent reviews, retained traversal/model payloads, proposal archives and
+execution receipts stay host-only. Format compatibility does not supply missing
+scientific evidence or authorize a new execution.
+
 The [October 11 increment](progress-2026-10-11.json) publishes one reviewed
 SiLU RTL repair and original evidence hashes. Its authoritative review, raw
 development logs and live execution archives remain host-only. The table below

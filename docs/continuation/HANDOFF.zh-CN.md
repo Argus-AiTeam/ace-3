@@ -1,5 +1,14 @@
 # ACE-3 跨对话接续说明
 
+**2026-10-12 V10 证据格式适配：** 原样发布独审通过的 position-2 适配器与
+fixture 测试，精确 SHA 和来源见
+[适配增量](progress-2026-10-12-v10-evidence-adapter.json)。保留旧格式兼容、
+V10 模型/token/层序/KV 来源门控及既有源码修复。原独审记录确认聚焦检查通过，
+但未导出其原始 adapter 测试日志和项数，不挪用另一组 12 passed 日志。
+发布者只核对字节、语法和既有调用接口，不重跑科学或修改实现。
+范围 development/not_certified，不关闭 V2 来源反证或 V3 轨迹/logits/oracle 验收。
+新检查点 `checkpoint-2026-10-12-v10-evidence-adapter`，旧标签和失败历史不变。
+
 **2026-10-12 输入绑定调用集成：** 已将原生独审通过的 Makefile、validator 和
 focused test 三文件原字节一起发布。Makefile 相对已审基线只增加 validate 的
 `--checkpoint "$(OFFICIAL_MODEL24_CHECKPOINT)"`，原 FP16/QKV VCD/PASS 门控不变；
