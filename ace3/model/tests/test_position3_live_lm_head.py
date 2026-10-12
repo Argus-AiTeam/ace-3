@@ -9,6 +9,7 @@ import tempfile
 import unittest
 from pathlib import Path
 from typing import Any
+from unittest.mock import patch
 
 from ace3.model.position3_live_lm_head import (
     EvidenceError,
@@ -21,6 +22,7 @@ from ace3.model.position3_live_lm_head import (
     prepare,
     require_source_bindings,
     source_records,
+    validate,
 )
 
 
@@ -234,6 +236,84 @@ class Position3LiveLmHeadTests(unittest.TestCase):
             stored.pop("two")
             with self.assertRaisesRegex(EvidenceError, "closure is incomplete"):
                 require_source_bindings(stored, root, paths)
+
+    def test_validate_uses_explicit_bound_checkpoint(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            output = root / "output"
+            output.mkdir()
+            binary = root / "bound-binary"
+            binary.write_text("binary\n", encoding="ascii")
+            evidence = output / "evidence.json"
+            bound_checkpoint = root / "bound/model.safetensors"
+            bound_checkpoint.parent.mkdir()
+            bound_checkpoint.write_text("bound checkpoint\n", encoding="ascii")
+            parent = root / "parent/evidence.json"
+            parent.parent.mkdir()
+            parent.write_text("parent\n", encoding="ascii")
+            tokenizer = root / "tokenizer"
+            tokenizer.mkdir()
+            calls: list[Path] = []
+
+            def fake_compute(
+                checkpoint: Path, tokenizer_dir: Path, parent_evidence: Path
+            ) -> dict[str, Any]:
+                calls.append(checkpoint)
+                return {
+                    "checkpoint": str(checkpoint),
+                    "tokenizer_dir": str(tokenizer_dir),
+                    "parent_evidence": str(parent_evidence),
+                    "_normalized": [],
+                    "_checks": {},
+                    "_winners": [],
+                    "_records": {},
+                }
+
+            oracle = {
+                "checkpoint": str(bound_checkpoint),
+                "tokenizer_dir": str(tokenizer),
+                "parent_evidence": str(parent),
+            }
+            evidence_document = {"validated_checkpoint": str(bound_checkpoint)}
+            (output / "oracle.json").write_text(
+                json.dumps(oracle, sort_keys=True), encoding="utf-8"
+            )
+            evidence.write_text(
+                json.dumps(evidence_document, sort_keys=True), encoding="utf-8"
+            )
+
+            with (
+                patch(
+                    "ace3.model.position3_live_lm_head.require_source_bindings",
+                    lambda _: None,
+                ),
+                patch(
+                    "ace3.model.position3_live_lm_head.require_file_record",
+                    lambda *_args, **_kwargs: {},
+                ),
+                patch(
+                    "ace3.model.position3_live_lm_head.compute_oracle",
+                    fake_compute,
+                ),
+                patch(
+                    "ace3.model.position3_live_lm_head.assemble_evidence",
+                    lambda _output, _binary, computed: {
+                        "validated_checkpoint": computed["checkpoint"]
+                    },
+                ),
+            ):
+                self.assertEqual(
+                    validate(
+                        output,
+                        binary,
+                        evidence,
+                        parent,
+                        tokenizer,
+                        checkpoint=bound_checkpoint,
+                    ),
+                    evidence_document,
+                )
+            self.assertEqual(calls, [bound_checkpoint])
 
 
 if __name__ == "__main__":

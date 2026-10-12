@@ -22,6 +22,11 @@
 > Broader frozen-hash and external-tracing provenance remains unresolved.
 > This is development source publication, not full V2 or model acceptance.
 
+> **October 12 input-binding increment:** the reviewed
+> [LM-head validator and focused test](docs/continuation/progress-2026-10-12-bound-checkpoint.json)
+> now require an explicit checkpoint instead of silently using a default.
+> This preserves numerical semantics and is development/not-certified, not V3 acceptance.
+
 > **Continue or recover this work:** start with [AGENTS.md](AGENTS.md) and the
 > [Chinese continuation handoff](docs/continuation/HANDOFF.zh-CN.md). The dated
 > [September 28 progress snapshot](docs/continuation/progress-2026-09-28.json)

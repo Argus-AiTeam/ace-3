@@ -20,6 +20,11 @@
 > 负向探针不读取 expected 记录，正常数值比较保持。更广范围的冻结 hash 与
 > 外部跟踪来源仍待核准；这是开发级源码发布，不是完整 V2 或模型验收。
 
+> **10 月 12 日输入绑定增量：** 已审
+> [LM-head validator 及定向测试](docs/continuation/progress-2026-10-12-bound-checkpoint.json)
+> 现在要求显式 checkpoint，不再静默使用默认模型文件。数值语义保持，
+> 范围为 development/not_certified，不代表 V3 通过。
+
 > **继续工作或恢复现场：** 请先阅读 [AGENTS.md](AGENTS.md) 和
 > [中文接续说明](docs/continuation/HANDOFF.zh-CN.md)。带日期的
 > [9 月 28 日进度快照](docs/continuation/progress-2026-09-28.json) 记录了已审核的

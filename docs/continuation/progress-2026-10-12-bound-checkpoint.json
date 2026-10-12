@@ -1,0 +1,61 @@
+{
+  "schema": "ace-public-incremental-source/v1",
+  "project": "ACE3",
+  "observed_beijing": "2026-10-12T09:55:00+08:00",
+  "public_summary_is_authoritative_receipt": false,
+  "scope": "Exact independently reviewed explicit-checkpoint validator and focused test",
+  "evidence_scope": "development",
+  "stage_certification": "not_certified",
+  "campaign_complete": false,
+  "full_v2_acceptance": false,
+  "full_v3_acceptance": false,
+  "base_commit": "3df369ddb4742c8a3952229d418550bf8ccd665d",
+  "source_files": [
+    {
+      "path": "ace3/model/position3_live_lm_head.py",
+      "before_sha256": "321739b5466d1be1202669cfcb0b8e7d8e73ebe1376cdf568758c5ffe9b8d48b",
+      "sha256": "5844a14a64dd7cd73182272c3d2f3698c20d1137cca1d80bbf3e69358338b6f4",
+      "bytes": 19655
+    },
+    {
+      "path": "ace3/model/tests/test_position3_live_lm_head.py",
+      "before_sha256": "b917160a12cd99662899dcc0feb41fd2fb1b7b14153d9c5b9eafc8a3e5b9c423",
+      "sha256": "b6144452a1f14e3d4ad0c33f6238f145262c33d11126bd1f8b17cdec54610656",
+      "bytes": 13403
+    }
+  ],
+  "source_origin": {
+    "implementation_owner": "627850739d1e",
+    "review_round": 1,
+    "independent_review_sha256": "9338d995019a9217db1d42d18719a9340dc57249591c15ed0ab314a4baed76ec",
+    "native_status": "done",
+    "original_bounded_log_sha256": "a839fd10121182bb646fc21a4ae1de6a8e3e7f3e6439254c2bb33ed4c5f384c0",
+    "original_bounded_tests": 19,
+    "original_bounded_tests_scope": "Combined private producer and public validator suite, not 19 end-to-end scientific checks",
+    "publication_method": "Two-stage SHA-pinned native export; exact full reviewed bytes"
+  },
+  "interface_change": {
+    "python": "validate(..., checkpoint=bound_checkpoint) is mandatory",
+    "cli": "validate --checkpoint PATH is mandatory",
+    "oracle_arithmetic_changed": false,
+    "numerical_threshold_changed": false
+  },
+  "validation_boundary": {
+    "rerun_for_publication": false,
+    "publisher_authored_implementation_change": false,
+    "focused_test_uses_internal_evidence_and_model_fixtures": true,
+    "full_producer_materializer_native_reader_regression_claimed": false,
+    "scientific_execution_or_acceptance_claimed": false,
+    "runtime_or_live_project_overwritten": false
+  },
+  "excluded_from_publication": [
+    "Private-path execution-binding producer and native feedback state",
+    "Raw logs, weights, arrays, sessions, receipts granting authority and credentials"
+  ],
+  "unresolved": [
+    "V2 frozen expected-hash substitutions and external-tracing provenance",
+    "Complete production builder/gap-fill/reader regression",
+    "Fresh Manager, independent position-2 and actual V3 execution acceptance"
+  ],
+  "equal_mirrors": ["https://github.com/aHappend/ace-3", "https://github.com/Argus-AiTeam/ace-3"]
+}

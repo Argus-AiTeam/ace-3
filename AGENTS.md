@@ -1,7 +1,8 @@
 # ACE-3 continuation entry
 
 Read `docs/continuation/HANDOFF.zh-CN.md` and
-`docs/continuation/progress-2026-10-12-decoder-failure-probe.json` before changing anything.
+`docs/continuation/progress-2026-10-12-bound-checkpoint.json` before changing anything.
+Keep `docs/continuation/progress-2026-10-12-decoder-failure-probe.json` as the earlier decoder record.
 Keep `docs/continuation/progress-2026-10-12-file-gates.json` as the earlier file-open gate record.
 Keep `docs/continuation/progress-2026-10-12.json` as the earlier path/PASS repair record.
 Keep the October 11 SiLU source record as an accepted development increment.
@@ -25,6 +26,15 @@ Do not import the separate private-path Makefile, frozen-hash replacements or
 LD_PRELOAD tracing wrapper. Their provenance remains unresolved; this source
 increment is development/not_certified, not full V2/model acceptance.
 
+The bound-checkpoint increment copies the independently reviewed position-3
+LM-head validator and its focused test. Python callers must supply the
+keyword-only `checkpoint`; CLI validation must supply `--checkpoint`. The
+validator no longer silently recomputes with a different default checkpoint.
+No oracle arithmetic, numerical tolerance or model data changed. The isolated
+test checks argument forwarding with internal evidence/model fixtures; it is
+not a full producer-to-execution regression or V3 acceptance. Do not copy the
+private proposal producer or raw execution state into this public snapshot.
+
 At the September 28 snapshot, S13-S17 composition `92e4223ef310` was reviewed REJECTED.
 The new exact-integer Stage11 o_proj software `d12e372181f0` received review,
 but science owner `7a2022cef21c` stopped before any claim or numerical run:
@@ -38,7 +48,8 @@ Published sources are the historical reviewed implementation and its dependency
 snapshot, including the subsequently discovered defects, plus the one RTL file
 identified by the October 11 source manifest, the three files identified by
 the October 12 path/PASS manifest, the subsequent two-file file-gate manifest,
-and the single C++ file in the decoder failure-probe manifest.
+the single C++ file in the decoder failure-probe manifest, and the validator/test
+pair in the bound-checkpoint manifest.
 Other later repair edits are not included. The original September 26 source
 basis remains at its dated tag.
 Never copy this snapshot over a running workspace.
