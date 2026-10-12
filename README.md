@@ -16,6 +16,12 @@
 > now fail explicitly on unreadable vector inputs or unwritable VCD paths.
 > These exact source bytes remain development/not-certified; V1 is not accepted.
 
+> **October 12 decoder increment:** one reviewed
+> [injected-failure harness repair](docs/continuation/progress-2026-10-12-decoder-failure-probe.json)
+> avoids expected-record reads in the negative probe, preserving normal comparisons.
+> Broader frozen-hash and external-tracing provenance remains unresolved.
+> This is development source publication, not full V2 or model acceptance.
+
 > **Continue or recover this work:** start with [AGENTS.md](AGENTS.md) and the
 > [Chinese continuation handoff](docs/continuation/HANDOFF.zh-CN.md). The dated
 > [September 28 progress snapshot](docs/continuation/progress-2026-09-28.json)

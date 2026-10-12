@@ -123,19 +123,21 @@ struct Harness {
         if (!raw_trace || !raw_final)
             throw std::runtime_error("cannot open raw output files");
         const auto input_lines = lines(dir + "/inputs.hex");
-        const auto trace_lines = lines(dir + "/trace.hex");
-        const auto final_lines = lines(dir + "/final.hex");
+        const auto trace_lines = fail_after_raw ? std::vector<std::string>{} : lines(dir + "/trace.hex");
+        const auto final_lines = fail_after_raw ? std::vector<std::string>{} : lines(dir + "/final.hex");
         const auto rope_lines = lines(dir + "/rope_coefficients.hex");
         const auto manifest_lines = lines(dir + "/boundary_manifest.json");
         std::string manifest;
         for (const auto& line : manifest_lines) manifest += line;
         if ((input_lines.size() != 896 && input_lines.size() != 1792) ||
-            trace_lines.empty() || final_lines.size() != input_lines.size() ||
-            rope_lines.empty() || rope_lines.size() > rope_cos.size() ||
+            rope_lines.empty() || rope_lines.size() > rope_cos.size())
+            throw std::runtime_error("decoder runtime vector contract mismatch");
+        if (!fail_after_raw &&
+            (trace_lines.empty() || final_lines.size() != input_lines.size() ||
             manifest.find("\"trace_records\": " +
                           std::to_string(trace_lines.size())) == std::string::npos ||
             manifest.find("\"final_records\": " +
-                          std::to_string(final_lines.size())) == std::string::npos)
+                          std::to_string(final_lines.size())) == std::string::npos))
             throw std::runtime_error("decoder runtime vector contract mismatch");
         inputs[0].resize(896); inputs[1].resize(896);
         for (const auto& line : input_lines) {
@@ -274,6 +276,18 @@ struct Harness {
         if (layer0_trace_capture_accept(
                 checking, top.trace_valid_o, top.trace_ready_i,
                 top.final_valid_o, top.final_ready_i)) {
+            if (fail_after_raw && trace_count==0) {
+                raw_trace << std::hex << std::setfill('0')
+                          << std::setw(2) << done_count
+                          << std::setw(4) << unsigned(top.trace_position_o)
+                          << std::setw(2) << unsigned(top.trace_stage_o)
+                          << std::setw(4) << unsigned(top.trace_index_o)
+                          << std::setw(4) << unsigned(top.trace_f16_o) << '\n';
+                if (!raw_trace) throw std::runtime_error("raw trace write failed");
+                ++trace_count;
+                raw_trace.flush();
+                throw std::runtime_error("injected failure after raw trace");
+            }
             if (trace_count>=expected_trace.size() ||
                 expected_trace[trace_count].token!=done_count ||
                 expected_trace[trace_count].position!=top.trace_position_o ||
@@ -289,10 +303,6 @@ struct Harness {
                       << std::setw(4) << unsigned(top.trace_f16_o) << '\n';
             if (!raw_trace) throw std::runtime_error("raw trace write failed");
             ++trace_count;
-            if (fail_after_raw && trace_count==1) {
-                raw_trace.flush();
-                throw std::runtime_error("injected failure after raw trace");
-            }
         }
         if (layer0_final_capture_accept(
                 checking, top.final_valid_o, top.final_ready_i,

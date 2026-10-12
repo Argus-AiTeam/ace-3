@@ -1,5 +1,16 @@
 # ACE-3 跨对话接续说明
 
+**2026-10-12 decoder 失败探针增量：** 原样发布一份已审 C++ harness，
+注入失败分支不读取 expected trace/final，在记录首个 DUT 输出后明确失败；
+正常数值比较保持。完整 SHA 和独审来源见
+[单文件源码记录](progress-2026-10-12-decoder-failure-probe.json)。
+原 canonical exit0 不等于完整 V2 接受：冻结层间 hash 替换的独立归因、
+LD_PRELOAD 跟踪与外部 syscall 观察的区别仍须核准。相关 Makefile/generator/
+tracer 未发布，旧失败和审核决定不改写。三层两 token 与 24 层控制器协议
+不冒充全模型数值链；Icarus full trace 限制保留。范围 development/not_certified，
+不重跑科学、不覆盖运行现场。新 checkpoint 为
+`checkpoint-2026-10-12-decoder-failure-probe`，旧标签保持原位。
+
 **2026-10-12 文件门控后续增量：** 两份 FP16 adaptation/QKV testbench 原样继承
 已审的输入文件可读性和 VCD 路径可写性检查，打开失败时明确 `$fatal`，不让工具的
 非致命文件告警冒充检查成功。精确源码和独立审核摘要见
@@ -53,7 +64,8 @@ admission、reference 或已关闭 producer，不动 ACE2，不扩展精度、�
 ## 新对话 starter prompt
 
 ```text
-先读 AGENTS.md、HANDOFF.zh-CN.md、progress-2026-10-12-file-gates.json，
+先读 AGENTS.md、HANDOFF.zh-CN.md、progress-2026-10-12-decoder-failure-probe.json，
+保留此前 progress-2026-10-12-file-gates.json 的文件门控记录，
 再读此前 progress-2026-10-12.json 和历史结果摘要。
 在原主机运行 python tools/argus_continuation.py inspect，核对实际 runtime、
 backlog、最近独立 Reviewer 和 native terminal，不从旧对话猜当前任务。

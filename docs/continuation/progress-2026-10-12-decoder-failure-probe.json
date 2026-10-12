@@ -1,0 +1,64 @@
+{
+  "schema": "ace-public-incremental-source/v1",
+  "project": "ACE3",
+  "observed_beijing": "2026-10-12T08:23:55+08:00",
+  "public_summary_is_authoritative_receipt": false,
+  "scope": "Exact independently reviewed decoder C++ injected-failure path",
+  "evidence_scope": "development",
+  "stage_certification": "not_certified",
+  "campaign_complete": false,
+  "full_v2_acceptance": false,
+  "base_commit": "407d9eb666bb93f0554f5a8435079d36febfdd21",
+  "source_files": [
+    {
+      "path": "ace3/tb/ace3_decoder_layer0_token_engine_main.cpp",
+      "before_sha256": "b8fe2e4e72814d717dbda357c42cfaf60c92f8bfc6d8ee195df78ee892bd8471",
+      "sha256": "d9104c844f816f8b35b74b42d8109869d5cfc2e3dd8fd39aecebe562f71992f0",
+      "bytes": 30670
+    }
+  ],
+  "retained_source_sha256": {
+    "Makefile": "dcd915f050e9eb5a0e8a5245c25b447c7b8503e9d81aa4f4ff591c20f43cba0c",
+    "ace3/tb/ace3_layer0_trace_capture_policy.h": "c70abe7071136c3c154dd32e27b04ccfca13d96b35f9498231e5e3f462decf26",
+    "ace3/rtl/ace3_fp16_silu_gate_core.sv": "6cd6c802307f9904c235f54227d3c83e65bef949304e67f0c6b9d24cf003fc94",
+    "ace3/tb/ace3_fp16_adaptation_tb.sv": "a21d1da4f163450f597f04376247b1c8450dcb16611d1f8100ea4d5b6c0ea0bc",
+    "ace3/tb/ace3_qkv_rope_cache_tb.sv": "ec8765b149c2ac36c33558a807b2dd7665ac846783560c7909ad045caea8d714"
+  },
+  "source_origin": {
+    "implementation_owner": "4a8128ad35b6",
+    "implementation_review_round": 5,
+    "implementation_review_sha256": "772aceccd9bfe53dca8a129f3ff0d12a4642446f294fd4f0e3621ba20fdc3564",
+    "export_owner": "8bc4b36dee55",
+    "export_review_sha256": "2fe52f8b7e19ac354451dee2ac2fc860b40abf202a10da2fe6c81e281d0f7bcc",
+    "export_manifest_sha256": "b801445fe1bf20e9d77b4e894f274c4067e44f8c3745d2828be3a268a5af0236",
+    "publication_method": "Two-stage SHA-pinned native export; published file must match the entire reviewed byte sequence."
+  },
+  "changes": [
+    "The injected-failure branch does not open expected trace.hex or final.hex.",
+    "It records the first DUT trace output and raises the intended failure before consulting expected trace records.",
+    "The normal branch retains its original expected-record loading and numerical comparisons."
+  ],
+  "validation_boundary": {
+    "source_and_export_independently_reviewed": true,
+    "original_canonical_run_exit_code": 0,
+    "original_canonical_log_sha256": "bb13b5c384542e78e433fee95ccf947d3d508f10b7d340ee7ba427109445602a",
+    "rerun_for_publication": false,
+    "publisher_authored_implementation_change": false,
+    "full_model_or_external_syscall_proof_claimed": false,
+    "unresolved": [
+      "The broader canonical evidence includes rewritten frozen layer handoff hashes without independently established attribution.",
+      "Its tracing wrapper uses an LD_PRELOAD library, not demonstrated external kernel syscall tracing.",
+      "The numerical cascade covers layers 0, 1 and 2 with two tokens; the 24-layer controller result does not claim numerical RTL.",
+      "Full Icarus trace remains runtime-limited."
+    ]
+  },
+  "excluded_from_publication": [
+    "Private-path Makefile overlay and rewritten layer1/layer2 expected hashes",
+    "Layer2 generator expected-hash replacement",
+    "LD_PRELOAD tracing wrapper and library",
+    "Raw logs, weights, arrays, sessions, active state, authority and credentials"
+  ],
+  "continuation_rule": "Preserve these exact development bytes and prior repairs. Keep the broader provenance counterevidence open; normal Manager and independent review own any future validation.",
+  "equal_mirrors": ["https://github.com/aHappend/ace-3", "https://github.com/Argus-AiTeam/ace-3"],
+  "checkpoint_ref": "refs/tags/checkpoint-2026-10-12-decoder-failure-probe"
+}

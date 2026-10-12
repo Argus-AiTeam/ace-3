@@ -1,7 +1,8 @@
 # ACE-3 continuation entry
 
 Read `docs/continuation/HANDOFF.zh-CN.md` and
-`docs/continuation/progress-2026-10-12-file-gates.json` before changing anything.
+`docs/continuation/progress-2026-10-12-decoder-failure-probe.json` before changing anything.
+Keep `docs/continuation/progress-2026-10-12-file-gates.json` as the earlier file-open gate record.
 Keep `docs/continuation/progress-2026-10-12.json` as the earlier path/PASS repair record.
 Keep the October 11 SiLU source record as an accepted development increment.
 Keep `docs/continuation/progress-2026-09-28.json` as the historical baseline.
@@ -17,6 +18,13 @@ the reviewed fail-closed checks for unreadable vector files and unwritable VCD
 paths in the same two testbenches. Copy these exact bytes into future archives;
 source publication does not certify the full V1 regression or authorize replay.
 
+The decoder failure-probe increment copies one reviewed C++ file. Only its
+injected-failure branch avoids reading expected trace/final records before
+recording the first DUT output and failing. Normal numerical comparisons remain.
+Do not import the separate private-path Makefile, frozen-hash replacements or
+LD_PRELOAD tracing wrapper. Their provenance remains unresolved; this source
+increment is development/not_certified, not full V2/model acceptance.
+
 At the September 28 snapshot, S13-S17 composition `92e4223ef310` was reviewed REJECTED.
 The new exact-integer Stage11 o_proj software `d12e372181f0` received review,
 but science owner `7a2022cef21c` stopped before any claim or numerical run:
@@ -29,7 +37,8 @@ fresh science owner. Do not duplicate a running repair or replay consumed work.
 Published sources are the historical reviewed implementation and its dependency
 snapshot, including the subsequently discovered defects, plus the one RTL file
 identified by the October 11 source manifest, the three files identified by
-the October 12 path/PASS manifest, and the subsequent two-file file-gate manifest.
+the October 12 path/PASS manifest, the subsequent two-file file-gate manifest,
+and the single C++ file in the decoder failure-probe manifest.
 Other later repair edits are not included. The original September 26 source
 basis remains at its dated tag.
 Never copy this snapshot over a running workspace.
