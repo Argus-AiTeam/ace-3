@@ -20,8 +20,11 @@
 > 负向探针不读取 expected 记录，正常数值比较保持。更广范围的冻结 hash 与
 > 外部跟踪来源仍待核准；这是开发级源码发布，不是完整 V2 或模型验收。
 
-> **输入绑定发布更正：** validator 单独增量已撤回，待原生独审补齐 Makefile
-> 调用后完整发布。[更正记录](docs/continuation/progress-2026-10-12-bound-checkpoint.json)
+> **输入绑定调用集成：** 已一起纳入独审通过的
+> [Makefile、checkpoint validator 与 focused tests](docs/continuation/progress-2026-10-12-bound-checkpoint-caller.json)，
+> 保留原有 VCD/PASS 门控。这是源码调用集成完成，不是 V3 数值通过。
+> 此前 validator 单独增量的撤回与
+> [更正记录](docs/continuation/progress-2026-10-12-bound-checkpoint.json)
 > 保留已审源码身份和发布历史。
 
 > **继续工作或恢复现场：** 请先阅读 [AGENTS.md](AGENTS.md) 和

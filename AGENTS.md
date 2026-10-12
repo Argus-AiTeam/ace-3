@@ -1,6 +1,7 @@
 # ACE-3 continuation entry
 
 Read `docs/continuation/HANDOFF.zh-CN.md` and
+`docs/continuation/progress-2026-10-12-bound-checkpoint-caller.json`, then
 `docs/continuation/progress-2026-10-12-decoder-failure-probe.json` before changing anything.
 Keep `docs/continuation/progress-2026-10-12-file-gates.json` as the earlier file-open gate record.
 Keep `docs/continuation/progress-2026-10-12.json` as the earlier path/PASS repair record.
@@ -8,10 +9,12 @@ Keep the October 11 SiLU source record as an accepted development increment.
 Keep `docs/continuation/progress-2026-09-28.json` as the historical baseline.
 
 The [checkpoint publication correction](docs/continuation/progress-2026-10-12-bound-checkpoint.json)
-withdraws the incomplete validator/test-only increment from main. Its reviewed
-bytes remain in commit history; publish them again only with independently
-reviewed integration of the Makefile validate caller. Do not silently add a
-fallback checkpoint or treat source publication as V3 acceptance.
+withdraws the incomplete validator/test-only increment from main. The subsequent
+caller integration now publishes the independently reviewed Makefile, validator
+and tests together. Preserve the earlier withdrawal and failed outcomes. The
+Makefile adds only the explicit checkpoint argument, retaining reviewed VCD/PASS
+gates. Do not silently add a fallback checkpoint or treat publication as V3
+acceptance; exact hashes and test limits are in the caller-integration record.
 
 The October 12 increment adds the independently reviewed Makefile and FP16/QKV
 testbench path and PASS-sentinel repairs, retaining the October 11 SiLU repair.

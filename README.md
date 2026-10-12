@@ -22,9 +22,12 @@
 > Broader frozen-hash and external-tracing provenance remains unresolved.
 > This is development source publication, not full V2 or model acceptance.
 
-> **Input-binding publication correction:** the validator-only checkpoint increment
-> was withdrawn pending independently reviewed Makefile caller integration.
-> [The correction record](docs/continuation/progress-2026-10-12-bound-checkpoint.json)
+> **Input-binding caller integration:** the reviewed
+> [Makefile, checkpoint validator and focused tests](docs/continuation/progress-2026-10-12-bound-checkpoint-caller.json)
+> are now included together. The existing VCD/PASS gates remain unchanged.
+> This completes the source integration, not V3 numerical acceptance.
+> The earlier validator-only increment was withdrawn;
+> [the correction record](docs/continuation/progress-2026-10-12-bound-checkpoint.json)
 > preserves its reviewed source identities and publication history.
 
 > **Continue or recover this work:** start with [AGENTS.md](AGENTS.md) and the

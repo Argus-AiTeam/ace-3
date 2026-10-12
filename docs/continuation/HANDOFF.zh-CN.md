@@ -1,9 +1,18 @@
 # ACE-3 跨对话接续说明
 
+**2026-10-12 输入绑定调用集成：** 已将原生独审通过的 Makefile、validator 和
+focused test 三文件原字节一起发布。Makefile 相对已审基线只增加 validate 的
+`--checkpoint "$(OFFICIAL_MODEL24_CHECKPOINT)"`，原 FP16/QKV VCD/PASS 门控不变；
+validator 拒绝缺少 checkpoint，并使用显式绑定输入。精确 SHA、独审来源及
+12 项有界单测的桩边界见[完整调用增量](progress-2026-10-12-bound-checkpoint-caller.json)。
+这是 development/not_certified；不是新 RTL/模型通过，不关闭 V2 来源反证。
+保留下一段历史撤回记录；旧科学 claim、审核与失败不追认或重放。
+新检查点为 `checkpoint-2026-10-12-bound-checkpoint-caller`，既有标签不移动。
+
 **2026-10-12 输入绑定发布更正：** `9d2f89c` 的已审 validator/test 增量要求
 显式 `--checkpoint`，但现有 Makefile validate 调用未同步，发布者漏查了此调用。
 已以正常后续提交恢复先前原样源码，保留已审候选和发布历史，不改运行现场。
-需由原生 Engineer/Reviewer 补齐调用兼容性，再将完整已审增量双仓发布；
+当时要求由原生 Engineer/Reviewer 补齐调用兼容性，再将完整已审增量双仓发布；
 不能由监督者猜测修改科学调用，也不能静默恢复默认 checkpoint 来掩盖漏绑。
 见[更正记录](progress-2026-10-12-bound-checkpoint.json)。不是 V3 通过。
 
@@ -71,7 +80,8 @@ admission、reference 或已关闭 producer，不动 ACE2，不扩展精度、�
 ## 新对话 starter prompt
 
 ```text
-先读 AGENTS.md、HANDOFF.zh-CN.md、progress-2026-10-12-decoder-failure-probe.json，
+先读 AGENTS.md、HANDOFF.zh-CN.md、progress-2026-10-12-bound-checkpoint-caller.json，
+再读 progress-2026-10-12-decoder-failure-probe.json，
 保留此前 progress-2026-10-12-file-gates.json 的文件门控记录，
 再读此前 progress-2026-10-12.json 和历史结果摘要。
 在原主机运行 python tools/argus_continuation.py inspect，核对实际 runtime、

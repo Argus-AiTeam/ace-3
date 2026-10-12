@@ -17,6 +17,12 @@ the same two testbenches with exact reviewed bytes. Only source and sanitized
 provenance are published; original export reviews, proposals, runtime state and
 execution receipts remain on the host. It does not certify the full regression.
 
+The [checkpoint caller integration](progress-2026-10-12-bound-checkpoint-caller.json)
+publishes the Makefile, validator and focused tests together. The explicit
+checkpoint/tokenizer payloads remain external, licensed host dependencies.
+Private proposal producers, source archives, native reviews and execution
+authority are not included; a source-only clone does not authorize execution.
+
 | Dependency | Location / provenance (updated September 28) | Published here | Recovery consequence |
 | --- | --- | --- | --- |
 | Live Argus state, backlog, handoffs, native events, registry and claims | `/home/argustest/.argus-skill-ace3/projects/s-62150b05` | No | Same-host continuation can inspect it. Disk loss removes lifecycle and authoritative receipts not separately archived. |

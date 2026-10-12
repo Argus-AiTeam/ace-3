@@ -1,0 +1,73 @@
+{
+  "schema": "ace-public-incremental-source/v1",
+  "project": "ACE3",
+  "observed_beijing": "2026-10-12T12:53:00+08:00",
+  "public_summary_is_authoritative_receipt": false,
+  "scope": "Exact independently reviewed Makefile caller, explicit checkpoint validator and focused tests",
+  "evidence_scope": "development",
+  "stage_certification": "not_certified",
+  "campaign_complete": false,
+  "full_v2_or_v3_acceptance": false,
+  "base_commit": "3951a21eeb612ffb74c1fb710b94e0d0753f553a",
+  "previous_publication_correction": "progress-2026-10-12-bound-checkpoint.json",
+  "source_files": [
+    {
+      "path": "Makefile",
+      "before_sha256": "dcd915f050e9eb5a0e8a5245c25b447c7b8503e9d81aa4f4ff591c20f43cba0c",
+      "sha256": "2178c83ce4d1c1953e6e6c83389ee0b7d0cf579b4b0637d65f5cdd5a7d675e57",
+      "bytes": 155195
+    },
+    {
+      "path": "ace3/model/position3_live_lm_head.py",
+      "before_sha256": "321739b5466d1be1202669cfcb0b8e7d8e73ebe1376cdf568758c5ffe9b8d48b",
+      "sha256": "3f310960d549c8ad7812916108afd4b41931f77a7b036c0263dfeb5355b3a6c6",
+      "bytes": 19765
+    },
+    {
+      "path": "ace3/model/tests/test_position3_live_lm_head.py",
+      "before_sha256": "b917160a12cd99662899dcc0feb41fd2fb1b7b14153d9c5b9eafc8a3e5b9c423",
+      "sha256": "c83a53f3c2ceefc5de79761d2ce034adcbc5b2cc5f8c69e26173080af41fdcbe",
+      "bytes": 13769
+    }
+  ],
+  "retained_source_sha256": {
+    "ace3/rtl/ace3_fp16_silu_gate_core.sv": "6cd6c802307f9904c235f54227d3c83e65bef949304e67f0c6b9d24cf003fc94",
+    "ace3/tb/ace3_fp16_adaptation_tb.sv": "a21d1da4f163450f597f04376247b1c8450dcb16611d1f8100ea4d5b6c0ea0bc",
+    "ace3/tb/ace3_qkv_rope_cache_tb.sv": "ec8765b149c2ac36c33558a807b2dd7665ac846783560c7909ad045caea8d714",
+    "ace3/tb/ace3_decoder_layer0_token_engine_main.cpp": "d9104c844f816f8b35b74b42d8109869d5cfc2e3dd8fd39aecebe562f71992f0",
+    "ace3/tb/ace3_layer0_trace_capture_policy.h": "c70abe7071136c3c154dd32e27b04ccfca13d96b35f9498231e5e3f462decf26"
+  },
+  "source_origin": {
+    "implementation_owner": "a82253061501",
+    "artifact_workspace_owner": "1c707bfc99c9",
+    "independent_review_round": 1,
+    "independent_review_sha256": "eba378d57a26a729c5564be4399040b16affa7ba49646ac78f050c17fae1778c",
+    "minimal_makefile_patch_sha256": "e6e7192cfa1cbf0326f1e7817f361da707610356e82360a08307c068f5210453",
+    "publication_method": "Two-stage SHA-pinned native export, checked against the reviewed proposal archive manifest and re-read unchanged after copying."
+  },
+  "changes": [
+    "The existing model24-selected-token-position3-lm-head Makefile validate invocation now passes OFFICIAL_MODEL24_CHECKPOINT.",
+    "The validate CLI requires --checkpoint; the Python validation function rejects its absence and consumes the supplied checkpoint rather than the module default.",
+    "Focused tests cover missing checkpoint rejection and bound checkpoint consumption.",
+    "Makefile differs from the previous published reviewed file by exactly one added checkpoint argument; existing FP16/QKV VCD and PASS gates remain unchanged."
+  ],
+  "validation_boundary": {
+    "original_focused_tests": "12 passed",
+    "original_focused_log_sha256": "69828b20f6e0c2fdf85c4833120f2788a9451879813e845472cfa7018343b077",
+    "native_reader_sidecar_sha256": "cf0229055e552bb755751338cc9fa1d4adfb9bf5d1458af4aa8fda0b7c1dab2d",
+    "native_reader_scope": "Final written proposal read by the real pre-enqueue reader and source-binding validator, not Manager release or runtime-pass authority.",
+    "test_limit": "Checkpoint-consumption unit cases stub oracle/evidence helpers; they are not model or RTL numerical acceptance.",
+    "publisher_checks": "Exact three-file source SHA/size, retained repair SHA, full source diff, Python syntax and known caller compatibility.",
+    "rerun_for_publication": false,
+    "publisher_authored_implementation_change": false,
+    "runtime_changed_by_publication": false
+  },
+  "excluded_from_publication": [
+    "Private-path proposal producer, proposal archives and source-manifest arrays",
+    "Weights, tokenizer payloads, raw evidence, provider transcripts and credentials",
+    "Active runtime state, authority, claims and native receipts"
+  ],
+  "continuation_rule": "Preserve this complete reviewed caller/validator/test increment and prior repaired bytes. Keep historical publication withdrawal and failed outcomes. New execution still requires its own real Manager review and independent runtime-pass; V2 frozen-hash and external-tracing provenance remains unresolved.",
+  "equal_mirrors": ["https://github.com/aHappend/ace-3", "https://github.com/Argus-AiTeam/ace-3"],
+  "checkpoint_ref": "refs/tags/checkpoint-2026-10-12-bound-checkpoint-caller"
+}

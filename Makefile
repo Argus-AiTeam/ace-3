@@ -2433,6 +2433,7 @@ model24-selected-token-position3-lm-head: \
 	@cd "$(ROOT)" && "$(PYTHON)" "$(POSITION3_LIVE_LM_HEAD)" validate \
 	    --output-dir "$(POSITION3_LIVE_LM_HEAD_DIR)" \
 	    --binary "$(POSITION3_LIVE_LM_HEAD_DIR)/obj_dir/Vace3_streaming_tied_lm_head_topk" \
+	    --checkpoint "$(OFFICIAL_MODEL24_CHECKPOINT)" \
 	    --parent-evidence "$(POSITION3_TRAVERSAL_DIR)/evidence.json" \
 	    --tokenizer-dir "$(OFFICIAL_MODEL24_TOKENIZER_DIR)" \
 	    --evidence "$(POSITION3_LIVE_LM_HEAD_DIR)/evidence.json" \
