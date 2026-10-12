@@ -1,14 +1,11 @@
 # ACE-3 跨对话接续说明
 
-**2026-10-12 checkpoint 输入增量：** 原样发布已独审的 position-3 LM-head
-validator 及其定向测试，Python `validate()` 现在必须显式传入 keyword-only
-`checkpoint`，CLI `validate` 必须传 `--checkpoint`。准备和核验应使用同一绑定
-模型文件，不再静默回退归档内不存在或不同的默认文件；oracle 算法与数值门槛未改。
-精确源码及审核范围见
-[源码记录](progress-2026-10-12-bound-checkpoint.json)。
-本次只复用已有独审和原日志，不重跑科学。测试包含内部证据/模型桩，只证明参数
-传递，不冒充完整生产链回归、外部来源核准或 V3 通过。私有 producer、原始日志、
-模型数据和活动状态未公开；源码同步也不覆盖运行现场。旧 checkpoint 标签不动。
+**2026-10-12 输入绑定发布更正：** `9d2f89c` 的已审 validator/test 增量要求
+显式 `--checkpoint`，但现有 Makefile validate 调用未同步，发布者漏查了此调用。
+已以正常后续提交恢复先前原样源码，保留已审候选和发布历史，不改运行现场。
+需由原生 Engineer/Reviewer 补齐调用兼容性，再将完整已审增量双仓发布；
+不能由监督者猜测修改科学调用，也不能静默恢复默认 checkpoint 来掩盖漏绑。
+见[更正记录](progress-2026-10-12-bound-checkpoint.json)。不是 V3 通过。
 
 **2026-10-12 decoder 失败探针增量：** 原样发布一份已审 C++ harness，
 注入失败分支不读取 expected trace/final，在记录首个 DUT 输出后明确失败；
@@ -74,8 +71,7 @@ admission、reference 或已关闭 producer，不动 ACE2，不扩展精度、�
 ## 新对话 starter prompt
 
 ```text
-先读 AGENTS.md、HANDOFF.zh-CN.md、progress-2026-10-12-bound-checkpoint.json，
-保留此前 progress-2026-10-12-decoder-failure-probe.json 的记录，
+先读 AGENTS.md、HANDOFF.zh-CN.md、progress-2026-10-12-decoder-failure-probe.json，
 保留此前 progress-2026-10-12-file-gates.json 的文件门控记录，
 再读此前 progress-2026-10-12.json 和历史结果摘要。
 在原主机运行 python tools/argus_continuation.py inspect，核对实际 runtime、

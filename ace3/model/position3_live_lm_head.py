@@ -426,8 +426,6 @@ def validate(
     evidence_path: Path,
     parent_evidence: Path = PARENT_EVIDENCE,
     tokenizer_dir: Path = TOKENIZER_DIR,
-    *,
-    checkpoint: Path,
 ) -> dict[str, Any]:
     stored = load_json(evidence_path)
     require_source_bindings(stored.get("consumed_sources", {}))
@@ -438,7 +436,7 @@ def validate(
         stored.get("official_shape_streaming_tied_lm_head", {}).get("binary", {}),
         "official RTL binary",
     )
-    computed = compute_oracle(checkpoint, tokenizer_dir, parent_evidence)
+    computed = compute_oracle(CHECKPOINT, tokenizer_dir, parent_evidence)
     computed.pop("_normalized")
     computed.pop("_checks")
     computed.pop("_winners")
@@ -488,7 +486,6 @@ def main() -> None:
         "--parent-evidence", type=Path, default=PARENT_EVIDENCE
     )
     validate_parser.add_argument("--tokenizer-dir", type=Path, default=TOKENIZER_DIR)
-    validate_parser.add_argument("--checkpoint", type=Path, required=True)
     args = parser.parse_args()
     try:
         if args.operation == "prepare":
@@ -520,7 +517,6 @@ def main() -> None:
                 evidence,
                 args.parent_evidence.resolve(),
                 args.tokenizer_dir.resolve(),
-                checkpoint=args.checkpoint.resolve(strict=True),
             )
         )
     except (EvidenceError, OSError, ValueError, KeyError) as error:
