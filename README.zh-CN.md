@@ -37,15 +37,13 @@
 ACE-3 MP 是一个面向 Transformer 推理、以证据为先的混合精度加速器项目。
 首个实现配置针对官方 Qwen2.5-0.5B-Instruct AWQ 检查点，采用 W4A16 执行。
 
-ACE-3 MP 由 **[Vulcan](https://ahappend.github.io/vulcan/)（原 Argus for Chips）**
+ACE-3 MP 由 **[Vulcan](https://ahappend.github.io/vulcan/) (cooperated with [Argus](https://argusbot.cn/) for Chips)**
 在人类定义的目标与授权边界下开展设计和持续迭代。Vulcan 是独立开发的
-AI 原生硬件工程系统，兼容通用智能体系统 **[Argus](https://argusbot.cn/)**。
+AI 原生硬件工程系统，兼容通用智能体系统 Argus。
 这一署名不扩大下文的验证或硬件成果声明；历史运行时命令和证据标识保留原名。
 
 [Vulcan 官网](https://ahappend.github.io/vulcan/) ·
-[Vulcan 源码](https://github.com/aHappend/vulcan) ·
-[Argus 官网](https://argusbot.cn/) ·
-[Argus 官方源码](https://github.com/microsoft/ArgusAgent)
+[Vulcan 源码](https://github.com/aHappend/vulcan)
 
 > **公开开发快照：** 本仓库目前尚未宣称已完成完整加速器、综合设计、
 > FPGA bitstream、实测硬件性能或芯片流片。
